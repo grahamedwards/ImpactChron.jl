@@ -1,82 +1,105 @@
 ## Parameters for planetesimal thermal model
 
+## Declare structs
 
-## Ar-Ar closure temperature
+# normally distributed data, reported at mean and 1σ
+mutable struct nrm
+    μ::Float64
+    σ::Float64
+end
 
-T_olg = [550,10]    # Trieloff+2003, oligoclase feldspar
+# range of data, on assumed uniformd distribution
+mutable struct unf
+    a::Float64
+    b::Float64
+end
+
+# Accretion parameters
+mutable struct accretion_params
+    # Background Conditions
+    tₛₛ::nrm   # age of CAIs (Ma)
+    rAlₒ::nrm # initial solar ²⁶Al/²⁷Al
+    # Accretion Event
+    R::unf # Body radius
+    tₐ::unf # Instantaneous accretion date, My after CAIs
+    cAl::unf # Fractional abundance of Al (g/g)
+    Tm::Vector{Float64}
+end
+
+# Thermal Parameters
+mutable struct thermal_params
+    Tc::nrm  # Ar-Ar closure temperature (K)
+    ρ::unf # Bulk density not a thermal property proper, I know)
+    Cₚ::unf  # Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
+    k::unf # Thermal Conductivity (k, W m⁻¹ K⁻¹)
+end
+
+## Epsilon skootch
+
+rϵ = 1. + eps() # relative epsilon factor to scale "constant uniforms"
+
+## Data Compilation
+
+"""
+## Accretion time ~~ all uniform distributions
+    accr = unf(1.8, 2.3) # Composite of inner solar system data
 
 ## Parent Body Size
+    iss_R = unf(115e3,210e3)
 
-iss_R = [115,210] *1e3
-"""
+## Al content, Lodders & Fegley 1999
+    Al_LL = 1.18 / 100.
+    Al_L  = 1.16 / 100.
+    Al_H  = 1.06 / 100.
+    Al_EH = 0.82 / 100.
+    Al_EL = 1.00 / 100.
+    Al_R  = 1.06 / 100.
+        #Al_all = vcat(Al_LL,Al_L,Al_H,Al_EH,Al_EL)
+
+## Parent Body Size
     LL_R = [150,200] *1e3 # min: Edwards&Blackburn2020 || max: Henke/Gail
     L_R  = [115,160] *1e3 # Gail+2019
     H_R  = [160,200] *1e3 #Henke+ 2013(upper),2016(lower)
     E_R = [120,210] *1e3 # Trieloff+2022 (EL)
 """
 
-## Accretion time ~~ all uniform distributions
-
-accr = [1.8, 2.3] # Composite of inner solar system data
-
-## Al concentration
-
-"""
-# Lodders & Fegley 1999
-Al_LL = 1.18 / 100.
-Al_L  = 1.16 / 100.
-Al_H  = 1.06 / 100.
-Al_EH = 0.82 / 100.
-Al_EL = 1.00 / 100.
-Al_R  = 1.06 / 100.
-    #Al_all = vcat(Al_LL,Al_L,Al_H,Al_EH,Al_EL)
-"""
-
-
-
 ## Age of CAIs & initial ²⁶Al/²⁷Al Jacobsen+2008
     # Composite of CAI mineral Mg and Pb data
-
-tₛₛ_J08 = [4567.4, 0.34*0.5]
-rAlₒ_J08 = [5.11e-5 , 0.14 *0.5]
+tₛₛ_J08 = nrm(4567.4, 0.34*0.5)
+rAlₒ_J08 = nrm(5.11e-5 , (0.14e-5) *0.5)
     #formerly Allende bulk CAI isochron value (5.23 ± 0.13) e-5
-
-
-mutable struct accretion_params
-# Background Conditions
-
-    tₛₛ = tₛₛ_J08   # [μ , σ] ~ age of CAIs (Ma)
-    rAlₒ = rAlₒ_J08 # [μ , σ] ~ initial solar ²⁶Al/²⁷Al
-# Accretion Event
-    R = 150e3 * ones(2) # Body radius ~ [min , max]
-    tₐ = 2.13 * ones(2) # [min , max] ~ accretion time, My after CAIs
-    Al_conc = 0.011 * ones(2) # [min , max] ~ Fractional abundance of Al (g/g)
+Radius = unf(150e3,150e3 * rϵ) # Body radius ~ [min , max]
+t_accr = unf(2.13,2.13 * rϵ) # Instantaneous Accretion Date, My after CAIs
+Al_conc = unf(0.011,0.011 * rϵ) #Fractional abundance of Al (g/g)
 
 # T_midplane @ 2.5 AU
     # from distribution of Woolum & Cassen, 1999
-    Tm2d5 = Vector{Float64}(undef,40)
-        Tm2d5[1] = 0
-        Tm2d5[2:19] .= 100
-        Tm2d5[20:32] .= 200
-        Tm2d5[33:37] .= 300
-        Tm2d5[38] = 400
-        Tm2d5[39] = 500
-        Tm2d5[40] = 600
-end
+Tm2d5 = Vector{Float64}(undef,40)
+        Tm2d5[1] = 0.
+        Tm2d5[2:19] .= 100.
+        Tm2d5[20:32] .= 200.
+        Tm2d5[33:37] .= 300.
+        Tm2d5[38] = 400.
+        Tm2d5[39] = 500.
+        Tm2d5[40] = 600.
+
 
 
 ## Thermal parameters
-
-mutable struct thermal
 # Ar-Ar closure temperature (K)
-    Tc = T_olg
+T_olg = nrm(550,10)    # Trieloff+2003, oligoclase feldspar
 # Bulk density (kg/m³ | not a thermal property proper, I know)
-    ρ = [3160 , 3360] # OC range, see below
-# Specific heat capacity (cₚ, J kg⁻¹ K⁻¹)
-    cₚ = [750 , 922]  # Range from Wach+2013 @ 873 K
+ρ = unf(3160 , 3360) # OC range, see below
+# Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
+Cₚ = unf(750 , 922)  # Range from Wach+2013 @ 873 K
 # Thermal Conductivity (k, W m⁻¹ K⁻¹)
-    k = [4 , 4]       # OC estimate, see below...
-end
+k = unf(4. , 4.  * rϵ)       # OC estimate, see below...
+
+
+
+accret = accretion_params(tₛₛ_J08,rAlₒ_J08,Radius,t_accr,Al_conc,Tm2d5)
+therm = thermal_params(T_olg,ρ,Cₚ,k)
+
 
 #####
 # MAY NEED TO MAKE FINITE DIFFERENCE FUNCTION TO TRACK CHANGING ρ, k, Cp

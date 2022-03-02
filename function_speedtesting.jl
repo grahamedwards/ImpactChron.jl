@@ -1,3 +1,4 @@
+## Interior summation loop in HeveySanders equation
 using LoopVectorization
 
 function ΣT(n, r, t, R, λ, κ)

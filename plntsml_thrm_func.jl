@@ -2,6 +2,7 @@
 using LoopVectorization
 using Plots; gr()
 using Random; rng = MersenneTwister()
+using Distributions
 
 """
 Reference info:
@@ -21,7 +22,7 @@ const H_Al = 0.355 # W/kg (Castillo-Rogez et al., 2009) hard
 
 s_a  = 365.2422*24*60*60 # seconds per annum
 λ_Al = (log(2)/7.17e5)  / s_a # s⁻¹ | decay constant of Al in s
-H_Al = 0.355 # W/kg (Castillo-Rogez et al., 2009) hard
+H_Al = 0.355 # W/kg (Castillo-Rogez et al., 2009)
 
 radius = 150e3 # m | Radius
 Δr = 10e3 # m | radial distance increment
@@ -56,10 +57,7 @@ plot_radii = plot(time_Ma,T[1,:], label = string(Int(r_rng[1]/1000), " km"))
     end
     plot(plot_radii, xlabel = "time (Ma after CAIs)", ylabel = "Temperature (K)")
 
-##
-a=1
 ## Functions!
-
 
 function plntsml_Tz(time::Vector,radii::Vector;
     To::Float64,
@@ -107,8 +105,9 @@ function PlntsmlAr(;
     rAlo::Number,         # initial solar ²⁶Al/²⁷Al
     ρ::Number,            # rock density
     K::Number,            # Thermal Conductivity
-    κ::Number)            # Thermal diffusivity
+    Cₚ::Number)           # Specific heat capacity
 
+    κ = K / (ρ*Cₚ)
     s_a  = 365.2422 * 24.0 * 60.0 * 60.0 # seconds per annum, for Physics™!
 
     # Assume ²⁶Al is primary heat producer
@@ -150,7 +149,7 @@ function PlntsmlAr(;
             end
 
             T = To +
-            (κ*Aₒ/(K*λ)) * exp(-λ_Al*t) *
+            (κ*Aₒ/(K*λ)) * exp(-λ*t) *
             ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
@@ -165,9 +164,9 @@ function PlntsmlAr(;
     #return (radii, shell_vol/last(vols), tₛₛ .- ages)
     return (tₛₛ .- ages) # Return ages in geologic time (Ma)
 end
-"""
+
 ## Testing plntsml_Ar output
-(r,fr,Ar_ages) = plntsml_Ar( Tc = 550,       # Ar closure temperature, K
+Ar_ages = PlntsmlAr( Tc = 550,       # Ar closure temperature, K
             tₛₛ = 4567.4,    #solar system age, Ma
             tₐ = 2.13,      # accretion time, My after CAIs
             Δt = 0.1,      # absolute timestep, default 10 ka
@@ -179,59 +178,54 @@ end
             rAlo = 5.11e-5, # initial solar ²⁶Al/²⁷Al
             ρ = 3210,       # rock density, kg/m³
             K = 4.,          # Thermal Conductivity
-            κ = 4.0 /(3210.0 * 950.0))     # Thermal diffusivity
-"""
+            Cₚ = 950.)     # Thermal diffusivity
+
 
 ## Naive Resampler
 
 
 
 
-function PlntsmlRsmpl(accretion,thermal;
+function PlntsmlRsmpl(acrn::accretion_params,thrm::thermal_params;
             Δt = 0.1,      # absolute timestep, default 10 ka
             tmax = 1000.,     # maximum time allowed to model
             Δr = 1e4)         # Absolute lengthscale step (m)
 
+    Tₒ(x) = 100. * rand() + x[rand(1:40)] # sample from histogram bins of x
+# Accretion Parameters: create distributions
+    dtₛₛ = Normal(acrn.tₛₛ.μ,acrn.tₛₛ.σ)       #solar system age, Ma
+    drAlₒ = Normal(acrn.rAlₒ.μ,acrn.rAlₒ.σ)     # initial solar ²⁶Al/²⁷Al
+    dR = Uniform(acrn.R.a,acrn.R.b)   # Body radius
+    dtₐ = Uniform(acrn.tₐ.a,acrn.tₐ.b)      # Accretion date, My after CAIs
+    dcAl = Uniform(acrn.cAl.a,acrn.cAl.b)  # Fractional abundance of Al (g/g)
+    # skip acrn.Tm since this is done with custom function (above)
+
+# Thermal Parameters
+    dTc = Normal(thrm.Tc.μ,thrm.Tc.σ)       # Ar closure temperature, K
+    dρ = Uniform(thrm.ρ.a,thrm.ρ.b)       # rock density, kg/m³
+    dCₚ = Uniform(thrm.Cₚ.a,thrm.Cₚ.b) # Specific Heat Capacity
+    dk = Uniform(thrm.k.a,thrm.k.b)          # Thermal Conductivity
+
+#Add for loop structure here :)
+
+    Ar_ages = PlntsmlAr(  tₛₛ = rand(dtₛₛ),       #solar system age, Ma
+                rAlo = rand(drAlₒ),     # initial solar ²⁶Al/²⁷Al
+                tₐ = rand(dtₐ),      # accretion time, My after CAIs
+                R = rand(dR),      # Body radius
+                To = Tₒ(acrn.Tm),       # Disk temperature @ 2.5 au, K
+                Al_conc = rand(dcAl),   # Fractional abundance of Al (g/g)
+                Tc = rand(dTc),       # Ar closure temperature, K
+                ρ = rand(dρ),       # rock density, kg/m³
+                K = rand(dk),          # Thermal Conductivity
+                Cₚ = rand(dCₚ),     # Specific Heat Capacity
+                Δt = 0.1,      # absolute timestep, default 10 ka
+                tmax = 100.,     # maximum time allowed to model
+                Δr = 1e4)        # Absolute lengthscale step (m)
 
 
-
-    rAlₒ = accretion.rAlₒ # [μ , σ] ~ initial solar ²⁶Al/²⁷Al
-    cAl = accretion.Al_conc # [min , max] ~ Fractional abundance of Al (g/g)
-        ΔcAl = cAl[2]-cAl[1]
-    R = accretion.R      # [min , max] ~ Body radius (m)
-        ΔR = R[2]-R[1]
-    Tm2d5 = accretion.Tm2d5 # cust. dist. ~ Disk temperature @ 2.5 au, K
-    tₛₛ = accretion.tₛₛ # [μ , σ] ~ solar system age, Ma
-    tₐ = accretion.tₐ   # [min , max] ~ accretion time, My after CAIs
-        Δtₐ = tₐ[2]-tₐ[1]
-
-    Tc = thermal.Tc # [μ , σ] ~ Ar closure temperature, K
-    ρ = thermal.ρ       # [min , max] ~ bulk density, kg/m³
-        Δρ = ρ[2]-ρ[1]
-    k = thermal.k       # [min,max] ~ Thermal Conductivity (W m⁻¹ K⁻¹)
-        Δk = k[2]-k[1]
-    Δcₚ = thermal.cₚ[2] - thermal.cₚ[1]
-
-# Set parameter sampler functions
-# Accretion
-    Tₒ()= 100. * rand() + Tm2d5[rand(1:40)] #CUSTOM: draw from U(bin in Tm2d5)
-
-    tₐ(min=tₐ[1], Δ=Δtₐ) = min + Δ*rand() # Accretion time (instantaneous)
-    tₛₛ(μ=tₛₛ[1],σ=tₛₛ[2]) = μ + σ*randn() # age of CAIs
-
-    rAlₒ(μ=rAlₒ[1],σ=rAlₒ[2]) = μ + σ*randn() # initial solar ²⁶Al/²⁷Al at CAIs
-    cAl(min=R,Δ=ΔR) = min + Δ * rand()
-# Thermal
-    Tc(μ=Tc[1],σ=Tc[2]) = μ + σ*randn()
-    cₚ(min=cₚ[1],Δ=Δcₚ) = min + Δ * rand()
-    ρ(min=ρ[1],Δ=Δρ) = min + Δ * rand()
-    k()
-
-
+    return Ar_ages
 
 end
 
-function inputtest(b)
-    Δb = b[2] - b[1]
-    brand(min=b[1], Δ= Δb) = min + Δ * rand()
-end
+
+plot(PlntsmlRsmpl(accret,therm))
