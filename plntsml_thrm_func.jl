@@ -1,5 +1,6 @@
 
 using LoopVectorization
+#using Polyester
 using Plots; gr()
 using Random; rng = MersenneTwister()
 using Distributions
@@ -40,7 +41,7 @@ t_acr = 2.13
 time_Ma = collect( t_acr : Δt : t_run )
 time_s  = time_Ma .* 1e6 .* s_a
 
-r_rng = collect( Δr : Δr : radius )
+r_rng = collect( 1000. : Δr : radius )
 
 Aₒ = ρ*Al_conc*rAlo*H_Al*exp(-λ_Al*time_s[1]) # W/m³ |
     # Volumetric heat production at instant of accretion
@@ -99,8 +100,8 @@ function PlntsmlAr(;
     Δt::Number = 0.01,    # absolute timestep, default 10 ka
     tmax::Number = 2000,  # maximum time allowed to model
     R::Number,            # Body radius
-    Δr::Number = 1,       # Absolute lengthscale step (m)
-    To::Number,
+    nᵣ::Integer,        # Number of simulated radial distances
+    To::Number,           # Disk temperature (K)
     Al_conc::Number,      # Fractional abundance of Al (g/g)
     rAlo::Number,         # initial solar ²⁶Al/²⁷Al
     ρ::Number,            # rock density
@@ -114,8 +115,8 @@ function PlntsmlAr(;
     λ=log(2) / 7.17e5 / s_a   # ²⁶Al decay constant in s⁻¹
     H=0.355     # Specific power production of ²⁶Al (W/kg; Castillo-Rogez+2009)
 
-    shells =  Δr : Δr : R  #
-    radii = (Δr/2.0) : Δr : (R - Δr)
+    shells = LinRange(R/nᵣ,R,nᵣ)
+    radii = LinRange(0.5*R/nᵣ , R-0.5*R/nᵣ , nᵣ)
 
     vols = [(4.0 * π / 3.0) * z^3 for z ∈ shells]
     shell_vol = vols[2:end] .- vols[1:end-1]
@@ -170,9 +171,9 @@ Ar_ages = PlntsmlAr( Tc = 550,       # Ar closure temperature, K
             tₛₛ = 4567.4,    #solar system age, Ma
             tₐ = 2.13,      # accretion time, My after CAIs
             Δt = 0.1,      # absolute timestep, default 10 ka
-            tmax = 100.,     # maximum time allowed to model
+            tmax = 1000.,     # maximum time allowed to model
             R = 150e3,      # Body radius
-            Δr = 1e4,         # Absolute lengthscale step (m)
+            nᵣ = 15,         # radial nodes
             To = 250.,       # Disk temperature @ 2.5 au, K
             Al_conc = 0.0118,   # Fractional abundance of Al (g/g)
             rAlo = 5.11e-5, # initial solar ²⁶Al/²⁷Al
@@ -183,13 +184,10 @@ Ar_ages = PlntsmlAr( Tc = 550,       # Ar closure temperature, K
 
 ## Naive Resampler
 
-
-
-
-function PlntsmlRsmpl(acrn::accretion_params,thrm::thermal_params;
+function PlntsmlRsmpl(N,acrn::accretion_params,thrm::thermal_params;
             Δt = 0.1,      # absolute timestep, default 10 ka
             tmax = 1000.,     # maximum time allowed to model
-            Δr = 1e4)         # Absolute lengthscale step (m)
+            nᵣ = 100)         # # radial nodes
 
     Tₒ(x) = 100. * rand() + x[rand(1:40)] # sample from histogram bins of x
 # Accretion Parameters: create distributions
@@ -206,9 +204,12 @@ function PlntsmlRsmpl(acrn::accretion_params,thrm::thermal_params;
     dCₚ = Uniform(thrm.Cₚ.a,thrm.Cₚ.b) # Specific Heat Capacity
     dk = Uniform(thrm.k.a,thrm.k.b)          # Thermal Conductivity
 
-#Add for loop structure here :)
 
-    Ar_ages = PlntsmlAr(  tₛₛ = rand(dtₛₛ),       #solar system age, Ma
+    ages = Array{Float64}(undef,nᵣ,N)
+
+    for i ∈ 1:N
+
+        ages[:,i] = PlntsmlAr(  tₛₛ = rand(dtₛₛ),       #solar system age, Ma
                 rAlo = rand(drAlₒ),     # initial solar ²⁶Al/²⁷Al
                 tₐ = rand(dtₐ),      # accretion time, My after CAIs
                 R = rand(dR),      # Body radius
@@ -218,14 +219,15 @@ function PlntsmlRsmpl(acrn::accretion_params,thrm::thermal_params;
                 ρ = rand(dρ),       # rock density, kg/m³
                 K = rand(dk),          # Thermal Conductivity
                 Cₚ = rand(dCₚ),     # Specific Heat Capacity
-                Δt = 0.1,      # absolute timestep, default 10 ka
-                tmax = 100.,     # maximum time allowed to model
-                Δr = 1e4)        # Absolute lengthscale step (m)
-
-
-    return Ar_ages
+                Δt = Δt,      # absolute timestep, default 10 ka
+                tmax = tmax,     # maximum time allowed to model
+                nᵣ = nᵣ)        # radial nodes
+    end
+    return ages
 
 end
 
 
-plot(PlntsmlRsmpl(accret,therm))
+many_ages = PlntsmlRsmpl(100,accret,therm, nᵣ=100)
+
+histogram(vec(many_ages))
