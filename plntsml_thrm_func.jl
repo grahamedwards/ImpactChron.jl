@@ -115,8 +115,8 @@ function PlntsmlAr(;
     λ=log(2) / 7.17e5 / s_a   # ²⁶Al decay constant in s⁻¹
     H=0.355     # Specific power production of ²⁶Al (W/kg; Castillo-Rogez+2009)
 
-    shells = LinRange(R/nᵣ,R,nᵣ)
-    radii = LinRange(0.5*R/nᵣ , R-0.5*R/nᵣ , nᵣ)
+    shells = LinRange(0,R,nᵣ+1)
+    radii = (0.5 * R / nᵣ) .+ shells[1:end-1]
 
     vols = [(4.0 * π / 3.0) * z^3 for z ∈ shells]
     shell_vol = vols[2:end] .- vols[1:end-1]
@@ -162,8 +162,8 @@ function PlntsmlAr(;
             end
         end
     end
-    #return (radii, shell_vol/last(vols), tₛₛ .- ages)
-    return (tₛₛ .- ages) # Return ages in geologic time (Ma)
+    return (radii, shell_vol/last(vols), tₛₛ .- ages)
+    #return (tₛₛ .- ages) # Return ages in geologic time (Ma)
 end
 
 ## Testing plntsml_Ar output
@@ -173,7 +173,7 @@ Ar_ages = PlntsmlAr( Tc = 550,       # Ar closure temperature, K
             Δt = 0.1,      # absolute timestep, default 10 ka
             tmax = 1000.,     # maximum time allowed to model
             R = 150e3,      # Body radius
-            nᵣ = 15,         # radial nodes
+            nᵣ = 100,         # radial nodes
             To = 250.,       # Disk temperature @ 2.5 au, K
             Al_conc = 0.0118,   # Fractional abundance of Al (g/g)
             rAlo = 5.11e-5, # initial solar ²⁶Al/²⁷Al

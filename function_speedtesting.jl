@@ -22,3 +22,12 @@ function ΣTt(n, r, t, R, λ, κ)
     end
     return Σ
 end
+
+
+
+
+## Testing speed of midpoint calculations
+    # choice works for LinRange style vectors
+
+dot_add(a,b,sh) = (0.5 * a / b) .+ sh[1:end-1] # > order of magnitude faster
+diff_add(sh) = 0.5 .* diff(sh) .+ sh[1:end-1]
