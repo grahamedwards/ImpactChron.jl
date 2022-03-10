@@ -106,7 +106,8 @@ function PlntsmlAr(;
     rAlo::Number,         # initial solar ²⁶Al/²⁷Al
     ρ::Number,            # rock density
     K::Number,            # Thermal Conductivity
-    Cₚ::Number)           # Specific heat capacity
+    Cₚ::Number,           # Specific heat capacity
+    rmNaN::Bool=true)     # Remove NaNs (never warms) from cooling history.
 
     κ = K / (ρ*Cₚ)
     s_a  = 365.2422 * 24.0 * 60.0 * 60.0 # seconds per annum, for Physics™!
@@ -162,7 +163,12 @@ function PlntsmlAr(;
             end
         end
     end
-    return (tₛₛ .- ages , shell_vol/last(vols) , radii)
+    if rmNaN #remove NaN option.
+        Xnan = .!isnan.(ages)
+        return (tₛₛ .- ages[Xnan] , shell_vol[Xnan]/last(vols) , radii[Xnan])
+    else
+        return (tₛₛ .- ages , shell_vol/last(vols) , radii)
+    end
     #return (tₛₛ .- ages) # Return ages in geologic time (Ma)
 end
 
@@ -179,8 +185,8 @@ Ar_ages = PlntsmlAr( Tc = 550,       # Ar closure temperature, K
             rAlo = 5.11e-5, # initial solar ²⁶Al/²⁷Al
             ρ = 3210,       # rock density, kg/m³
             K = 4.,          # Thermal Conductivity
-            Cₚ = 950.)     # Thermal diffusivity
-
+            Cₚ = 950.,     # Thermal diffusivity
+            rmNaN = true)
 
 ## Naive Resampler
 
@@ -221,7 +227,8 @@ function PlntsmlRsmpl(N,acrn::accretion_params,thrm::thermal_params;
                 Cₚ = rand(dCₚ),     # Specific Heat Capacity
                 Δt = Δt,      # absolute timestep, default 10 ka
                 tmax = tmax,     # maximum time allowed to model
-                nᵣ = nᵣ)[1]        # radial nodes
+                nᵣ = nᵣ,        # radial nodes
+                rmNaN=false)[1] # allow NaNs to remain
     end
     return ages
 

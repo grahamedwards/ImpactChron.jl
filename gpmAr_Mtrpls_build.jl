@@ -14,7 +14,7 @@ I'm not sure why this means you DON'T have to compare to uncertainty.
 But I get the idea that if uncertainty is small, it doesn't have to be fully flushed.
 
 """
-function ll_calc(    p_dist::Tuple{Vector,Vector,Vector},    # Proposed distribution (ages,proportion, ?radii?)
+function ll_calc(   p_dist::Tuple{Vector,Vector,Vector},    # Proposed distribution (ages,proportion, ?radii?)
                     mu::AbstractArray,      # 1D Array/Vector of observed μ's (sorted)
                     sigma::AbstractArray)   # 1D Array/Vector of observed σ's (sorted)
 
@@ -26,17 +26,12 @@ function ll_calc(    p_dist::Tuple{Vector,Vector,Vector},    # Proposed distribu
     #nbins = distrows - 1            # bins (or steps) in dist
     #dx = abs(xmax-xmin)             # Timespan of model
 
-    # Remove NaN's from model output
-    Xnan = .!isnan.(p_dist[1])
-    x_unsorted = p_dist[1][Xnan]
-    dist_unsorted = p_dist[2][Xnan]
-
     # Sort relative to ages in x (this may be unnecessary)
-    i_sort = sortperm(x_unsorted)
-    x = x_unsorted[i_sort]
-    dist = dist_unsorted[i_sort]
+    i_sort = sortperm(p_dist[1])
+    x = p_dist[1][i_sort]
+    dist = p_dist[2][i_sort]
 
-    ∫distdx = diff(x) .*
+    #∫distdx = diff(x) .* 
 
     # Cycle through each datum in dataset
     # @inbounds
