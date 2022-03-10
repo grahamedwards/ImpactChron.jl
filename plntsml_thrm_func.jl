@@ -19,7 +19,7 @@ t_acr = 2.13 # Ma after CAIs
 const s_a  = 365.2422*24*60*60 # seconds per annum
 const λ_Al = (log(2)/7.17e5)  / s_a # s⁻¹ | decay constant of Al in s
 const H_Al = 0.355 # W/kg (Castillo-Rogez et al., 2009) hard
-"""
+
 
 s_a  = 365.2422*24*60*60 # seconds per annum
 λ_Al = (log(2)/7.17e5)  / s_a # s⁻¹ | decay constant of Al in s
@@ -57,7 +57,7 @@ plot_radii = plot(time_Ma,T[1,:], label = string(Int(r_rng[1]/1000), " km"))
         plot!(plot_radii,time_Ma,T[i,:], label = string(Int(r_rng[i]/1000), " km"))
     end
     plot(plot_radii, xlabel = "time (Ma after CAIs)", ylabel = "Temperature (K)")
-
+"""
 ## Functions!
 
 function plntsml_Tz(time::Vector,radii::Vector;
@@ -154,15 +154,15 @@ function PlntsmlAr(;
             ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
-            if T < Tᵢ && T <= Tc # compare T to Tc only if cooling
-                ages[i]=time_Ma[j]  #log time only when T falls below Tc
+            if T < Tᵢ && T <= Tc    # compare T to Tc only if cooling
+                ages[i]=time_Ma[j]  # log time only when T falls below Tc
                 break               # kill loop
             else
                 Tᵢ = T
             end
         end
     end
-    return (radii, shell_vol/last(vols), tₛₛ .- ages)
+    return (tₛₛ .- ages , shell_vol/last(vols) , radii)
     #return (tₛₛ .- ages) # Return ages in geologic time (Ma)
 end
 
@@ -221,13 +221,13 @@ function PlntsmlRsmpl(N,acrn::accretion_params,thrm::thermal_params;
                 Cₚ = rand(dCₚ),     # Specific Heat Capacity
                 Δt = Δt,      # absolute timestep, default 10 ka
                 tmax = tmax,     # maximum time allowed to model
-                nᵣ = nᵣ)        # radial nodes
+                nᵣ = nᵣ)[1]        # radial nodes
     end
     return ages
 
 end
 
 
-many_ages = PlntsmlRsmpl(100,accret,therm, nᵣ=100)
+#many_ages = PlntsmlRsmpl(100,accret,therm, nᵣ=100)
 
-histogram(vec(many_ages))
+#histogram(vec(many_ages))
