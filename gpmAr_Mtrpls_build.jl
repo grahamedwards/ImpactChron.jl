@@ -31,33 +31,32 @@ function ll_calc(   p_dist::Tuple{Vector,Vector,Vector},    # Proposed distribut
     x = p_dist[1][i_sort]
     dist = p_dist[2][i_sort]
 
-    #∫distdx = diff(x) .* 
+    # Calculate integral of cooling age distribution with trapezoid rule
+    ∫distdx = zero(float(eltype(p_dist[2])))
+    for k = 1:length(x)-1
+        ∫distdx += (x[k+1]-x[k]) * 0.5 * (dist[k+1] + dist[k])
+    end
+    # Convert values in discrete distribution to values
+    dist ./= ∫distdx
 
     # Cycle through each datum in dataset
     # @inbounds
     for j = 1:nₘ
         # Find index of μ in the `dist` array
         iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
-        Uₓ = x[iₓ] # upper bound age in distribution
 
         # If possible, prevent aliasing problems by interpolation
-        if iₓ > 1 && (sigma[j] < (Uₓ - x[iₓ-1])) && iₓ < nₚ
+        if iₓ > 1 && (sigma[j] < abs(x[iₓ] - x[iₓ-1])) && iₓ < nₚ
             # Interpolate corresponding distribution value
-            Lₓ = x[iₓ-1] # lower bound age in distribution
-
-            likelihood = ( dist[iₓ]*(mu[j]-Lₓ) + dist[iₓ-1]*(Uₓ-mu[j]) ) /
-                ( (last(x)-x[1]) * mean(dist) )
-                # is this valid though?
-                # I think it should be divided by x-distance.
+            likelihood = dist[iₓ] - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])/(x[iₓ]-x[iₓ-1])
 
         # Otherwise, sum contributions from Gaussians at each point in distribution
         else
             likelihood = zero(float(eltype(dist)))
             # add @inbounds, then @turbo, then @tturbo.
-            for i = 2:nₚ-1
+            for i = 1:nₚ
                 # Likelihood curve follows a Gaussian PDF. Note: dx cancels
-                likelihood += dist[i] * 0.5 * (x[i+1] - x[i-1])
-                / (mean(dist) * nₚ * sigma[j] * sqrt(2*pi)) *
+                likelihood += dist[i] / (sigma[j] * sqrt(2*pi)) *
                         exp( - (x[i]-mu[j])*(x[i]-mu[j]) / (2*sigma[j]*sigma[j]) )
             end
         end
