@@ -1,17 +1,22 @@
+## gpmAr Metropolis functions: construction site
 
+
+## Log-likelihood calculation
 
 """
+Log-likelihood notes for building from Chron.jl code...
+
 [x] Set input dist as tuple of age and abundnace vectors.
 This will not use the xmin xmax frame.
 
 Make sure everything is sorted.
-Use searchsortedfirst for speed.
-Find corresponding date, interpolate, etc... and compare to that datum
+    Use searchsortedfirst for speed.
+Find corresponding date, interpolate, etc... and compare to each datum
 
-
-KEY part of condition is that sigma is < bin size.
+Interpolation conditional:
+KEY component is that sigma is < bin size.
 I'm not sure why this means you DON'T have to compare to uncertainty.
-But I get the idea that if uncertainty is small, it doesn't have to be fully flushed.
+But I get the idea that if uncertainty is small, it doesn't have to be fully evaluated
 
 """
 function ll_calc(   p_dist::Tuple{Vector,Vector,Vector},    # Proposed distribution (ages,proportion, ?radii?)
@@ -63,4 +68,92 @@ function ll_calc(   p_dist::Tuple{Vector,Vector,Vector},    # Proposed distribut
         ll += log(likelihood)
     end
     return ll
+end
+
+
+
+
+function MetropolisAr(dist!::Function, x::AbstractArray, p::AbstractArray, pmin::AbstractArray, pmax::AbstractArray, mu::AbstractArray, sigma::AbstractArray; burnin::Integer=0, nsteps::Int=10000)
+    acceptanceDist = falses(nsteps)
+    llDist = Array{float(eltype(x))}(undef,nsteps)
+    pDist = Array{float(eltype(x))}(undef,nsteps,length(p))
+
+    # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize accetance probability at 50%
+    stepfactor = 2.9
+
+    # Sort the dataset from youngest to oldest
+    sI = sortperm(mu)
+    mu_sorted = mu[sI] # Sort means
+    sigma_sorted = sigma[sI] # Sort uncertainty
+
+    # These quantities will be used more than once
+    datarows = length(mu_sorted)
+    p = copy(p)
+    pₚ = copy(p)
+
+    # Step sigma for Gaussian proposal distributions
+    step_sigma = copy(p)./100
+
+    # Log likelihood of initial proposal
+    dist = similar(x)
+    ll = llₚ = dist_ll(dist!(dist, x, p), mu_sorted, sigma_sorted, x[1], x[end])
+
+    # Burnin
+    for i=1:nsteps
+        # Start with fresh slate of parameters
+        copyto!(pₚ, p)
+
+        # Adjust one parameter
+        k = rand(1:length(p))
+        δpₖ = step_sigma[k]*randn()
+        pₚ[k] += δpₖ
+
+        # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
+        if  pmin[k] < pₚ[k] < pmax[k]
+            llₚ = dist_ll(dist!(dist, x, pₚ), mu_sorted, sigma_sorted, x[1], x[end])
+        else
+            llₚ = -Inf # auto-reject proposal if bounds exceeded
+        end
+
+        # Decide to accept or reject the proposal
+        if log(rand()) < (llₚ-ll)
+            # Record new step sigma
+            step_sigma[k] = abs(δpₖ)*stepfactor
+            # Record new parameters
+            copyto!(p, pₚ)
+            # Record new log likelihood
+            ll = llₚ
+        end
+    end
+    # Step through each of the N steps in the Markov chain
+    @inbounds for i=1:nsteps
+        # Start with fresh slate of parameters
+        copyto!(pₚ, p)
+
+        # Adjust one parameter
+        k = rand(1:length(p))
+        δpₖ = step_sigma[k]*randn()
+        pₚ[k] += δpₖ
+
+        # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
+        if  pmin[k] < pₚ[k] < pmax[k]
+            llₚ = dist_ll(dist!(dist, x, pₚ), mu_sorted, sigma_sorted, x[1], x[end])
+        else
+            llₚ = -Inf # auto-reject proposal if bounds exceeded
+        end
+
+        # Decide to accept or reject the proposal
+        if log(rand()) < (llₚ-ll)
+            # Record new step sigma
+            step_sigma[k] = abs(δpₖ)*stepfactor
+            # Record new parameters
+            copyto!(p, pₚ)
+            # Record new log likelihood
+            ll = llₚ
+            acceptanceDist[i]=true
+        end
+        pDist[i,:] .= p
+        llDist[i] = ll
+    end
+    return pDist, llDist, acceptanceDist
 end
