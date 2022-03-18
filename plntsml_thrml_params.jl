@@ -34,6 +34,39 @@ mutable struct thermal_params
     k::unf # Thermal Conductivity (k, W m⁻¹ K⁻¹)
 end
 
+
+
+mutable struct Proposal #Planetesimal Proposal
+    # Background Conditions
+    tss::Float64   # age of CAIs (Ma)
+    rAlo::Float64 # initial solar ²⁶Al/²⁷Al
+    # Accretion Event
+    R::Float64 # Body radius
+    ta::Float64 # Instantaneous accretion date, My after CAIs
+    cAl::Float64 # Fractional abundance of Al (g/g)
+    Tm::Float64
+    # Thermal Parameters
+    Tc::Float64  # Ar-Ar closure temperature (K)
+    ρ::Float64 # Bulk density not a thermal property proper, I know)
+    Cp::Float64  # Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
+    k::Float64 # Thermal Conductivity (k, W m⁻¹ K⁻¹)
+end
+Base.copy(s::Proposal)= Proposal(s.tss,s.rAlo,s.R,s.ta,s.cAl,s.Tm,s.Tc,s.ρ,s.Cp,s.k)
+function Base.copyto!(s2::Proposal,s1::Proposal)
+    s2.tss  = s1.tss
+    s2.rAlo = s1.rAlo
+    s2.R    = s1.R
+    s2.ta   = s1.ta
+    s2.cAl  = s1.cAl
+    s2.Tm   = s1.Tm
+    s2.Tc   = s1.Tc
+    s2.ρ    = s1.ρ
+    s2.Cp   = s1.Cp
+    s2.k    = s1.k
+    return
+end
+
+vars =[:tss,:rAlo,:R,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
 ## Epsilon skootch
 
 rϵ = 1. + eps() # relative epsilon factor to scale "constant uniforms"

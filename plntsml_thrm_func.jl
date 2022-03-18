@@ -100,7 +100,7 @@ function PlntsmlAr(;
     Δt::Number = 0.01,    # absolute timestep, default 10 ka
     tmax::Number = 2000,  # maximum time allowed to model
     R::Number,            # Body radius
-    nᵣ::Integer,        # Number of simulated radial distances
+    nᵣ::Integer,          # Number of simulated radial distances
     To::Number,           # Disk temperature (K)
     Al_conc::Number,      # Fractional abundance of Al (g/g)
     rAlo::Number,         # initial solar ²⁶Al/²⁷Al
