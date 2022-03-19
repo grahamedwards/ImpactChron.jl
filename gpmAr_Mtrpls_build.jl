@@ -81,8 +81,8 @@ end
 
 
 function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
-                        x::AbstractArray,   # I think unneeded. timeseries from exp/gauss dist version
                         p::Proposal,   # Parameter proposal
+                        step_σ::Proposal # σ for Gauss. proposal distributions
                         pmin::Proposal,# Minimum parameter bounds
                         pmax::Proposal,# Maximum parameter bounds
                         pvars::Vector{Symbol}, # Variable parameters in proposal
@@ -95,10 +95,10 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
                         nᵣ::Integer=100)    # Radial nodes
     # Prepare output Distributions
     acceptanceDist = falses(nsteps)
-
-########### float(eltype(x))?????
-    llDist = Array{float(eltype(x))}(undef,nsteps)
-    pDist = Array{float(eltype(x))}(undef,nsteps,length(pvars))
+    nᵥ = length(pvars)
+########### used to be `float(eltype(x))``
+    llDist = Array{Float64}(undef,nsteps)
+    pDist = Array{Float64}(undef,nsteps,nᵥ)
 
     # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
     stepfactor = 2.9
@@ -113,47 +113,59 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
     p = copy(p)
     pₚ = copy(p)
 
-    # Step sigma for Gaussian proposal distributions
-    # Assumes a 1% σ step for the first Metropolis step.
-    step_sigma = copy(p)./100
+
+    # Calculate initial proposal distribution
+    dist = PlntsmlAr(
+                tₛₛ = p.tss,     #solar system age, Ma
+                rAlo = p.rAlo,  # initial solar ²⁶Al/²⁷Al
+                tₐ = p.ta,      # accretion time, My after CAIs
+                R = p.R,        # Body radius
+                To = p.Tm,      # Disk temperature @ 2.5 au, K
+                Al_conc = p.cAl,# Fractional abundance of Al (g/g)
+                Tc = p.Tc,      # Ar closure temperature, K
+                ρ = p.ρ,        # rock density, kg/m³
+                K = p.k,        # Thermal Conductivity
+                Cₚ = p.Cp,      # Specific Heat Capacity
+                Δt = Δt,        # absolute timestep, default 10 ka
+                tmax = tmax,    # maximum time allowed to model
+                nᵣ = nᵣ,        # radial nodes
+                rmNaN=true)     # remove NaNs
 
     # Log likelihood of initial proposal
-    dist = similar(x)
-    ll = llₚ = ll_calc(dist!(dist, x, p), mu_sorted, sigma_sorted, x[1], x[end])
-
-############
-# Change to appropriate
-############
-    PlntsmlAr(  tₛₛ = p.tss,       #solar system age, Ma
-            rAlo = p.rAlo,     # initial solar ²⁶Al/²⁷Al
-            tₐ = p.ta,      # accretion time, My after CAIs
-            R = p.R,      # Body radius
-            To = p.Tm,       # Disk temperature @ 2.5 au, K
-            Al_conc = p.cAl,   # Fractional abundance of Al (g/g)
-            Tc = p.Tc,       # Ar closure temperature, K
-            ρ = p.ρ,       # rock density, kg/m³
-            K = p.k,          # Thermal Conductivity
-            Cₚ = p.Cp,     # Specific Heat Capacity
-            Δt = Δt,      # absolute timestep, default 10 ka
-            tmax = tmax,     # maximum time allowed to model
-            nᵣ = nᵣ,        # radial nodes
-            rmNaN=false) # allow NaNs to remain
+    ll = llₚ = ll_calc(dist, mu_sorted, sigma_sorted)
 
     # Burnin
-    for i=1:burnin
+    #@inbounds
+    for i = 1:burnin
         # Start with fresh slate of parameters
         copyto!(pₚ, p)
 
         # Adjust one parameter
         k = rand(pvars)
-        δpₖ = getproperty(step_sigma,k)*randn()
+        δpₖ = getproperty(step_σ,k)*randn()
         setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
             #pₚ[k] += δpₖ
 
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
-                #if  pmin[k] < pₚ[k] < pmax[k]
-            llₚ = dist_ll(dist!(dist, x, pₚ), mu_sorted, sigma_sorted, x[1], x[end])
+        # if  pmin[k] < pₚ[k] < pmax[k]
+            distₚ = dist = PlntsmlAr(
+                        tₛₛ = pₚ.tss,     #solar system age, Ma
+                        rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
+                        tₐ = pₚ.ta,      # accretion time, My after CAIs
+                        R = pₚ.R,        # Body radius
+                        To = pₚ.Tm,      # Disk temperature @ 2.5 au, K
+                        Al_conc = pₚ.cAl,# Fractional abundance of Al (g/g)
+                        Tc = pₚ.Tc,      # Ar closure temperature, K
+                        ρ = pₚ.ρ,        # rock density, kg/m³
+                        K = pₚ.k,        # Thermal Conductivity
+                        Cₚ = pₚ.Cp,      # Specific Heat Capacity
+                        Δt = Δt,        # absolute timestep, default 10 ka
+                        tmax = tmax,    # maximum time allowed to model
+                        nᵣ = nᵣ,        # radial nodes
+                        rmNaN=true)     # remove NaNs
+
+            llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted)
         else
             llₚ = -Inf # auto-reject proposal if bounds exceeded
         end
@@ -161,7 +173,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
         # Decide to accept or reject the proposal
         if log(rand()) < (llₚ-ll)
             # Record new step sigma
-            setproperty!(step_sigma,k,abs(δpₖ)*stepfactor)
+            setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
                 #step_sigma[k] = abs(δpₖ)*stepfactor
             # Record new parameters
             copyto!(p, pₚ)
@@ -169,19 +181,40 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
             ll = llₚ
         end
     end
+
     # Step through each of the N steps in the Markov chain
-    @inbounds for i=1:nsteps
+    #@inbounds
+    for i=1:nsteps
+
         # Start with fresh slate of parameters
         copyto!(pₚ, p)
 
         # Adjust one parameter
-        k = rand(1:length(p))
-        δpₖ = step_sigma[k]*randn()
-        pₚ[k] += δpₖ
+        k = rand(pvars)
+        δpₖ = getproperty(step_σ,k)*randn()
+        setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
+            #pₚ[k] += δpₖ
 
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if  pmin[k] < pₚ[k] < pmax[k]
-            llₚ = dist_ll(dist!(dist, x, pₚ), mu_sorted, sigma_sorted, x[1], x[end])
+        if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
+        # if  pmin[k] < pₚ[k] < pmax[k]
+            distₚ = dist = PlntsmlAr(
+                        tₛₛ = pₚ.tss,     #solar system age, Ma
+                        rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
+                        tₐ = pₚ.ta,      # accretion time, My after CAIs
+                        R = pₚ.R,        # Body radius
+                        To = pₚ.Tm,      # Disk temperature @ 2.5 au, K
+                        Al_conc = pₚ.cAl,# Fractional abundance of Al (g/g)
+                        Tc = pₚ.Tc,      # Ar closure temperature, K
+                        ρ = pₚ.ρ,        # rock density, kg/m³
+                        K = pₚ.k,        # Thermal Conductivity
+                        Cₚ = pₚ.Cp,      # Specific Heat Capacity
+                        Δt = Δt,        # absolute timestep, default 10 ka
+                        tmax = tmax,    # maximum time allowed to model
+                        nᵣ = nᵣ,        # radial nodes
+                        rmNaN=true)     # remove NaNs
+
+            llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted)
         else
             llₚ = -Inf # auto-reject proposal if bounds exceeded
         end
@@ -189,14 +222,19 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
         # Decide to accept or reject the proposal
         if log(rand()) < (llₚ-ll)
             # Record new step sigma
-            step_sigma[k] = abs(δpₖ)*stepfactor
+            setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
+                #step_sigma[k] = abs(δpₖ)*stepfactor
             # Record new parameters
             copyto!(p, pₚ)
             # Record new log likelihood
             ll = llₚ
             acceptanceDist[i]=true
         end
-        pDist[i,:] .= p
+
+        for j = 1:nᵥ
+            pDist[i,j] = getproperty(p,j)
+        end
+
         llDist[i] = ll
     end
     return pDist, llDist, acceptanceDist

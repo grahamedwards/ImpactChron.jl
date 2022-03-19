@@ -51,7 +51,10 @@ mutable struct Proposal #Planetesimal Proposal
     Cp::Float64  # Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
     k::Float64 # Thermal Conductivity (k, W m⁻¹ K⁻¹)
 end
+
+# And a little function support for the Proposal mutable struct
 Base.copy(s::Proposal)= Proposal(s.tss,s.rAlo,s.R,s.ta,s.cAl,s.Tm,s.Tc,s.ρ,s.Cp,s.k)
+
 function Base.copyto!(s2::Proposal,s1::Proposal)
     s2.tss  = s1.tss
     s2.rAlo = s1.rAlo
