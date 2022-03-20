@@ -1,3 +1,4 @@
 .DS_Store
+likelihood_tests.jl
 gpmProposalMetropolis.jl
 gpmArMtrpls_study.jl

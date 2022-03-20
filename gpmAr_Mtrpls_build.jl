@@ -62,7 +62,7 @@ function ll_calc(   p_dist::Tuple{Vector{Float64},Vector{Float64},Vector{Float64
         if iₓ > 1 && (sigma[j] < abs(x[iₓ] - x[iₓ-1]))
             # Interpolate corresponding distribution value
             likelihood = dist[iₓ] - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])/(x[iₓ]-x[iₓ-1])
-            ticker[j]=1
+
         # Otherwise, sum contributions from Gaussians at each point in distribution
         else
             likelihood = zero(float(eltype(dist)))
@@ -246,11 +246,10 @@ end
 ## Testing
 
 
-
 # Build main, max, min, σ `p` structs
 prpsl = Proposal(4567.4,5.11e-5,1.5e5,2.13,0.011,250,550,3210,900,4)
-prpsl_max = Proposal(4567.4 + 0.34,
-                    5.11e-5 + 0.14e-5,
+prpsl_max = Proposal(4567.60 + 0.36,    # Jacobsen2008 CAI AJEF Pb-Pb upperbound
+                    5.23e-5 + 0.13e-5, #Jacobsen2008 Allende CAI whole rock max
                     2.1e5,
                     2.3,
                     .012,
@@ -260,10 +259,10 @@ prpsl_max = Proposal(4567.4 + 0.34,
                     950.,       # Cp ~ max calculated for LLs EdwardsBlackburn2020
                     5.)
 
-prpsl_min = Proposal(4567.4 - 0.34,
-                    5.11e-5 - 0.14e-5,
-                    1.15e5,
-                    2.3,
+prpsl_min = Proposal(4567.4 - 0.34, # Jacobsen2008 AJEF-A34 Pb-Pb lowerbound
+                    5.11e-5 - 0.14e-5, # Jacobsen2008 AJEF lowerbound
+                    1.1e5,
+                    1.8,
                     0.010,
                     0.,
                     550 - 20,
@@ -317,7 +316,7 @@ out_pDist , out_llDist , out_accept =
                 ages[1:80],  # Observed means
                 uncert[1:80],# Observed 1σ's
                 burnin=0,      # Burn-in iterations
-                nsteps=10,  # Post burn-in iterations
+                nsteps=1000,  # Post burn-in iterations
                 Δt= 0.01,    # Time-step (Ma)
                 tmax=2000,  # Max model duration (Ma, starts at CAIs)
                 nᵣ=200)    # Radial nodes

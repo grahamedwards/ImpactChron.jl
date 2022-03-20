@@ -102,7 +102,7 @@ rϵ = 1. + eps() # relative epsilon factor to scale "constant uniforms"
 
 ## Age of CAIs & initial ²⁶Al/²⁷Al Jacobsen+2008
     # Composite of CAI mineral Mg and Pb data
-tₛₛ_J08 = nrm(4567.4, 0.34*0.5)
+tₛₛ_J08 = nrm(4567.44, 0.34*0.5)
 rAlₒ_J08 = nrm(5.11e-5 , (0.14e-5) *0.5)
     #formerly Allende bulk CAI isochron value (5.23 ± 0.13) e-5
 Radius = unf(150e3,150e3 * rϵ) # Body radius ~ [min , max]
