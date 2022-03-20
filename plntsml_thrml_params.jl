@@ -69,7 +69,8 @@ function Base.copyto!(s2::Proposal,s1::Proposal)
     return
 end
 
-vars =[:tss,:rAlo,:R,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
+#vars =[:tss,:rAlo,:R,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
+
 ## Epsilon skootch
 
 rϵ = 1. + eps() # relative epsilon factor to scale "constant uniforms"
