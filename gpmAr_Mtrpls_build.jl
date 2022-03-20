@@ -59,7 +59,7 @@ function ll_calc(   p_dist::Tuple{Vector{Float64},Vector{Float64},Vector{Float64
         iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
 
         # If possible, prevent aliasing problems by interpolation
-        if iₓ > 1 && (sigma[j] < abs(x[iₓ] - x[iₓ-1]))
+        if iₓ > 1 && iₓ <= nₚ && (sigma[j] < abs(x[iₓ] - x[iₓ-1]))
             # Interpolate corresponding distribution value
             likelihood = dist[iₓ] - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])/(x[iₓ]-x[iₓ-1])
 
@@ -281,7 +281,7 @@ prpsl_σ = Proposal(0.5 * 0.34,      # tss
                     25.,            # Cp
                     0.5)           # k
 
-vars =[:tss,:rAlo,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
+vars =[:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
 # Includes: [:tss,:rAlo,:R,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
 
 d = PlntsmlAr(
