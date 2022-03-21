@@ -69,7 +69,7 @@ function plntsml_Tz(time::AbstractArray,radii::AbstractArray;
 
     T=Array{Float64}(undef,length(radii),length(time))
     R = last(radii)
-    n=1:1000
+    n=1:300
 
     @inbounds for i = 1:length(radii)
         @inbounds for j = 1:length(time)
@@ -132,7 +132,7 @@ function PlntsmlAr(;
 
     Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
-    n=1:1000 # Σ is an infinite summation, but get good returns on n=1000
+    n=1:300 # Σ is an infinite summation, but get good returns on n=300
 
 
     # possibly: using Polyester: @batch
