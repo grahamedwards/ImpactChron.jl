@@ -60,8 +60,7 @@ plot_radii = plot(time_Ma,T[1,:], label = string(Int(r_rng[1]/1000), " km"))
 """
 ## Functions!
 
-###OUTDATED, NEEDS UPDATE WITH Σ maths, etc...
-function plntsml_Tz(time::Vector,radii::Vector;
+function plntsml_Tz(time::AbstractArray,radii::AbstractArray;
     To::Float64,
     Ao::Float64,
     λ::Float64,
@@ -70,11 +69,7 @@ function plntsml_Tz(time::Vector,radii::Vector;
 
     T=Array{Float64}(undef,length(radii),length(time))
     R = last(radii)
-    #r=radii[5]
-    #t=time[5]
     n=1:1000
-    #Σ = sum( @. ( ((-1)^n) / (n*((n^2)-( λ*(R^2)/(κ*π^2) ) ) ) ) *
-        #sin(n*π*r/R) * exp(-κ*(n^2)*(π^2)*t/(R^2)) )
 
     @inbounds for i = 1:length(radii)
         @inbounds for j = 1:length(time)
@@ -83,7 +78,7 @@ function plntsml_Tz(time::Vector,radii::Vector;
 
             #Σ = sum( @. ( ((-1)^n) / (n*((n^2)-( λ*(R^2)/(κ*π^2) ) ) ) ) * sin(n*π*r/R) * exp(-κ*(n^2)*(π^2)*t/(R^2)) )
             Σ = zero(Float64)
-            @tturbo for nᵢ ∈ n # tturbo -> turbo if use @batch above.
+            @tturbo for nᵢ ∈ n
                 α = ifelse(isodd(nᵢ), -1.0, 1.0)
                 β = nᵢ*((nᵢ^2)-( λ*(R^2)/(κ*π^2) ) )
                 γ = sin(nᵢ*π*r/R)
