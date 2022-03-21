@@ -60,6 +60,7 @@ plot_radii = plot(time_Ma,T[1,:], label = string(Int(r_rng[1]/1000), " km"))
 """
 ## Functions!
 
+###OUTDATED, NEEDS UPDATE WITH Σ maths, etc...
 function plntsml_Tz(time::Vector,radii::Vector;
     To::Float64,
     Ao::Float64,
@@ -125,9 +126,9 @@ function PlntsmlAr(;
     ages = fill(NaN,length(radii)) # Vector{Float64}(undef,length(radii))
 
     time_Ma = tₐ : Δt : tmax  # time in Ma (after CAIs)
-    time  = time_Ma .* 1e6 .* s_a # time in s (after CAIs)
+    time  = (time_Ma .- tₐ) .* 1e6 .* s_a # time in s (after accretion)
 
-    Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * time[1])
+    Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
     n=1:1000 # Σ is an infinite summation, but get good returns on n=1000
 
