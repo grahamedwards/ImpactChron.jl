@@ -81,8 +81,15 @@ function plntsml_Tz(time::Vector,radii::Vector;
             r = radii[i]
             t = time[j]
 
-            Σ = sum( @. ( ((-1)^n) / (n*((n^2)-( λ*(R^2)/(κ*π^2) ) ) ) ) *
-                sin(n*π*r/R) * exp(-κ*(n^2)*(π^2)*t/(R^2)) )
+            #Σ = sum( @. ( ((-1)^n) / (n*((n^2)-( λ*(R^2)/(κ*π^2) ) ) ) ) * sin(n*π*r/R) * exp(-κ*(n^2)*(π^2)*t/(R^2)) )
+            Σ = zero(Float64)
+            @tturbo for nᵢ ∈ n # tturbo -> turbo if use @batch above.
+                α = ifelse(isodd(nᵢ), -1.0, 1.0)
+                β = nᵢ*((nᵢ^2)-( λ*(R^2)/(κ*π^2) ) )
+                γ = sin(nᵢ*π*r/R)
+                δ = exp(-κ*(nᵢ^2)*(π^2)*t/(R^2))
+                Σ += (α / β ) * γ * δ
+            end
 
             T[i,j] = To +
             (κ*Ao/(K*λ)) * exp(-λ*t) *
