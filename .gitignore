@@ -2,3 +2,4 @@
 likelihood_tests.jl
 gpmProposalMetropolis.jl
 gpmArMtrpls_study.jl
+function_speedtesting.jl

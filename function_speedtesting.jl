@@ -34,13 +34,13 @@ sum( @. ( ((-1)^n) / (n*((n^2)-( λ*(R^2)/(κ*π^2) ) ) ) ) *
 
 function ΣTtp(n::UnitRange, r, t, R, λ, κ)
     Σ = zero(typeof(λ))
-    κπ2 = κ * π * π
-    R2 = R * R
+    #κπ2 = κ * π * π
+    #R2 = R * R
     @tturbo for nᵢ ∈ n
         a = ifelse(isodd(nᵢ), -1.0, 1.0)
-        b = nᵢ*((nᵢ^2)-( λ*(R2)/(κπ2) ) )
+        b = nᵢ*((nᵢ^2)-( λ*(R*R)/(κ*π*π) ) )
         c = sin(nᵢ*π*r/R)   #
-        d = exp(-(nᵢ^2)*(κπ2)*t/(R2))
+        d = exp(-(nᵢ^2)*(κ*π*π)*t/(R*R))
         Σ += (a / b ) * c * d
     end
     return Σ
@@ -59,7 +59,7 @@ R = 150e3
 κ =  4. / (3210. * 900.)
 
 # Values that change
-t = 0 
+t = 0
 r = 1e3
 
 
