@@ -1,25 +1,5 @@
 ## gpmAr Metropolis functions: construction site
 
-"""
-In production....
-proposal =
-
-        rAlo = p[2],     # initial solar ²⁶Al/²⁷Al
-        tₐ = p[3],      # accretion time, My after CAIs
-        #tₛₛ = p[1],       #solar system age, Ma
-        #R = p[2]      # Body radius
-        To = p[2],       # Disk temperature @ 2.5 au, K
-        Al_conc = p[2],   # Fractional abundance of Al (g/g)
-        Tc = p[2],       # Ar closure temperature, K
-        ρ = p[2],       # rock density, kg/m³
-        K = p[2],          # Thermal Conductivity
-        Cₚ = p[2],     # Specific Heat Capacity
-
-p=proposal[:,1]
-pmax = p .+ proposal[:,2]
-pmin = p .- proposal[:,2]
-"""
-
 ## Log-likelihood calculation
 
 """
@@ -30,50 +10,60 @@ Make sure everything is sorted.
 Find corresponding date, interpolate, etc... and compare to each datum
 
 """
-function ll_calc(   p_dist::Tuple{Vector{Float64},Vector{Float64},Vector{Float64}},    # Proposed distribution (ages,proportion, radii)
-                    mu::AbstractArray,      # 1D Array/Vector of observed μ's (sorted)
-                    sigma::AbstractArray)   # 1D Array/Vector of observed σ's (sorted)
+function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},    # Proposed distribution (ages,proportion, radii)
+                    mu::AbstractVector,      # 1D Array/Vector of observed μ's (sorted)
+                    sigma::AbstractVector)   # 1D Array/Vector of observed σ's (sorted)
 
-    # Define some frequently used variables
+# Define some frequently used variables
     ll = zero(float(eltype(p_dist[2])))
-    nₘ = length(mu)           # n of "Measured" data
-    nₚ = length(p_dist[1])         # N of "Proposed" distribution data
-    tkr = zeros(nₘ)
-    # Sort relative to ages in x (this may be unnecessary)
+    nₘ = length(mu)            # n of "Measured" data
+    nₚ = length(p_dist[1])     # N of "Proposed" distribution data
+    #tkr = zeros(nₘ)
+# Sort relative to ages in x this saves a lot of extra abs() tests
     i_sort = sortperm(p_dist[1])
     x = p_dist[1][i_sort]
     dist = p_dist[2][i_sort]
 
-    # Calculate integral of cooling age distribution with trapezoid rule
+# Calculate integral of cooling age distribution with trapezoid rule
     ∫distdx = zero(float(eltype(p_dist[2])))
-    for k = 1:length(x)-1
-        ∫distdx += (x[k+1]-x[k]) * 0.5 * (dist[k+1] + dist[k])
+    for k ∈ 1:length(x)-1
+            ∫distdx += (x[k+1]-x[k]) * 0.5 * (dist[k+1] + dist[k])
     end
-    # Convert values in discrete distribution to values
-    dist ./= ∫distdx
 
-    # Cycle through each datum in dataset
+# Calculate area under each dist[x]
+    distdx = Vector{float(eltype(dist))}(undef,nₚ)
+    for k ∈ 2:nₚ-1
+        distdx[k] = 0.5 * (x[k+1] - x[k-1]) * dist[k]
+    end
+    distdx[1] = 0.5 * (x[2] - x[1]) * dist[1]
+    distdx[end] = 0.5 * (last(x) - x[end-1]) * dist[end]
+
+# Cycle through each datum in (mu,sigma)
     # @inbounds
-    for j = 1:nₘ
+    for j ∈ 1:nₘ
         # Find index of μ in the `dist` array
         iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
 
-        # If possible, prevent aliasing problems by interpolation
-        if iₓ > 1 && iₓ <= nₚ && (sigma[j] < abs(x[iₓ] - x[iₓ-1]))
-            # Interpolate corresponding distribution value
-            likelihood = dist[iₓ] - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])/(x[iₓ]-x[iₓ-1])
-
-        # Otherwise, sum contributions from Gaussians at each point in distribution
+# If possible, prevent aliasing problems by interpolation
+        if (iₓ>1) && (iₓ<=nₚ) && ( (2sigma[j]) < (x[iₓ]-mu[j]) ) && ( (2sigma[j])<(mu[j]-x[iₓ-1]) )
+            # && (sigma[j] < (x[iₓ]-x[iₓ-1]) ) # original threshold, see notes.
+        # Interpolate corresponding distribution value, note: (x[iₓ]-x[iₓ-1]) cancels in second term
+            likelihood = dist[iₓ] * (x[iₓ]-x[iₓ-1]) - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])
+            #likelihood = 6sigma[j] * (dist[iₓ] - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1]) / (x[iₓ]-x[iₓ-1]) )
+                    #alternate likelihood calculation that only integrates "width" of mu distribution...
+# Otherwise, sum contributions from Gaussians at each point in distribution
         else
             likelihood = zero(float(eltype(dist)))
             # add @inbounds, then @turbo, then @tturbo.
-            for i = 1:nₚ
+            for i ∈ 1:nₚ
                 # Likelihood curve follows a Gaussian PDF.
-                likelihood += dist[i] / (sigma[j] * sqrt(2*pi)) *
+                likelihood += ( distdx[i] / (sigma[j] * sqrt(2*π)) ) *
                         exp( - (x[i]-mu[j])*(x[i]-mu[j]) / (2*sigma[j]*sigma[j]) )
             end
         end
-        ll += log(likelihood)
+        ll += log(likelihood/∫distdx)
+                # Normalize by total area under curve for intercomparability
+                # Properly applied to dist, but this reduces calculations.
     end
     return ll
 end
