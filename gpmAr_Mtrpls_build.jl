@@ -18,29 +18,29 @@ function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
     ll = zero(float(eltype(p_dist[2])))
     nₘ = length(mu)            # n of "Measured" data
     nₚ = length(p_dist[1])     # N of "Proposed" distribution data
+
     #tkr = zeros(nₘ)
 # Sort relative to ages in x this saves a lot of extra abs() tests
     i_sort = sortperm(p_dist[1])
     x = p_dist[1][i_sort]
     dist = p_dist[2][i_sort]
 
-# Calculate integral of cooling age distribution with trapezoid rule
-    ∫distdx = zero(float(eltype(p_dist[2])))
-    for k ∈ 1:length(x)-1
-            ∫distdx += (x[k+1]-x[k]) * 0.5 * (dist[k+1] + dist[k])
-    end
-
-# Calculate area under each dist[x]
+# Calculate area under each dist[x] and sum to estimate integral ∫distdx.
     distdx = Vector{float(eltype(dist))}(undef,nₚ)
-    for k ∈ 2:nₚ-1
-        distdx[k] = 0.5 * (x[k+1] - x[k-1]) * dist[k]
-    end
     distdx[1] = 0.5 * (x[2] - x[1]) * dist[1]
     distdx[end] = 0.5 * (last(x) - x[end-1]) * dist[end]
 
+    ∫distdx = distdx[1] + distdx[end]
+
+    if nₚ > 2
+        @inbounds for k ∈ 2:nₚ-1
+            distdx[k] = 0.5 * (x[k+1] - x[k-1]) * dist[k]
+            ∫distdx += distdx[k]
+        end
+    end
+
 # Cycle through each datum in (mu,sigma)
-    # @inbounds
-    for j ∈ 1:nₘ
+    @inbounds for j ∈ 1:nₘ
 # Find index of μ in the `dist` array
         iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
 
@@ -54,8 +54,7 @@ function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
 # Otherwise, sum contributions from Gaussians at each point in distribution
         else
             likelihood = zero(float(eltype(dist)))
-            # add @inbounds, then @turbo, then @tturbo.
-            for i ∈ 1:nₚ
+            @turbo for i ∈ 1:nₚ     # @turbo faster than @tturbo
 # Likelihood curve follows a Gaussian PDF.
                 likelihood += ( distdx[i] / (sigma[j] * sqrt(2*π)) ) *
                         exp( - (x[i]-mu[j])*(x[i]-mu[j]) / (2*sigma[j]*sigma[j]) )
