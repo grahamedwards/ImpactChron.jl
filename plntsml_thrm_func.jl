@@ -193,36 +193,35 @@ Ar_ages = PlntsmlAr( Tc = 550,       # Ar closure temperature, K
 
 ## Naive Resampler
 
-function PlntsmlRsmpl(N,acrn::accretion_params,thrm::thermal_params;
+function PlntsmlRsmpl(N,P::ResampleParams;
             Δt = 0.1,      # absolute timestep, default 10 ka
             tmax = 1000.,     # maximum time allowed to model
-            nᵣ = 100)         # # radial nodes
+            nᵣ = 100,        # # radial nodes
+            ArDates::Function=PlntsmlAr)
 
-    Tₒ(x) = 100. * rand() + x[rand(1:40)] # sample from histogram bins of x
-# Accretion Parameters: create distributions
-    dtₛₛ = Normal(acrn.tₛₛ.μ,acrn.tₛₛ.σ)       #solar system age, Ma
-    drAlₒ = Normal(acrn.rAlₒ.μ,acrn.rAlₒ.σ)     # initial solar ²⁶Al/²⁷Al
-    dR = Uniform(acrn.R.a,acrn.R.b)   # Body radius
-    dtₐ = Uniform(acrn.tₐ.a,acrn.tₐ.b)      # Accretion date, My after CAIs
-    dcAl = Uniform(acrn.cAl.a,acrn.cAl.b)  # Fractional abundance of Al (g/g)
-    # skip acrn.Tm since this is done with custom function (above)
+    Tₒ(x::AbstractVector) = 100. * rand() + x[rand(1:40)] # sample from histogram bins of x
 
-# Thermal Parameters
-    dTc = Normal(thrm.Tc.μ,thrm.Tc.σ)       # Ar closure temperature, K
-    dρ = Uniform(thrm.ρ.a,thrm.ρ.b)       # rock density, kg/m³
-    dCₚ = Uniform(thrm.Cₚ.a,thrm.Cₚ.b) # Specific Heat Capacity
-    dk = Uniform(thrm.k.a,thrm.k.b)          # Thermal Conductivity
+    dtₛₛ = Normal(P.tₛₛ.μ,P.tₛₛ.σ)       #solar system age, Ma
+    drAlₒ = Normal(P.rAlₒ.μ,P.rAlₒ.σ)     # initial solar ²⁶Al/²⁷Al
+    # skip P.Tm since this is done with custom function Tₒ
+    dR = Uniform(P.R.a,P.R.b)   # Body radius
+    dtₐ = Uniform(P.tₐ.a,P.tₐ.b)      # Accretion date, My after CAIs
+    dcAl = Uniform(P.cAl.a,P.cAl.b)  # Fractional abundance of Al (g/g)
+    dTc = Normal(P.Tc.μ,P.Tc.σ)       # Ar closure temperature, K
+    dρ = Uniform(P.ρ.a,P.ρ.b)       # rock density, kg/m³
+    dCₚ = Uniform(P.Cₚ.a,P.Cₚ.b) # Specific Heat Capacity
+    dk = Uniform(P.k.a,P.k.b)          # Thermal Conductivity
 
 
     ages = Array{Float64}(undef,nᵣ,N)
 
     for i ∈ 1:N
 
-        ages[:,i] = PlntsmlAr(  tₛₛ = rand(dtₛₛ),       #solar system age, Ma
+        ages[:,i] = ArDates(  tₛₛ = rand(dtₛₛ),       #solar system age, Ma
                 rAlo = rand(drAlₒ),     # initial solar ²⁶Al/²⁷Al
                 tₐ = rand(dtₐ),      # accretion time, My after CAIs
                 R = rand(dR),      # Body radius
-                To = Tₒ(acrn.Tm),       # Disk temperature @ 2.5 au, K
+                To = Tₒ(P.Tm),       # Disk temperature @ 2.5 au, K
                 Al_conc = rand(dcAl),   # Fractional abundance of Al (g/g)
                 Tc = rand(dTc),       # Ar closure temperature, K
                 ρ = rand(dρ),       # rock density, kg/m³
@@ -238,6 +237,6 @@ function PlntsmlRsmpl(N,acrn::accretion_params,thrm::thermal_params;
 end
 
 
-#many_ages = PlntsmlRsmpl(100,accret,therm, nᵣ=100)
+many_ages = PlntsmlRsmpl(100,plntsml_params, nᵣ=100)
 
-#histogram(vec(many_ages))
+histogram(vec(many_ages))
