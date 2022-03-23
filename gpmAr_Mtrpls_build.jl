@@ -41,13 +41,13 @@ function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
 # Cycle through each datum in (mu,sigma)
     # @inbounds
     for j ∈ 1:nₘ
-        # Find index of μ in the `dist` array
+# Find index of μ in the `dist` array
         iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
 
 # If possible, prevent aliasing problems by interpolation
         if (iₓ>1) && (iₓ<=nₚ) && ( (2sigma[j]) < (x[iₓ]-mu[j]) ) && ( (2sigma[j])<(mu[j]-x[iₓ-1]) )
             # && (sigma[j] < (x[iₓ]-x[iₓ-1]) ) # original threshold, see notes.
-        # Interpolate corresponding distribution value, note: (x[iₓ]-x[iₓ-1]) cancels in second term
+# Interpolate corresponding distribution value, note: (x[iₓ]-x[iₓ-1]) cancels in second term
             likelihood = dist[iₓ] * (x[iₓ]-x[iₓ-1]) - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])
             #likelihood = 6sigma[j] * (dist[iₓ] - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1]) / (x[iₓ]-x[iₓ-1]) )
                     #alternate likelihood calculation that only integrates "width" of mu distribution...
@@ -56,14 +56,13 @@ function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
             likelihood = zero(float(eltype(dist)))
             # add @inbounds, then @turbo, then @tturbo.
             for i ∈ 1:nₚ
-                # Likelihood curve follows a Gaussian PDF.
+# Likelihood curve follows a Gaussian PDF.
                 likelihood += ( distdx[i] / (sigma[j] * sqrt(2*π)) ) *
                         exp( - (x[i]-mu[j])*(x[i]-mu[j]) / (2*sigma[j]*sigma[j]) )
             end
         end
         ll += log(likelihood/∫distdx)
-                # Normalize by total area under curve for intercomparability
-                # Properly applied to dist, but this reduces calculations.
+# Normalize by total area under curve for intercomparability among proposals.
     end
     return ll
 end
