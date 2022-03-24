@@ -1,9 +1,8 @@
 
 using LoopVectorization
-#using Polyester
-using Plots; gr()
 using Random; rng = MersenneTwister()
 using Distributions
+#using Polyester?
 
 """
 Reference info:
@@ -95,6 +94,7 @@ function plntsml_Tz(time::AbstractArray,radii::AbstractArray;
     return T
 end
 
+## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
 
 function PlntsmlAr(;
     Tc::Number,
@@ -175,22 +175,6 @@ function PlntsmlAr(;
     #return (tₛₛ .- ages) # Return ages in geologic time (Ma)
 end
 
-## Testing plntsml_Ar output
-Ar_ages = PlntsmlAr( Tc = 550,       # Ar closure temperature, K
-            tₛₛ = 4567.4,    #solar system age, Ma
-            tₐ = 2.13,      # accretion time, My after CAIs
-            Δt = 0.1,      # absolute timestep, default 10 ka
-            tmax = 1000.,     # maximum time allowed to model
-            R = 150e3,      # Body radius
-            nᵣ = 100,         # radial nodes
-            To = 250.,       # Disk temperature @ 2.5 au, K
-            Al_conc = 0.0118,   # Fractional abundance of Al (g/g)
-            rAlo = 5.11e-5, # initial solar ²⁶Al/²⁷Al
-            ρ = 3210,       # rock density, kg/m³
-            K = 4.,          # Thermal Conductivity
-            Cₚ = 950.,     # Thermal diffusivity
-            rmNaN = true)
-
 ## Naive Resampler
 
 function PlntsmlRsmpl(N,P::ResampleParams;
@@ -236,7 +220,4 @@ function PlntsmlRsmpl(N,P::ResampleParams;
 
 end
 
-
-many_ages = PlntsmlRsmpl(100,plntsml_params, nᵣ=100)
-
-histogram(vec(many_ages))
+"...func load successful"

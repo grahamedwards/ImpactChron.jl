@@ -168,3 +168,5 @@ k_CK(T) = 1.26 + 0.0011 * T # Modeled over 100 - 300 K Opeil+2010
 ρ_R = [3.14 , 0]    # extracted w/o uncertainty from text.
                     # Actually look at p. 274 to account for wXing.
 """
+
+"...params load successful"
