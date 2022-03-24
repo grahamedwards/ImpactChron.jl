@@ -63,10 +63,9 @@ function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
 end
 
 
-
 function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
                         p::Proposal,   # Parameter proposal
-                        step_σ::Proposal, # σ for Gauss. proposal distributions
+                        pσ::Proposal, # σ for Gauss. proposal distributions
                         pmin::Proposal,# Minimum parameter bounds
                         pmax::Proposal,# Maximum parameter bounds
                         pvars::Vector{Symbol}, # Variable parameters in proposal
@@ -76,13 +75,25 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
                         nsteps::Int=10000,  # Post burn-in iterations
                         Δt::Number= 0.1,    # Time-step (Ma)
                         tmax::Number=2000,  # Max model duration (Ma, starts at CAIs)
-                        nᵣ::Integer=100)    # Radial nodes
-    # Prepare output Distributions
+                        nᵣ::Integer=100,    # Radial nodes
+                        updateN::Integer=50) # Frequency of status updates (every `updateN` steps)
+# Prepare output Distributions
     acceptanceDist = falses(nsteps)
     nᵥ = length(pvars)
-########### used to be `float(eltype(x))``
-    llDist = Array{Float64}(undef,nsteps)
-    pDist = Array{Float64}(undef,nsteps,nᵥ)
+    llDist = Array{float(eltype(mu))}(undef,nsteps)
+    pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ)
+
+# Status function to keep user updated...
+    function MetropolisStatus(p::Proposal,vars::Vector{Symbol},ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
+        println("---------------------------")
+        stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
+        println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
+        println("ll=$ll \n")
+        for v ∈ vars
+            println(v," → ",getproperty(p,v))
+        end
+        println("---------------------------")
+    end
 
     # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
     stepfactor = 2.9
@@ -96,10 +107,10 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
     datarows = length(mu_sorted)
     p = copy(p)
     pₚ = copy(p)
-
+    step_σ=copy(pσ)
 
     # Calculate initial proposal distribution
-    dist = DistAr(
+    distₚ = DistAr(
                 tₛₛ = p.tss,     #solar system age, Ma
                 rAlo = p.rAlo,  # initial solar ²⁶Al/²⁷Al
                 tₐ = p.ta,      # accretion time, My after CAIs
@@ -116,7 +127,10 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
                 rmNaN=true)     # remove NaNs
 
     # Log likelihood of initial proposal
-    ll = llₚ = ll_calc(dist, mu_sorted, sigma_sorted)
+    ll = llₚ = ll_calc(distₚ, mu_sorted, sigma_sorted)
+
+# Start the clock
+    start = time()
 
     # Burnin
     #@inbounds
@@ -133,7 +147,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
         # if  pmin[k] < pₚ[k] < pmax[k]
-            distₚ = dist = DistAr(
+            distₚ = DistAr(
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                         tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -149,7 +163,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
                         nᵣ = nᵣ,        # radial nodes
                         rmNaN=true)     # remove NaNs
 
-            llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted)
+            length(distₚ[1])>1 ? llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted) : llₚ=-Inf
         else
             llₚ = -Inf # auto-reject proposal if bounds exceeded
         end
@@ -164,7 +178,16 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
             # Record new log likelihood
             ll = llₚ
         end
+        i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
     end
+
+# Hooray, we finished the burn-in, let's tell someone!
+    println("===  BURN IN COMPLETE  ===\n\n")
+    println("Post-Burn-In Status:")
+    MetropolisStatus(p,pvars,ll,0,0,"",start)
+    println("== == == == == == == == ==")
+    println("Now beginning $nsteps Markov chain iterations...")
+    flush(stdout)
 
     # Step through each of the N steps in the Markov chain
     #@inbounds
@@ -182,7 +205,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
         # if  pmin[k] < pₚ[k] < pmax[k]
-            distₚ = dist = DistAr(
+            distₚ = DistAr(
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                         tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -198,7 +221,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
                         nᵣ = nᵣ,        # radial nodes
                         rmNaN=true)     # remove NaNs
 
-            llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted)
+            length(distₚ[1])>1 ? llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted) : llₚ=-Inf
         else
             llₚ = -Inf # auto-reject proposal if bounds exceeded
         end
@@ -220,6 +243,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
         end
 
         llDist[i] = ll
+        i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start); flush(stdout)
     end
     return pDist, llDist, acceptanceDist
 end
