@@ -4,3 +4,5 @@ gpmProposalMetropolis.jl
 gpmArMtrpls_study.jl
 function_speedtesting.jl
 gpm_testruns.jl
+
+/outputs
