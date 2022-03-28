@@ -1,5 +1,39 @@
 ## gpmAr Metropolis functions: construction site
 
+## Plot Evolution of proposals
+
+function plotproposals(d::Dict,vars::Vector{Symbol},cols::Integer;
+                        ll::Bool=true,
+                        max::Proposal=nothing,min::Proposal=nothing)
+    ll ? v=vcat(vars,:ll) : v=copy(vars)
+    nᵥ=length(v)
+# Calculate number of rows needed to accomodate all variables in `cols` columns.
+    rows = Int(ceil(nᵥ/cols,digits=0))
+
+    panels = Vector{Any}(nothing,nᵥ)
+    for i ∈ 1:nᵥ
+        k = v[i]
+        y = d[k]
+        x = 1:length(y)
+        panels[i] = plot(x,y,xticks=[],ylabel="$k",linecolor=:black)
+
+        max != nothing && k != :ll && plot!([1,last(x)],getproperty(max,k)*ones(2),linecolor=:grey,linestyle=:dash)
+        min != nothing && k != :ll && plot!([1,last(x)],getproperty(min,k)*ones(2),linecolor=:grey,linestyle=:dash)
+        if k == :ll
+            r = 100 * sum(d[:accept])/length(d[:accept])
+            annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:right,6))
+        end
+    end
+    sbplts=rows*cols
+    Δplts = sbplts-length(panels)
+    if Δplts > 0
+        blnkplt = plot(legend=false,grid=false,foreground_color_subplot=:white)
+        [ push!(panels,blnkplt) for j ∈ 1:Δplts]
+    end
+
+    plot(panels...,layout=grid(rows,cols),labels="")
+end
+
 ## Log-likelihood calculation
 
 """
