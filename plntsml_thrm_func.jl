@@ -136,6 +136,7 @@ end
 ## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
 
 function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
+    Tmin::Number=0,
     Tc::Number,
     tₛₛ::Number,
     tₐ::Number,         # accretion time
@@ -178,6 +179,7 @@ function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
     @inbounds for i = 1:length(radii)
         Tᵢ = 0.0 #
         T = 0.0
+        HotEnough = false
         @inbounds for j = 1:length(time)
 
             r = radii[i]
@@ -197,8 +199,9 @@ function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
             ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
-#### Add in conditional to record if minimum T is passed.
-            if T < Tᵢ && T <= Tc    # compare T to Tc only if cooling
+            T > Tᵢ && T>Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
+# compare T to Tc only if cooling & got hot enough
+            if T < Tᵢ && T <= Tc && HotEnough
                 ages[i]=time_Ma[j]  # log time only when T falls below Tc
                 break               # kill loop
             else
