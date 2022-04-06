@@ -59,6 +59,45 @@ plot_radii = plot(time_Ma,T[1,:], label = string(Int(r_rng[1]/1000), " km"))
 """
 ## Functions!
 
+"""
+histogramify
+~~~~~~~~~~~~
+converts fractional abundances `y` of model outputs `x`
+into a histogram over centers of bins in `domain`
+
+Assumes that Σy=1:
+This allows us to skip calculating this value to normalize values of dist,
+    so that ∫ dist dx = 1
+
+"""
+
+function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
+# Sort (x,y) values in order of ascending x (e.g. dates) for search efficiency
+    i_sorted = sortperm(x)
+    xₛ = x[i_sorted]
+    yₛ = y[i_sorted]
+# Calculate bin center range (xₘ)  for domain
+    Δd = step(domain) #calculate time_domain step
+    xₘ = (first(domain) + 0.5Δd) : Δd : (last(domain) - 0.5Δd)
+# Declare distribution vector
+    dist = zeros(float(eltype(yₛ)),length(xₘ))
+# Identify indices of domain that bound all values of x
+    xmin = searchsortedfirst(domain,first(xₛ)) - 1
+    xmax = searchsortedlast(domain,last(xₛ)) + 1
+# Ensure that xmin and xmax are defined in domain
+    if (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1, and if any searches fail, xmax < xmin (no dates overlap time_domain)
+        for i ∈ (xmin):(xmax) # 1 step outward of xmin,xmax to get peripheral values
+            l = searchsortedfirst(xₛ , domain[i]) # lower index
+            u = searchsortedlast(xₛ , domain[i+1]) # upper index
+# Ensure values of (xₛ,yₛ) fall within bounds (if not, ssf/ssl return l > u)
+            u >= l && ( dist[i] = vreduce(+,yₛ[l:u])/Δd )
+        end
+    elseif (xmax - xmin) == 1
+        dist[xmin] = 1.0 / Δd
+    end
+    return xₘ,dist
+end
+
 function plntsml_Tz(time::AbstractArray,radii::AbstractArray;
     To::Float64,
     Ao::Float64,
@@ -96,7 +135,7 @@ end
 
 ## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
 
-function PlntsmlAr(;
+function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
     Tc::Number,
     tₛₛ::Number,
     tₐ::Number,         # accretion time
@@ -158,6 +197,7 @@ function PlntsmlAr(;
             ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
+#### Add in conditional to record if minimum T is passed.
             if T < Tᵢ && T <= Tc    # compare T to Tc only if cooling
                 ages[i]=time_Ma[j]  # log time only when T falls below Tc
                 break               # kill loop
@@ -166,13 +206,30 @@ function PlntsmlAr(;
             end
         end
     end
-    if rmNaN #remove NaN option.
+
+    if !rmNaN #remove NaN option.
+        dates = tₛₛ .- ages
+        volumes = shell_vol/last(vols)
+        radii_out = radii
+    else rmNaN
         Xnan = .!isnan.(ages)
-        return (tₛₛ .- ages[Xnan] , shell_vol[Xnan]/last(vols) , radii[Xnan])
-    else
-        return (tₛₛ .- ages , shell_vol/last(vols) , radii)
+        dates = tₛₛ .- ages[Xnan]
+        volumes = shell_vol[Xnan]/last(vols)
+        radii_out = radii[Xnan]
     end
-    #return (tₛₛ .- ages) # Return ages in geologic time (Ma)
+
+    if time_domain == 0:0
+        return dates,volumes,radii_out
+    elseif length(dates) > 1 # Ensure more than 1 radius
+# Return histogram of data binned by `time_domain`
+        bincenters,dist = histogramify(time_domain,dates,volumes)
+        return bincenters,dist,time_domain
+    else
+        Δtd = step(time_domain)
+        bincenters = (first(time_domain) + 0.5Δtd) : Δtd : (last(time_domain) - 0.5Δtd)
+        dist = zeros(length(bincenters))
+        return bincenters,dist,time_domain
+    end
 end
 
 ## Naive Resampler

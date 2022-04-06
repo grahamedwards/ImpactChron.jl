@@ -97,12 +97,13 @@ function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
 end
 
 
-function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
+function MetropolisAr(  time_domain::AbstractRange,
+                        DistAr::Function,    # Proposal distribution calculator
                         p::Proposal,   # Parameter proposal
                         pσ::Proposal, # σ for Gauss. proposal distributions
                         pmin::Proposal,# Minimum parameter bounds
                         pmax::Proposal,# Maximum parameter bounds
-                        pvars::Tuple{Symbol}, # Variable parameters in proposal
+                        pvars::Vector{Symbol}, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray;# Observed 1σ's
                         burnin::Int=0,      # Burn-in iterations
@@ -118,7 +119,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ)
 
 # Status function to keep user updated...
-    function MetropolisStatus(p::Proposal,vars::Tuple{Symbol},ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
+    function MetropolisStatus(p::Proposal,vars::Vector{Symbol},ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
         println("---------------------------")
         stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
         println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
@@ -144,7 +145,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
     step_σ=copy(pσ)
 
     # Calculate initial proposal distribution
-    distₚ = DistAr(
+    distₚ = DistAr(time_domain,
                 tₛₛ = p.tss,     #solar system age, Ma
                 rAlo = p.rAlo,  # initial solar ²⁶Al/²⁷Al
                 tₐ = p.ta,      # accretion time, My after CAIs
@@ -181,7 +182,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
         # if  pmin[k] < pₚ[k] < pmax[k]
-            distₚ = DistAr(
+            distₚ = DistAr(time_domain,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                         tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -239,7 +240,7 @@ function MetropolisAr(  DistAr::Function,    # Proposal distribution calculator
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
         # if  pmin[k] < pₚ[k] < pmax[k]
-            distₚ = DistAr(
+            distₚ = DistAr(time_domain,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                         tₐ = pₚ.ta,      # accretion time, My after CAIs
