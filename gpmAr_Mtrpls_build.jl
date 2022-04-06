@@ -103,7 +103,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                         pσ::Proposal, # σ for Gauss. proposal distributions
                         pmin::Proposal,# Minimum parameter bounds
                         pmax::Proposal,# Maximum parameter bounds
-                        pvars::Vector{Symbol}, # Variable parameters in proposal
+                        pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray;# Observed 1σ's
                         burnin::Int=0,      # Burn-in iterations
@@ -119,7 +119,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ)
 
 # Status function to keep user updated...
-    function MetropolisStatus(p::Proposal,vars::Vector{Symbol},ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
+    function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
         println("---------------------------")
         stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
         println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
