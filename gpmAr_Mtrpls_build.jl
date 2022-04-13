@@ -40,7 +40,7 @@ end
 Log-likelihood notes...
 
 """
-function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},    # Proposed distribution (ages,proportion, radii)
+function ll_dist(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},    # Proposed distribution (ages,proportion, radii)
                     mu::AbstractVector,      # 1D Array/Vector of observed μ's (sorted)
                     sigma::AbstractVector)   # 1D Array/Vector of observed σ's (sorted)
 
@@ -97,12 +97,28 @@ function ll_calc(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
 end
 
 
+function ll_param(vars::Tuple, p::Proposal,pμ::Proposal,pσ::Proposal)
+    ll=zero(Float64)
+    for v in vars
+        if !isnan(getproperty(pμ,v))
+            μ = getproperty(pμ,v)
+            σ = getproperty(pσ,v)
+            x = getproperty(p,v)
+
+            ll += -(x-μ)*(x-μ) / (2*σ*σ)
+        end
+    end
+    return ll
+end
+
+xx
+
+
 function MetropolisAr(  time_domain::AbstractRange,
                         DistAr::Function,    # Proposal distribution calculator
                         p::Proposal,   # Parameter proposal
-                        pσ::Proposal, # σ for Gauss. proposal distributions
-                        pmin::Proposal,# Minimum parameter bounds
-                        pmax::Proposal,# Maximum parameter bounds
+                        pσ::Proposal, # known or estimated σ for proposal distributions
+                        plims::NamedTuple=(g=(),) # Fixed parameter limits
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray;# Observed 1σ's
@@ -117,6 +133,8 @@ function MetropolisAr(  time_domain::AbstractRange,
     nᵥ = length(pvars)
     llDist = Array{float(eltype(mu))}(undef,nsteps)
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ)
+# If no plims given, set ranges to
+    plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf),length(pvars)))...) )
 
 # Status function to keep user updated...
     function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
@@ -162,7 +180,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                 rmNaN=true)     # remove NaNs
 
     # Log likelihood of initial proposal
-    ll = llₚ = ll_calc(distₚ, mu_sorted, sigma_sorted)
+    ll = llₚ = ll_dist(distₚ, mu_sorted, sigma_sorted)
 
 # Start the clock
     start = time()
@@ -180,8 +198,8 @@ function MetropolisAr(  time_domain::AbstractRange,
             #pₚ[k] += δpₖ
 
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
-        # if  pmin[k] < pₚ[k] < pmax[k]
+        if plims[k][1] < getproperty(pₚ,k) < plims[k][1]
+# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             distₚ = DistAr(time_domain,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
@@ -198,9 +216,15 @@ function MetropolisAr(  time_domain::AbstractRange,
                         nᵣ = nᵣ,        # radial nodes
                         rmNaN=true)     # remove NaNs
 
-            length(distₚ[1])>1 ? llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted) : llₚ=-Inf
+# Ensure the returned distribution has more than a cooling age bin.
+            if length(distₚ[1])>1
+                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) # add ll_params
+            else
+                llₚ=-Inf
+            end
+# Reject proposal if pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
         else
-            llₚ = -Inf # auto-reject proposal if bounds exceeded
+            llₚ = -Inf
         end
 
         # Decide to accept or reject the proposal
@@ -237,9 +261,10 @@ function MetropolisAr(  time_domain::AbstractRange,
         setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
             #pₚ[k] += δpₖ
 
-        # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if getproperty(pmin,k) < getproperty(pₚ,k) < getproperty(pmax,k)
-        # if  pmin[k] < pₚ[k] < pmax[k]
+# Calculate log likelihood for new proposal, ensuring bounds are not exceeded
+
+        if plims[k][1] < getproperty(pₚ,k) < plims[k][1]
+# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             distₚ = DistAr(time_domain,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
@@ -256,9 +281,11 @@ function MetropolisAr(  time_domain::AbstractRange,
                         nᵣ = nᵣ,        # radial nodes
                         rmNaN=true)     # remove NaNs
 
-            length(distₚ[1])>1 ? llₚ = ll_calc(distₚ , mu_sorted, sigma_sorted) : llₚ=-Inf
+            length(distₚ[1])>1 ? llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) : llₚ=-Inf
+
+# Reject proposal if pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
         else
-            llₚ = -Inf # auto-reject proposal if bounds exceeded
+            llₚ = -Inf
         end
 
         # Decide to accept or reject the proposal
