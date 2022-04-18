@@ -1,35 +1,5 @@
 ## Parameters for planetesimal thermal model
 
-## Resample structs
-
-# normally distributed data, reported at mean and 1σ
-mutable struct nrm
-    μ::Float64
-    σ::Float64
-end
-
-# range of data, on assumed uniformd distribution
-mutable struct unf
-    a::Float64
-    b::Float64
-end
-
-mutable struct ResampleParams
-# Background Conditions
-    tₛₛ::nrm   # age of CAIs (Ma)
-    rAlₒ::nrm # initial solar ²⁶Al/²⁷Al
-    Tm::Vector{Float64}
-# Planetesimal Characteristics
-    R::unf # Body radius
-    tₐ::unf # Instantaneous accretion date, My after CAIs
-    cAl::unf # Fractional abundance of Al (g/g)
-# Thermal Parameters
-    Tc::nrm  # Ar-Ar closure temperature (K)
-    ρ::unf # Bulk density not a thermal property proper, I know)
-    Cₚ::unf  # Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
-    k::unf # Thermal Conductivity (k, W m⁻¹ K⁻¹)
-end
-
 mutable struct Proposal #Planetesimal Proposal
     # Background Conditions
     tss::Float64   # age of CAIs (Ma)
@@ -65,13 +35,30 @@ end
 
 #vars =[:tss,:rAlo,:R,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
 
+## Resample struct: convert these to namedtuples
+
+mutable struct ResampleParams
+# Background Conditions
+    tₛₛ::NamedTuple{(:μ,:σ), Tuple{Float64, Float64}}   # age of CAIs (Ma)
+    rAlₒ::NamedTuple{(:μ,:σ), Tuple{Float64, Float64}}# initial solar ²⁶Al/²⁷Al
+    Tm::Vector{Float64}
+# Planetesimal Characteristics
+    R::NamedTuple{(:a,:b), Tuple{Float64, Float64}} # Body radius
+    tₐ::NamedTuple{(:a,:b), Tuple{Float64, Float64}} # Instantaneous accretion date, My after CAIs
+    cAl::NamedTuple{(:a,:b), Tuple{Float64, Float64}} # Fractional abundance of Al (g/g)
+# Thermal Parameters
+    Tc::NamedTuple{(:μ,:σ), Tuple{Float64, Float64}}  # Ar-Ar closure temperature (K)
+    ρ::NamedTuple{(:a,:b), Tuple{Float64, Float64}} # Bulk density not a thermal property proper, I know)
+    Cₚ::NamedTuple{(:a,:b), Tuple{Float64, Float64}}  # Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
+    k::NamedTuple{(:a,:b), Tuple{Float64, Float64}} # Thermal Conductivity (k, W m⁻¹ K⁻¹)
+end
 ## Epsilon skootch
 rϵ = 1. + eps() # relative epsilon factor to scale "constant uniforms"
 
 ## Age of CAIs & initial ²⁶Al/²⁷Al Jacobsen+2008
     # Composite of CAI mineral Mg and Pb data
-tₛₛ_J08 = nrm(4567.44, 0.34*0.5)
-rAlₒ_J08 = nrm(5.11e-5 , (0.14e-5) *0.5)
+tₛₛ_J08 = (; μ= 4567.44, σ= 0.34*0.5)
+rAlₒ_J08 = (; μ= 5.11e-5, σ= (0.14e-5) *0.5)
 # T_midplane @ 2.5 AU
     # from distribution of Woolum & Cassen, 1999
 Tm2d5 = Vector{Float64}(undef,40)
@@ -83,19 +70,19 @@ Tm2d5 = Vector{Float64}(undef,40)
         Tm2d5[39] = 500.
         Tm2d5[40] = 600.
     #formerly Allende bulk CAI isochron value (5.23 ± 0.13) e-5
-Radius = unf(150e3,150e3 * rϵ) # Body radius ~ [min , max]
-t_accr = unf(2.13,2.13 * rϵ) # Instantaneous Accretion Date, My after CAIs
-Al_conc = unf(0.011,0.011 * rϵ) #Fractional abundance of Al (g/g)
+Radius = (; a= 150e3, b= 150e3 * rϵ) # Body radius ~ [min , max]
+t_accr = (; a= 2.13, b= 2.13 * rϵ) # Instantaneous Accretion Date, My after CAIs
+Al_conc = (; a= 0.011, b= 0.011 * rϵ) #Fractional abundance of Al (g/g)
 
 #Thermal parameters
 # Ar-Ar closure temperature (K)
-T_olg = nrm(550,10)    # Trieloff+2003, oligoclase feldspar
+T_olg = (; μ= 550., σ= 10.)    # Trieloff+2003, oligoclase feldspar
 # Bulk density (kg/m³ | not a thermal property proper, I know)
-ρ = unf(3160 , 3360) # OC range, see below
+ρ = (; a= 3160., b= 3360.) # OC range, see below
 # Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
-Cₚ = unf(750 , 922)  # Range from Wach+2013 @ 873 K
+Cₚ = (; a=750. , b= 922.)  # Range from Wach+2013 @ 873 K
 # Thermal Conductivity (k, W m⁻¹ K⁻¹)
-k = unf(4. , 4.  * rϵ)       # OC estimate, see below...
+k = (; a=4. , b= 4. * rϵ)       # OC estimate, see below...
 
 
 plntsml_params = ResampleParams(tₛₛ_J08,rAlₒ_J08,Tm2d5,Radius,t_accr,Al_conc,T_olg,ρ,Cₚ,k)
@@ -107,9 +94,23 @@ plntsml_params = ResampleParams(tₛₛ_J08,rAlₒ_J08,Tm2d5,Radius,t_accr,Al_co
 #####
 #
 
-## Data Compilation
+## Data Compilation & old code formats.
 
 """
+
+# normally distributed data, reported at mean and 1σ
+mutable struct nrm
+    μ::Float64
+    σ::Float64
+end
+
+# range of data, on assumed uniformd distribution
+mutable struct unf
+    a::Float64
+    b::Float64
+end
+
+
 ## Accretion time ~~ all uniform distributions
     accr = unf(1.8, 2.3) # Composite of inner solar system data
 
