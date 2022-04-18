@@ -97,15 +97,14 @@ function ll_dist(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
 end
 
 
-function ll_param(vars::Tuple, p::Proposal,pμ::Proposal,pσ::Proposal)
+function ll_param(vars::Tuple, p::Proposal,D::NamedTuple)
     ll=zero(Float64)
     for v in vars
-        if !isnan(getproperty(pμ,v))
-            μ = getproperty(pμ,v)
-            σ = getproperty(pσ,v)
+        if D[v][3] == :N # Normal distribution
             x = getproperty(p,v)
-
-            ll += -(x-μ)*(x-μ) / (2*σ*σ)
+            ll += -(x-D[v][1])*(x-D[v][1]) / (2*D[v][2]*D[v][2]) # = - (x-μ)^2 / 2σ^2
+        elseif D[v][3] == :lN # LogNormal distribution
+            ll += -(log(x)-D[v][1])^2 / (2*D[v][2]*D[v][2]) # = - (ln(x)-μ)^2 / 2σ^2, use exponent in numerator bc logs are slow.
         end
     end
     return ll
@@ -117,8 +116,8 @@ xx
 function MetropolisAr(  time_domain::AbstractRange,
                         DistAr::Function,    # Proposal distribution calculator
                         p::Proposal,   # Parameter proposal
-                        pσ::Proposal, # known or estimated σ for proposal distributions
-                        plims::NamedTuple=(g=(),) # Fixed parameter limits
+                        pσ::Proposal, # proposed σ for pertrubations.
+                        plims::NamedTuple=(g=(),) # Paramter distributions.
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray;# Observed 1σ's
@@ -198,7 +197,7 @@ function MetropolisAr(  time_domain::AbstractRange,
             #pₚ[k] += δpₖ
 
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if plims[k][1] < getproperty(pₚ,k) < plims[k][1]
+        if plims[k][3] == :U && plims[k][1] < getproperty(pₚ,k) < plims[k][2]
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             distₚ = DistAr(time_domain,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
@@ -218,11 +217,11 @@ function MetropolisAr(  time_domain::AbstractRange,
 
 # Ensure the returned distribution has more than a cooling age bin.
             if length(distₚ[1])>1
-                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) # add ll_params
+                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) #+ ll_param(pvars,pₚ,,psig)
             else
                 llₚ=-Inf
             end
-# Reject proposal if pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
+# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
         else
             llₚ = -Inf
         end
@@ -263,7 +262,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
 
-        if plims[k][1] < getproperty(pₚ,k) < plims[k][1]
+        if plims[k][3] == :U && plims[k][1] < getproperty(pₚ,k) < plims[k][2]
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             distₚ = DistAr(time_domain,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
