@@ -104,7 +104,8 @@ function ll_param(vars::Tuple, p::Proposal,D::NamedTuple)
             x = getproperty(p,v)
             ll += -(x-D[v][1])*(x-D[v][1]) / (2*D[v][2]*D[v][2]) # = - (x-μ)^2 / 2σ^2
         elseif D[v][3] == :lN # LogNormal distribution
-            ll += -(log(x)-D[v][1])^2 / (2*D[v][2]*D[v][2]) # = - (ln(x)-μ)^2 / 2σ^2, use exponent in numerator bc logs are slow.
+            lnx = log(getproperty(p,v)) # calculate ln of proposed parameter
+            ll += -lnx-(lnx-D[v][1])*(lnx-D[v][1]) / (2*D[v][2]*D[v][2]) # = - ln(x) - (ln(x)-μ)^2 / 2σ^2
         end
     end
     return ll
@@ -217,7 +218,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 
 # Ensure the returned distribution has more than a cooling age bin.
             if length(distₚ[1])>1
-                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) #+ ll_param(pvars,pₚ,,psig)
+                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_param(pvars,pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -280,9 +281,13 @@ function MetropolisAr(  time_domain::AbstractRange,
                         nᵣ = nᵣ,        # radial nodes
                         rmNaN=true)     # remove NaNs
 
-            length(distₚ[1])>1 ? llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) : llₚ=-Inf
+            if length(distₚ[1])>1
+                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_param(pvars,pₚ,plims)
+            else
+                llₚ=-Inf
+            end
 
-# Reject proposal if pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
+# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
         else
             llₚ = -Inf
         end
