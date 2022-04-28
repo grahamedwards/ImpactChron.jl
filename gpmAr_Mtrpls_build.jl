@@ -118,10 +118,10 @@ function MetropolisAr(  time_domain::AbstractRange,
                         DistAr::Function,    # Proposal distribution calculator
                         p::Proposal,   # Parameter proposal
                         pσ::Proposal, # proposed σ for pertrubations.
-                        plims::NamedTuple=(g=(),) # Paramter distributions.
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray;# Observed 1σ's
+                        plims::NamedTuple=(g=(),), # Paramter distributions.
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int=10000,  # Post burn-in iterations
                         Δt::Number= 0.1,    # Time-step (Ma)
@@ -134,7 +134,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     llDist = Array{float(eltype(mu))}(undef,nsteps)
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ)
 # If no plims given, set ranges to
-    plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf),length(pvars)))...) )
+    plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf,:U),length(pvars)))...) )
 
 # Status function to keep user updated...
     function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
@@ -216,7 +216,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                         nᵣ = nᵣ,        # radial nodes
                         rmNaN=true)     # remove NaNs
 
-# Ensure the returned distribution has more than a cooling age bin.
+# Ensure the returned distribution has more than a single cooling age bin.
             if length(distₚ[1])>1
                 llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_param(pvars,pₚ,plims)
             else
@@ -311,5 +311,8 @@ function MetropolisAr(  time_domain::AbstractRange,
         llDist[i] = ll
         i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start); flush(stdout)
     end
-    return pDist, llDist, acceptanceDist
+    #MetOut = Dict((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
+    MetOut[:ll] = out_llDist
+    MetOut[:accept] = out_accept
+    return MetOut
 end
