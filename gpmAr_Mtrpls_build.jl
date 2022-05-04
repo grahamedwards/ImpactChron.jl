@@ -2,9 +2,10 @@
 
 ## Plot Evolution of proposals
 
-function plotproposals(d::Dict,vars::Tuple,cols::Integer;
-                        ll::Bool=true)
-    v=vars
+function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
+                        ll::Bool=true,bounds::Bool=true)
+    isempty(vars) ? v=keys(plims) : v=vars
+    ll && (v=tuple(:ll,v...))
     nᵥ=length(v)
 # Calculate number of rows needed to accomodate all variables in `cols` columns.
     rows = Int(ceil(nᵥ/cols,digits=0))
@@ -14,13 +15,28 @@ function plotproposals(d::Dict,vars::Tuple,cols::Integer;
         k = v[i]
         y = d[k]
         x = 1:length(y)
-        panels[i] = plot(x,y,xticks=[],ylabel="$k",linecolor=:black)
-
-        #max != nothing && k != :ll && plot!([1,last(x)],getproperty(max,k)*ones(2),linecolor=:grey,linestyle=:dash)
-        #min != nothing && k != :ll && plot!([1,last(x)],getproperty(min,k)*ones(2),linecolor=:grey,linestyle=:dash)
-        if ll==true && k == :ll
+        if k == :ll
+            panels[i] = plot(x,y,xticks=[],ylabel="ll",linecolor=:black) #use \scrl eventually
             r = 100 * sum(d[:accept])/length(d[:accept])
             annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:right,6))
+        elseif isnan(last(y))
+            panels[i] = plot([1,last(x)],fill(y[1],2),xticks=[],ylabel="$k",linecolor=:black)
+        else
+            panels[i] = plot(x,y,xticks=[],ylabel="$k",linecolor=:black)
+        end
+
+        if bounds && k != :ll
+            B = plims[k]
+            if isa(B,Unf)
+                plot!([1,last(x)],fill(B.a,2),linecolor=:grey,linestyle=:solid)
+                plot!([1,last(x)],fill(B.b,2),linecolor=:grey,linestyle=:solid)
+            elseif isa(B,Nrm)
+                plot!([1,last(x)],fill(B.μ+B.σ,2),linecolor=:grey,linestyle=:dash)
+                plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dash)
+            elseif isa(B,lNrm)
+                plot!([1,last(x)],fill(exp(B.μ+B.σ),2),linecolor=:grey,linestyle=:dashdot)
+                plot!([1,last(x)],fill(exp(B.μ-B.σ),2),linecolor=:grey,linestyle=:dashdot)
+            end
         end
     end
     sbplts=rows*cols
@@ -144,9 +160,9 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Prepare output Distributions
     acceptanceDist = falses(nsteps)
     nᵥ = length(pvars)
-    llDist = Array{float(eltype(mu))}(undef,nsteps) # Array to track
-    pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ)
-    prt = similar(acceptanceDist,Symbol)
+    llDist = Array{float(eltype(mu))}(undef,nsteps) # Vector to track loglikelihood
+    pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ) # Array to track proposal evolutions
+    prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
 # If no plims given, set ranges to
     plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf,:U),length(pvars)))...) )
 
@@ -190,16 +206,16 @@ function MetropolisAr(  time_domain::AbstractRange,
     # Burnin
     #@inbounds
     for i = 1:burnin
-        # Start with fresh slate of parameters
+# Start with fresh slate of parameters
         copyto!(pₚ, p)
 
-        # Adjust one parameter
+# Adjust one parameter
         k = rand(pvars)
         δpₖ = getproperty(step_σ,k)*randn()
         setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
             #pₚ[k] += δpₖ
 
-        # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
+# Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             distₚ = DistAr(time_domain,
