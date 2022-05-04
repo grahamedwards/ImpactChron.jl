@@ -2,10 +2,9 @@
 
 ## Plot Evolution of proposals
 
-function plotproposals(d::Dict,vars::Vector{Symbol},cols::Integer;
-                        ll::Bool=true,
-                        max::Proposal=nothing,min::Proposal=nothing)
-    ll ? v=vcat(vars,:ll) : v=copy(vars)
+function plotproposals(d::Dict,vars::Tuple,cols::Integer;
+                        ll::Bool=true)
+    v=vars
     nᵥ=length(v)
 # Calculate number of rows needed to accomodate all variables in `cols` columns.
     rows = Int(ceil(nᵥ/cols,digits=0))
@@ -17,9 +16,9 @@ function plotproposals(d::Dict,vars::Vector{Symbol},cols::Integer;
         x = 1:length(y)
         panels[i] = plot(x,y,xticks=[],ylabel="$k",linecolor=:black)
 
-        max != nothing && k != :ll && plot!([1,last(x)],getproperty(max,k)*ones(2),linecolor=:grey,linestyle=:dash)
-        min != nothing && k != :ll && plot!([1,last(x)],getproperty(min,k)*ones(2),linecolor=:grey,linestyle=:dash)
-        if k == :ll
+        #max != nothing && k != :ll && plot!([1,last(x)],getproperty(max,k)*ones(2),linecolor=:grey,linestyle=:dash)
+        #min != nothing && k != :ll && plot!([1,last(x)],getproperty(min,k)*ones(2),linecolor=:grey,linestyle=:dash)
+        if ll==true && k == :ll
             r = 100 * sum(d[:accept])/length(d[:accept])
             annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:right,6))
         end
@@ -96,23 +95,37 @@ function ll_dist(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},
     return ll
 end
 
+ll_param(x::Number,D::Nrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
+ll_param(x::Number,D::lNrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
+    #lnx = log(x); return -lnx-(lnx-D.μ)*(lnx-D.μ) / (2*D.σ*D.σ)
+ll_param(x::T,D::Unf) where T<:Number = zero(T)
 
-function ll_param(vars::Tuple, p::Proposal,D::NamedTuple)
-    ll=zero(Float64)
-    for v in vars
-        if D[v][3] == :N # Normal distribution
-            x = getproperty(p,v)
-            ll += -(x-D[v][1])*(x-D[v][1]) / (2*D[v][2]*D[v][2]) # = - (x-μ)^2 / 2σ^2
-        elseif D[v][3] == :lN # LogNormal distribution
-            lnx = log(getproperty(p,v)) # calculate ln of proposed parameter
-            ll += -lnx-(lnx-D[v][1])*(lnx-D[v][1]) / (2*D[v][2]*D[v][2]) # = - ln(x) - (ln(x)-μ)^2 / 2σ^2
-        end
-    end
+function ll_params(p::Proposal,d::NamedTuple)
+    ll = 0.
+    ll += ll_param(p.Cp, d.Cp)
+    ll += ll_param(p.R, d.R)
+    ll += ll_param(p.Tc, d.Tc)
+    ll += ll_param(p.Tm, d.Tm)
+    ll += ll_param(p.cAl, d.cAl)
+    ll += ll_param(p.k, d.k)
+    ll += ll_param(p.rAlo, d.rAlo)
+    ll += ll_param(p.ta, d.ta)
+    ll += ll_param(p.tss, d.tss)
+    ll += ll_param(p.ρ, d.ρ)
     return ll
 end
 
-xx
-
+# Status function to keep user updated...
+    function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
+        println("---------------------------")
+        stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
+        println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
+        println("ll=$ll \n")
+        for v ∈ vars
+            println(v," → ",getproperty(p,v))
+        end
+        println("---------------------------")
+    end
 
 function MetropolisAr(  time_domain::AbstractRange,
                         DistAr::Function,    # Proposal distribution calculator
@@ -131,22 +144,11 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Prepare output Distributions
     acceptanceDist = falses(nsteps)
     nᵥ = length(pvars)
-    llDist = Array{float(eltype(mu))}(undef,nsteps)
+    llDist = Array{float(eltype(mu))}(undef,nsteps) # Array to track
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ)
+    prt = similar(acceptanceDist,Symbol)
 # If no plims given, set ranges to
     plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf,:U),length(pvars)))...) )
-
-# Status function to keep user updated...
-    function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
-        println("---------------------------")
-        stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
-        println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
-        println("ll=$ll \n")
-        for v ∈ vars
-            println(v," → ",getproperty(p,v))
-        end
-        println("---------------------------")
-    end
 
     # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
     stepfactor = 2.9
@@ -164,23 +166,23 @@ function MetropolisAr(  time_domain::AbstractRange,
 
     # Calculate initial proposal distribution
     distₚ = DistAr(time_domain,
-                tₛₛ = p.tss,     #solar system age, Ma
-                rAlo = p.rAlo,  # initial solar ²⁶Al/²⁷Al
-                tₐ = p.ta,      # accretion time, My after CAIs
-                R = p.R,        # Body radius
-                To = p.Tm,      # Disk temperature @ 2.5 au, K
-                Al_conc = p.cAl,# Fractional abundance of Al (g/g)
-                Tc = p.Tc,      # Ar closure temperature, K
-                ρ = p.ρ,        # rock density, kg/m³
-                K = p.k,        # Thermal Conductivity
-                Cₚ = p.Cp,      # Specific Heat Capacity
+                tₛₛ = pₚ.tss,     #solar system age, Ma
+                rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
+                tₐ = pₚ.ta,      # accretion time, My after CAIs
+                R = pₚ.R,        # Body radius
+                To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
+                Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
+                Tc = pₚ.Tc,      # Ar closure temperature, K
+                ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
+                K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
+                Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,        # absolute timestep, default 10 ka
                 tmax = tmax,    # maximum time allowed to model
                 nᵣ = nᵣ,        # radial nodes
                 rmNaN=true)     # remove NaNs
 
     # Log likelihood of initial proposal
-    ll = llₚ = ll_dist(distₚ, mu_sorted, sigma_sorted)
+    ll = llₚ = ll_dist(distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
 
 # Start the clock
     start = time()
@@ -198,18 +200,18 @@ function MetropolisAr(  time_domain::AbstractRange,
             #pₚ[k] += δpₖ
 
         # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if plims[k][3] == :U && plims[k][1] < getproperty(pₚ,k) < plims[k][2]
+        if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             distₚ = DistAr(time_domain,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                         tₐ = pₚ.ta,      # accretion time, My after CAIs
                         R = pₚ.R,        # Body radius
-                        To = pₚ.Tm,      # Disk temperature @ 2.5 au, K
-                        Al_conc = pₚ.cAl,# Fractional abundance of Al (g/g)
+                        To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
+                        Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
                         Tc = pₚ.Tc,      # Ar closure temperature, K
-                        ρ = pₚ.ρ,        # rock density, kg/m³
-                        K = pₚ.k,        # Thermal Conductivity
+                        ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
+                        K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
                         Cₚ = pₚ.Cp,      # Specific Heat Capacity
                         Δt = Δt,        # absolute timestep, default 10 ka
                         tmax = tmax,    # maximum time allowed to model
@@ -218,7 +220,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 
 # Ensure the returned distribution has more than a single cooling age bin.
             if length(distₚ[1])>1
-                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_param(pvars,pₚ,plims)
+                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -257,32 +259,32 @@ function MetropolisAr(  time_domain::AbstractRange,
 
         # Adjust one parameter
         k = rand(pvars)
+        prt[i]=k
         δpₖ = getproperty(step_σ,k)*randn()
         setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
             #pₚ[k] += δpₖ
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-
-        if plims[k][3] == :U && plims[k][1] < getproperty(pₚ,k) < plims[k][2]
+        if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             distₚ = DistAr(time_domain,
-                        tₛₛ = pₚ.tss,     #solar system age, Ma
-                        rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
-                        tₐ = pₚ.ta,      # accretion time, My after CAIs
-                        R = pₚ.R,        # Body radius
-                        To = pₚ.Tm,      # Disk temperature @ 2.5 au, K
-                        Al_conc = pₚ.cAl,# Fractional abundance of Al (g/g)
-                        Tc = pₚ.Tc,      # Ar closure temperature, K
-                        ρ = pₚ.ρ,        # rock density, kg/m³
-                        K = pₚ.k,        # Thermal Conductivity
-                        Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                        Δt = Δt,        # absolute timestep, default 10 ka
-                        tmax = tmax,    # maximum time allowed to model
-                        nᵣ = nᵣ,        # radial nodes
-                        rmNaN=true)     # remove NaNs
+                tₛₛ = pₚ.tss,     #solar system age, Ma
+                rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
+                tₐ = pₚ.ta,      # accretion time, My after CAIs
+                R = pₚ.R,        # Body radius
+                To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
+                Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
+                Tc = pₚ.Tc,      # Ar closure temperature, K
+                ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
+                K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
+                Cₚ = pₚ.Cp,      # Specific Heat Capacity
+                Δt = Δt,        # absolute timestep, default 10 ka
+                tmax = tmax,    # maximum time allowed to model
+                nᵣ = nᵣ,        # radial nodes
+                rmNaN=true)     # remove NaNs
 
             if length(distₚ[1])>1
-                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_param(pvars,pₚ,plims)
+                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -311,8 +313,15 @@ function MetropolisAr(  time_domain::AbstractRange,
         llDist[i] = ll
         i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start); flush(stdout)
     end
-    #MetOut = Dict((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
-    MetOut[:ll] = out_llDist
-    MetOut[:accept] = out_accept
-    return MetOut
+    MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
+    for x ∈ keys(plims)
+# Record proposal values of unvaried parameters
+        in(x,pvars) || (MetOut[x]= vcat(getproperty(p,x),fill(NaN,nsteps-1)))
+# Calculate exponent of lognormally distributed variables
+        isa(plims[x],lNrm) && vmapt!(exp,MetOut[x],MetOut[x])
+    end
+    MetOut[:ll] = llDist
+    MetOut[:accept] = acceptanceDist
+    MetOut[:prt] = prt
+    return MetOut #(; MetOut...) # convert to NamedTuple
 end

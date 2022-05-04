@@ -1,4 +1,20 @@
 ## Parameters for planetesimal thermal model
+# Normally distributed data, reported as mean and 1σ
+struct Nrm
+    μ::Float64
+    σ::Float64
+end
+# Normally distributed data, reported as mean and 1σ
+struct lNrm
+    μ::Float64
+    σ::Float64
+end
+
+# Uniformly distributed data
+struct Unf
+    a::Float64
+    b::Float64
+end
 
 mutable struct Proposal #Planetesimal Proposal
     # Background Conditions
@@ -98,6 +114,10 @@ plntsml_params = ResampleParams(tₛₛ_J08,rAlₒ_J08,Tm2d5,Radius,t_accr,Al_co
 
 """
 
+Nrm(4567.60,0.36)   # Jacobsen2008 CAI AJEF Pb-Pb
+Nrm(4567.4,0.34) # Jacobsen2008 AJEF-A34 Pb-Pb
+Nrm(5.11e-5,0.14e-5) # Jacobsen2008 AJEF lowerbound
+
 # normally distributed data, reported at mean and 1σ
 mutable struct nrm
     μ::Float64
@@ -124,7 +144,7 @@ end
     Al_EH = 0.82 / 100.
     Al_EL = 1.00 / 100.
     Al_R  = 1.06 / 100.
-        #Al_all = vcat(Al_LL,Al_L,Al_H,Al_EH,Al_EL)
+    Al_all = vcat(Al_LL,Al_L,Al_H,Al_EH,Al_EL)
 
 ## Parent Body Size
     LL_R = [150,200] *1e3 # min: Edwards&Blackburn2020 || max: Henke/Gail
@@ -133,6 +153,13 @@ end
     E_R = [120,210] *1e3 # Trieloff+2022 (EL)
 
 # Thermal Conductivity (k, W m⁻¹ K⁻¹)
+
+# OCs compiled in Opeil+ 2012, (@200 K)
+Op12_comp = [1.25,3.05,0.82,1.90,0.45,1.15,3.15,2.72,2.26, # new Opeil+ 2012
+    1.88,1.47, # Opeil+ 2010
+    3.53,0.75,3.60,2.16,2.35,3.85,1.54,1.15,0.55,1.20,.73,.85,2.31, 1.03,2.14,1.86,.4,.47,1.54,.78,1.24,.97] # Yomogida+Matsui 1983
+Op12excluded = (Piillistfer=5.51, Abee=5.33)
+
 
 k_E = 5 #Enstatite chondrites (Opeil+2012) for T > 350 K
 k_E(T) = 4.11 + 248/T
