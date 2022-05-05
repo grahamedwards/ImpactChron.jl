@@ -150,14 +150,15 @@ end
 ## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
 
 function PlntsmlAr(;
+            nᵣ::Integer,          # Number of simulated radial distances
+            Δt::Number = 0.01,    # absolute timestep, default 10 ka
+            tmax::Number = 2000,  # maximum time allowed to model
+            Tmax::Number = 1500,  # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
             Tmin::Number=0,
             Tc::Number,
             tₛₛ::Number,
             tₐ::Number,         # accretion time
-            Δt::Number = 0.01,    # absolute timestep, default 10 ka
-            tmax::Number = 2000,  # maximum time allowed to model
             R::Number,            # Body radius
-            nᵣ::Integer,          # Number of simulated radial distances
             To::Number,           # Disk temperature (K)
             Al_conc::Number,      # Fractional abundance of Al (g/g)
             rAlo::Number,         # initial solar ²⁶Al/²⁷Al
@@ -169,22 +170,22 @@ function PlntsmlAr(;
     ages=Array{typeof(tₛₛ)}(undef,nᵣ)
     Vfrxn=Array{typeof(R)}(undef,nᵣ)
     radii = LinRange(zero(R),R,nᵣ)
-    PlntsmlAr!(ages,Vfrxn,radii,Tmin=Tmin,Tc=Tc,tₛₛ=tₛₛ,tₐ=tₐ,Δt=Δt, tmax=tmax,R=R,nᵣ=nᵣ,To=To,Al_conc=Al_conc,rAlo=rAlo,ρ=ρ,K=K,Cₚ=Cₚ,rmNaN=rmNaN)
+    PlntsmlAr!(ages,Vfrxn,radii,Tmax=Tmax,Tmin=Tmin,Tc=Tc,tₛₛ=tₛₛ,tₐ=tₐ,Δt=Δt,tmax=tmax,R=R,nᵣ=nᵣ,To=To,Al_conc=Al_conc,rAlo=rAlo,ρ=ρ,K=K,Cₚ=Cₚ,rmNaN=rmNaN)
     return ages,Vfrxn,radii
 end
 
 function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
-    Vfrxn::AbstractArray,
-    radii::AbstractRange;
-    #time_domain::AbstractRange=0:0; # Ouptut time domain
-    Tmin::Number=0,
+    Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
+    radii::AbstractRange; # pre-allocated (Lin)Range of radial nodes in body
+    nᵣ::Integer,          # Number of simulated radial distances
+    Δt::Number = 0.01,    # absolute timestep, default 10 ka
+    tmax::Number = 2000,  # maximum time allowed to model
+    Tmax::Number = 1500,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
+    Tmin::Number=0,       # minimum temperature (K)
     Tc::Number,
     tₛₛ::Number,
     tₐ::Number,         # accretion time
-    Δt::Number = 0.01,    # absolute timestep, default 10 ka
-    tmax::Number = 2000,  # maximum time allowed to model
     R::Number,            # Body radius
-    nᵣ::Integer,          # Number of simulated radial distances
     To::Number,           # Disk temperature (K)
     Al_conc::Number,      # Fractional abundance of Al (g/g)
     rAlo::Number,         # initial solar ²⁶Al/²⁷Al
@@ -247,6 +248,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
             T > Tᵢ && T>Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
+            T > Tmax && break # This level is not chondritic if it melts.
 # compare T to Tc only if cooling & got hot enough
             if T < Tᵢ && T <= Tc && HotEnough
                 ages[i]= tₛₛ - time_Ma[j]  # log time only when T falls below Tc

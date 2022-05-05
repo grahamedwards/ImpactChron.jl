@@ -1,5 +1,5 @@
 ## gpmAr Metropolis functions: construction site
-
+using LoopVectorization
 ## Plot Evolution of proposals
 
 function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
@@ -154,6 +154,8 @@ function MetropolisAr(  time_domain::AbstractRange,
                         nsteps::Int=10000,  # Post burn-in iterations
                         Δt::Number= 0.1,    # Time-step (Ma)
                         tmax::Number=2000,  # Max model duration (Ma, starts at CAIs)
+                        Tmax::Number=1500,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
+                        Tmin::Number=0,     # minimum temperature (K)
                         nᵣ::Integer=100,    # Radial nodes
                         updateN::Integer=50) # Frequency of status updates (every `updateN` steps)
 # Prepare output Distributions
@@ -196,10 +198,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                 ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
                 K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                Δt = Δt,        # absolute timestep, default 10 ka
-                tmax = tmax,    # maximum time allowed to model
-                nᵣ = nᵣ,        # radial nodes
-                rmNaN=true)     # remove NaNs
+                Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
 # Convert thermal code output into a binned histogram
     distₚ = histogramify(time_domain,dates,Vfrxn,Δd=Δd)
 # Log likelihood of initial proposal
@@ -234,10 +233,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                         ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
                         K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
                         Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                        Δt = Δt,        # absolute timestep, default 10 ka
-                        tmax = tmax,    # maximum time allowed to model
-                        nᵣ = nᵣ,        # radial nodes
-                        rmNaN=true)     # remove NaNs
+                        Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
 
             histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
 # Ensure the returned distribution is nonzero
@@ -300,9 +296,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                 ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
                 K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                Δt = Δt,        # absolute timestep, default 10 ka
-                tmax = tmax,    # maximum time allowed to model
-                nᵣ = nᵣ)        # radial nodes
+                Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
 
             histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
 # Ensure the returned distribution is nonzero
