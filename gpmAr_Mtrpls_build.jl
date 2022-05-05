@@ -55,7 +55,7 @@ end
 Log-likelihood notes...
 
 """
-function ll_dist(   p_dist::Tuple{AbstractVector,AbstractVector,AbstractVector},    # Proposed distribution (ages,proportion, radii)
+function ll_dist(   p_dist::Tuple{AbstractVector,AbstractVector},    # Proposed distribution (ages,proportions)
                     mu::AbstractVector,      # 1D Array/Vector of observed μ's (sorted)
                     sigma::AbstractVector)   # 1D Array/Vector of observed σ's (sorted)
 
@@ -144,7 +144,6 @@ end
     end
 
 function MetropolisAr(  time_domain::AbstractRange,
-                        DistAr::Function,    # Proposal distribution calculator
                         p::Proposal,   # Parameter proposal
                         pσ::Proposal, # proposed σ for pertrubations.
                         pvars::Tuple, # Variable parameters in proposal
@@ -163,6 +162,11 @@ function MetropolisAr(  time_domain::AbstractRange,
     llDist = Array{float(eltype(mu))}(undef,nsteps) # Vector to track loglikelihood
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ) # Array to track proposal evolutions
     prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
+
+# Calculate bincenters for time_domain
+    Δd = step(time_domain) #calculate time_domain step
+    bincenters = LinRange(first(time_domain)+0.5*Δd,last(time_domain) - 0.5Δd,length(time_domain)-1)
+
 # If no plims given, set ranges to
     plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf,:U),length(pvars)))...) )
 
@@ -181,7 +185,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     step_σ=copy(pσ)
 
     # Calculate initial proposal distribution
-    distₚ = DistAr(time_domain,
+    dates,Vfrxn,radii = PlntsmlAr(
                 tₛₛ = pₚ.tss,     #solar system age, Ma
                 rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                 tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -196,9 +200,10 @@ function MetropolisAr(  time_domain::AbstractRange,
                 tmax = tmax,    # maximum time allowed to model
                 nᵣ = nᵣ,        # radial nodes
                 rmNaN=true)     # remove NaNs
-
-    # Log likelihood of initial proposal
-    ll = llₚ = ll_dist(distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
+# Convert thermal code output into a binned histogram
+    distₚ = histogramify(time_domain,dates,Vfrxn,Δd=Δd)
+# Log likelihood of initial proposal
+    ll = llₚ = ll_dist((bincenters,distₚ), mu_sorted, sigma_sorted) + ll_params(p,plims)
 
 # Start the clock
     start = time()
@@ -218,7 +223,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            distₚ = DistAr(time_domain,
+            PlntsmlAr!(dates,Vfrxn,radii,
                         tₛₛ = pₚ.tss,     #solar system age, Ma
                         rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                         tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -234,9 +239,10 @@ function MetropolisAr(  time_domain::AbstractRange,
                         nᵣ = nᵣ,        # radial nodes
                         rmNaN=true)     # remove NaNs
 
-# Ensure the returned distribution has more than a single cooling age bin.
-            if length(distₚ[1])>1
-                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+            histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+# Ensure the returned distribution is nonzero
+            if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
+                llₚ = ll_dist((bincenters,distₚ) , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -283,7 +289,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            distₚ = DistAr(time_domain,
+            PlntsmlAr!(dates,Vfrxn,radii,
                 tₛₛ = pₚ.tss,     #solar system age, Ma
                 rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                 tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -296,15 +302,15 @@ function MetropolisAr(  time_domain::AbstractRange,
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,        # absolute timestep, default 10 ka
                 tmax = tmax,    # maximum time allowed to model
-                nᵣ = nᵣ,        # radial nodes
-                rmNaN=true)     # remove NaNs
+                nᵣ = nᵣ)        # radial nodes
 
-            if length(distₚ[1])>1
-                llₚ = ll_dist(distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+            histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+# Ensure the returned distribution is nonzero
+            if vreduce(+,distₚ) > 0
+                llₚ = ll_dist((bincenters,distₚ) , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
-
 # Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
         else
             llₚ = -Inf

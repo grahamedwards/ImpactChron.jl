@@ -70,32 +70,46 @@ This allows us to skip calculating this value to normalize values of dist,
     so that ∫ dist dx = 1
 
 """
+function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector;Δd::Number=0.)
+    iszero(Δd) && (Δd=step(domain))
+    dist = Vector{float(eltype(y))}(undef,length(domain)-1)
+    histogramify!(dist,domain,Δd,x,y)
+    return dist
+end
 
-function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
+function histogramify!(dist::AbstractVector,domain::AbstractRange,Δd::Number,x::AbstractVector,y::AbstractVector)
+# Declare distribution vector
+    fill!(dist,zero(eltype(dist)))
 # Sort (x,y) values in order of ascending x (e.g. dates) for search efficiency
     i_sorted = sortperm(x)
-    xₛ = x[i_sorted]
-    yₛ = y[i_sorted]
-# Calculate bin center range (xₘ)  for domain
-    Δd = step(domain) #calculate time_domain step
-    xₘ = (first(domain) + 0.5Δd) : Δd : (last(domain) - 0.5Δd)
-# Declare distribution vector
-    dist = zeros(float(eltype(yₛ)),length(xₘ))
+    x_sort = x[i_sorted]
+    y_sort = y[i_sorted]
+# Remove any NaNs to ensure
+    firstNaN = searchsortedfirst(x_sort,NaN)
+    xₛ = view(x_sort,1:firstNaN-1)
+    yₛ = view(y_sort,1:firstNaN-1)
+# Ensure NaN removal did not delete all elements of x & y
+    if length(xₛ)>0
 # Identify indices of domain that bound all values of x
-    xmin = searchsortedfirst(domain,first(xₛ)) - 1
-    xmax = searchsortedlast(domain,last(xₛ)) + 1
+        xmin = searchsortedfirst(domain,first(xₛ)) - 1
+        xmax = searchsortedlast(domain,last(xₛ)) + 1
 # Ensure that xmin and xmax are defined in domain
-    if (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1, and if any searches fail, xmax < xmin (no dates overlap time_domain)
-        for i ∈ (xmin):(xmax) # 1 step outward of xmin,xmax to get peripheral values
-            l = searchsortedfirst(xₛ , domain[i]) # lower index
-            u = searchsortedlast(xₛ , domain[i+1]) # upper index
-# Ensure values of (xₛ,yₛ) fall within bounds (if not, ssf/ssl return l > u)
-            u >= l && ( dist[i] = vreduce(+,yₛ[l:u])/Δd )
+        if iszero(xmin) || xmax > length(domain)
+            printstyled("CAUTION: "; color=:yellow)
+            println("Time domain bounds exceeded. Proposal rejected.")
+            flush(stdout)
+        elseif (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1
+            for i ∈ (xmin):(xmax) # 1 step outward of xmin,xmax to get peripheral values
+                l = searchsortedfirst(xₛ , domain[i]) # lower index
+                u = searchsortedlast(xₛ , domain[i+1]) # upper index
+# Ensure values of (xₛ,yₛ) fall within bounds (if not, searchsortedfirst/searchsortedlast return l > u)
+                u >= l && ( dist[i] = vreduce(+,yₛ[l:u])/Δd )
+            end
+        elseif (xmax - xmin) == 1
+            dist[xmin] = 1.0 / Δd
         end
-    elseif (xmax - xmin) == 1
-        dist[xmin] = 1.0 / Δd
     end
-    return xₘ,dist
+    return dist
 end
 
 function plntsml_Tz(time::AbstractArray,radii::AbstractArray;
@@ -135,7 +149,34 @@ end
 
 ## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
 
-function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
+function PlntsmlAr(;
+            Tmin::Number=0,
+            Tc::Number,
+            tₛₛ::Number,
+            tₐ::Number,         # accretion time
+            Δt::Number = 0.01,    # absolute timestep, default 10 ka
+            tmax::Number = 2000,  # maximum time allowed to model
+            R::Number,            # Body radius
+            nᵣ::Integer,          # Number of simulated radial distances
+            To::Number,           # Disk temperature (K)
+            Al_conc::Number,      # Fractional abundance of Al (g/g)
+            rAlo::Number,         # initial solar ²⁶Al/²⁷Al
+            ρ::Number,            # rock density
+            K::Number,            # Thermal Conductivity
+            Cₚ::Number,           # Specific heat capacity
+            rmNaN::Bool=false)     # Remove NaNs (never warms) from cooling history.
+
+    ages=Array{typeof(tₛₛ)}(undef,nᵣ)
+    Vfrxn=Array{typeof(R)}(undef,nᵣ)
+    radii = LinRange(zero(R),R,nᵣ)
+    PlntsmlAr!(ages,Vfrxn,radii,Tmin=Tmin,Tc=Tc,tₛₛ=tₛₛ,tₐ=tₐ,Δt=Δt, tmax=tmax,R=R,nᵣ=nᵣ,To=To,Al_conc=Al_conc,rAlo=rAlo,ρ=ρ,K=K,Cₚ=Cₚ,rmNaN=rmNaN)
+    return ages,Vfrxn,radii
+end
+
+function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
+    Vfrxn::AbstractArray,
+    radii::AbstractRange;
+    #time_domain::AbstractRange=0:0; # Ouptut time domain
     Tmin::Number=0,
     Tc::Number,
     tₛₛ::Number,
@@ -150,25 +191,31 @@ function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
     ρ::Number,            # rock density
     K::Number,            # Thermal Conductivity
     Cₚ::Number,           # Specific heat capacity
-    rmNaN::Bool=true)     # Remove NaNs (never warms) from cooling history.
+    rmNaN::Bool=false)     # Remove NaNs (never warms) from cooling history.
 
     κ = K / (ρ*Cₚ)
-    s_a  = 365.2422 * 24.0 * 60.0 * 60.0 # seconds per annum, for Physics™!
+    s_a  = 3.155692608e7 # seconds per annum, for Physics™!
 
-    # Assume ²⁶Al is primary heat producer
-    λ=log(2) / 7.17e5 / s_a   # ²⁶Al decay constant in s⁻¹
-    H=0.355     # Specific power production of ²⁶Al (W/kg; Castillo-Rogez+2009)
+# Assume ²⁶Al is primary heat producer
+    λ = 3.0634557591238076e-14 # = log(2) / 7.17e5 / s_a   # ²⁶Al decay constant in s⁻¹
+    H = 0.355     # Specific power production of ²⁶Al (W/kg; Castillo-Rogez+2009)
 
-    shells = LinRange(0,R,nᵣ+1)
-    radii = (0.5 * R / nᵣ) .+ shells[1:end-1]
+    shells= LinRange(zero(R),R,nᵣ+1)
+    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
 
-    vols = [(4.0 * π / 3.0) * z^3 for z ∈ shells]
-    shell_vol = vols[2:end] .- vols[1:end-1]
+# Calculate proportional volumes of shells around each radial node
+    Vbody = R^3
+    Vo = 0.
+    @inbounds for z ∈ 1:nᵣ
+        Vz = shells[z+1]^3
+        Vfrxn[z] = ( Vz - Vo ) / Vbody
+        Vo=Vz
+    end
 
-    ages = fill(NaN,length(radii)) # Vector{Float64}(undef,length(radii))
+    fill!(ages,NaN) # Vector{Float64}(undef,length(radii))
 
     time_Ma = tₐ : Δt : tmax  # time in Ma (after CAIs)
-    time  = (time_Ma .- tₐ) .* 1e6 .* s_a # time in s (after accretion)
+    time  = (0. : Δt : tmax - tₐ) * 1e6 * s_a # time in s (after accretion)
 
     Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
@@ -176,7 +223,7 @@ function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
 
 
     # possibly: using Polyester: @batch
-    @inbounds for i = 1:length(radii)
+    @inbounds for i = 1:nᵣ
         Tᵢ = 0.0 #
         T = 0.0
         HotEnough = false
@@ -202,14 +249,16 @@ function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
             T > Tᵢ && T>Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
 # compare T to Tc only if cooling & got hot enough
             if T < Tᵢ && T <= Tc && HotEnough
-                ages[i]=time_Ma[j]  # log time only when T falls below Tc
+                ages[i]= tₛₛ - time_Ma[j]  # log time only when T falls below Tc
                 break               # kill loop
             else
                 Tᵢ = T
             end
         end
     end
-
+end
+"""
+## rmNaN // Remove NaN code
     if !rmNaN #remove NaN option.
         dates = tₛₛ .- ages
         volumes = shell_vol/last(vols)
@@ -221,6 +270,7 @@ function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
         radii_out = radii[Xnan]
     end
 
+## ~histogramify~ WITHIN PlntsmlAr
     if time_domain == 0:0
         return dates,volumes,radii_out
     elseif length(dates) > 1 # Ensure more than 1 radius
@@ -233,7 +283,7 @@ function PlntsmlAr(time_domain::AbstractRange=0:0; # Ouptut time domain
         dist = zeros(length(bincenters))
         return bincenters,dist,time_domain
     end
-end
+"""
 
 ## Naive Resampler
 
