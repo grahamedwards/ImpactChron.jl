@@ -168,14 +168,13 @@ function PlntsmlAr(;
 
     ages=Array{typeof(tₛₛ)}(undef,nᵣ)
     Vfrxn=Array{typeof(R)}(undef,nᵣ)
-    radii = LinRange(zero(R),R,nᵣ)
-    PlntsmlAr!(ages,Vfrxn,radii,Tmax=Tmax,Tmin=Tmin,Tc=Tc,tₛₛ=tₛₛ,tₐ=tₐ,Δt=Δt,tmax=tmax,R=R,nᵣ=nᵣ,To=To,Al_conc=Al_conc,rAlo=rAlo,ρ=ρ,K=K,Cₚ=Cₚ,rmNaN=rmNaN)
+    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
+    PlntsmlAr!(ages,Vfrxn,Tmax=Tmax,Tmin=Tmin,Tc=Tc,tₛₛ=tₛₛ,tₐ=tₐ,Δt=Δt,tmax=tmax,R=R,nᵣ=nᵣ,To=To,Al_conc=Al_conc,rAlo=rAlo,ρ=ρ,K=K,Cₚ=Cₚ,rmNaN=rmNaN)
     return ages,Vfrxn,radii
 end
 
 function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
-    Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
-    radii::AbstractRange; # pre-allocated (Lin)Range of radial nodes in body
+    Vfrxn::AbstractArray; # pre-allocated vector for volume fraction of each date
     nᵣ::Integer,          # Number of simulated radial distances
     Δt::Number = 0.01,    # absolute timestep, default 10 ka
     tmax::Number = 2000,  # maximum time allowed to model
@@ -341,21 +340,20 @@ ImpactResetAr ~ reheat volumes for an exponential impact flux
 
 ImpactResetAr(  dates::AbsractArray,
                 Vfrxn::AbstractArray,
-                radii::AbstractRange,
                 p::Proposal;
                 Δt::Number,tmax::Number,nᵣ::Integer)
 
-Assumes impact heating depth of 20 km & impact reheating zone with z/D = 0.12
+Assumes impact heating depth of 20 km & impact reheating zone with z/D = 0.3
 
 
 """
-function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,radii::AbstractRange,p::Proposal;
+function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::Proposal;
                         #IzD::Number,   # depth/diameter ratio of impact reheating region
                         #Iz::Number,    # m | depth of impact reheating
                         Δt::Number,tmax::Number,nᵣ::Integer)
 #
 # FOR NOW
-    IzD = 0.12
+    IzD = 0.3
     Iz = 20e3 # m | impact heating depth
     rIz = 0.5/IzD # ratio of impact crater radius / depth
 
@@ -365,7 +363,6 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,radii::Abstrac
     tᵢ = p.tχ # Ma after CAIs
     Fᵢ = p.Fχ #Initial impactor flux Ma⁻¹
     λ = 1/p.τχ  # Ma⁻¹ | decay constant of impact flux
-
 
 # Step 1: Impact Events
 # Draw impact dates from flux distribution
@@ -380,6 +377,8 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,radii::Abstrac
     impacts = (tₛₛ - tᵢ) .- Itime[Ilog]
 
 # Step 2: Resetting Ar-Ar on the body
+# Define depths for each radial node.
+    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
 # Identify base of impact-affected zone
     I_r_baseᵢ = searchsortedfirst(radii,R-Iz) # deepest reheated radius index
     I_r_base = radii[I_r_baseᵢ] #radial node at base of reheating zone.

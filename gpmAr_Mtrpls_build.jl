@@ -136,6 +136,7 @@ end
         println("---------------------------")
         stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
         println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
+        println("acceptance rate =",vreduce(+,acceptanceDist)/stepI)
         println("ll=$ll \n")
         for v ∈ vars
             println(v," → ",getproperty(p,v))
@@ -187,7 +188,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     step_σ=copy(pσ)
 
     # Calculate initial proposal distribution
-    dates,Vfrxn,radii = PlntsmlAr(
+    dates,Vfrxn = PlntsmlAr(
                 tₛₛ = pₚ.tss,     #solar system age, Ma
                 rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                 tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -203,7 +204,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     if iszero(pₚ.Fχ)
         distₚ = histogramify(time_domain,dates,Vfrxn,Δd=Δd)
     else
-        Iages,Ivols = ImpactResetAr(dates,Vfrxn,radii,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+        Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
         distₚ = histogramify(time_domain,Iages,Ivols,Δd=Δd)
     end
 
@@ -228,7 +229,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates,Vfrxn,radii,
+            PlntsmlAr!(dates,Vfrxn,
                 tₛₛ = pₚ.tss,     #solar system age, Ma
                 rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                 tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -240,10 +241,11 @@ function MetropolisAr(  time_domain::AbstractRange,
                 K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
+            #k == problem && println("problem"); flush(stdout)
             if iszero(pₚ.Fχ)
                 histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
             else
-                Iages,Ivols = ImpactResetAr(dates,Vfrxn,radii,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
                 histogramify!(distₚ,time_domain,Δd,Iages,Ivols)
             end
 # Ensure the returned distribution is nonzero
@@ -295,7 +297,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates,Vfrxn,radii,
+            PlntsmlAr!(dates,Vfrxn,
                 tₛₛ = pₚ.tss,     #solar system age, Ma
                 rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
                 tₐ = pₚ.ta,      # accretion time, My after CAIs
@@ -307,11 +309,11 @@ function MetropolisAr(  time_domain::AbstractRange,
                 K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
-
+            #k == problem && println("problem"); flush(stdout)
             if iszero(pₚ.Fχ)
                 histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
             else
-                Iages,Ivols = ImpactResetAr(dates,Vfrxn,radii,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
                 histogramify!(distₚ,time_domain,Δd,Iages,Ivols)
             end
 # Ensure the returned distribution is nonzero
