@@ -1,8 +1,7 @@
 
-using LoopVectorization
+using LoopVectorization,Polyester
 using Random; rng = MersenneTwister()
 using Distributions
-#using Polyester?
 
 """
 Reference info:
@@ -330,6 +329,79 @@ function PlntsmlRsmpl(N,P::ResampleParams;
     end
     return ages
 
+end
+
+## Impact Heater v0.0
+"""
+ImpactResetAr ~ reheat volumes for an exponential impact flux
+                described by parameters in p {::Proposal}
+                p.tχ ~ instability start time
+                p.τχ ~ e-folding timescale of impact flux
+                p.Fχ ~ initial impact flux
+
+ImpactResetAr(  dates::AbsractArray,
+                Vfrxn::AbstractArray,
+                radii::AbstractRange,
+                p::Proposal;
+                Δt::Number,tmax::Number,nᵣ::Integer)
+
+Assumes impact heating depth of 20 km & impact reheating zone with z/D = 0.12
+
+
+"""
+function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,radii::AbstractRange,p::Proposal;
+                        #IzD::Number,   # depth/diameter ratio of impact reheating region
+                        #Iz::Number,    # m | depth of impact reheating
+                        Δt::Number,tmax::Number,nᵣ::Integer)
+#
+# FOR NOW
+    IzD = 0.12
+    Iz = 20e3 # m | impact heating depth
+    rIz = 0.5/IzD # ratio of impact crater radius / depth
+
+# Declare variables from input
+    tₛₛ = p.tss
+    R = p.R # m | asteroid radius
+    tᵢ = p.tχ # Ma after CAIs
+    Fᵢ = p.Fχ #Initial impactor flux Ma⁻¹
+    λ = 1/p.τχ  # Ma⁻¹ | decay constant of impact flux
+
+
+# Step 1: Impact Events
+# Draw impact dates from flux distribution
+    Itime = 0. : Δt : (tmax-tᵢ) # timeseries for potential impacts in Ma after tᵢ
+    Ilog = BitVector(undef,length(Itime))
+
+    @inbounds @batch for i ∈ eachindex(Itime)
+        p_hit = Δt * Fᵢ * exp(-λ*Itime[i])
+        Ilog[i] = ifelse( rand() < p_hit, true,false)
+    end
+# Create vector of absolute impact dates from drawing
+    impacts = (tₛₛ - tᵢ) .- Itime[Ilog]
+
+# Step 2: Resetting Ar-Ar on the body
+# Identify base of impact-affected zone
+    I_r_baseᵢ = searchsortedfirst(radii,R-Iz) # deepest reheated radius index
+    I_r_base = radii[I_r_baseᵢ] #radial node at base of reheating zone.
+# Calculate important node thicknesses and body volume.
+    Δr = step(radii)
+    Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
+# Create impact fractional volume vector
+    I_Vfrxn = zeros(eltype(Vfrxn),length(impacts))
+
+    @inbounds for imp ∈ eachindex(impacts)
+        @inbounds for r ∈ I_r_baseᵢ:nᵣ
+            x = (radii[r]+Iz-R) * rIz
+            I_Vfrxnᵣ = x^2 * Δr / Vbody # note: π removed for cancelling out Vbody
+# Only reset material that reflects primary cooling.
+            I_Vfrxnᵣ = ifelse(Vfrxn[r] > I_Vfrxnᵣ, I_Vfrxnᵣ, Vfrxn[r])
+# Add reheated fractions to total reheated volume
+            I_Vfrxn[imp] += I_Vfrxnᵣ
+# Subtract reheated fraction from Vfrxn.
+            Vfrxn[r] -= I_Vfrxnᵣ
+        end
+    end
+    return vcat(dates,impacts),vcat(Vfrxn,I_Vfrxn)
 end
 
 "...func load successful"

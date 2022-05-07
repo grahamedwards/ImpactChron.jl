@@ -17,23 +17,27 @@ struct Unf
 end
 
 mutable struct Proposal #Planetesimal Proposal
-    # Background Conditions
+# Background Conditions
     tss::Float64   # age of CAIs (Ma)
     rAlo::Float64 # initial solar ²⁶Al/²⁷Al
-    # Accretion Event
+# Accretion Event
     R::Float64 # Body radius
     ta::Float64 # Instantaneous accretion date, My after CAIs
     cAl::Float64 # Fractional abundance of Al (g/g)
     Tm::Float64
-    # Thermal Parameters
+# Thermal Parameters
     Tc::Float64  # Ar-Ar closure temperature (K)
     ρ::Float64 # Bulk density not a thermal property proper, I know)
     Cp::Float64  # Specific heat capacity (Cₚ, J kg⁻¹ K⁻¹)
     k::Float64 # Thermal Conductivity (k, W m⁻¹ K⁻¹)
+# Impact Parameters
+    tχ::Float64 # timing of instability, My after CAIs
+    τχ::Float64 # e-folding timescale of instability heightened impact flux (Ma)
+    Fχ::Float64 # Initial impactor flux at onset of instability
 end
 
 # And a little function support for the Proposal mutable struct
-Base.copy(s::Proposal)= Proposal(s.tss,s.rAlo,s.R,s.ta,s.cAl,s.Tm,s.Tc,s.ρ,s.Cp,s.k)
+Base.copy(s::Proposal)= Proposal(s.tss,s.rAlo,s.R,s.ta,s.cAl,s.Tm,s.Tc,s.ρ,s.Cp,s.k,s.tχ,s.τχ,s.Fχ)
 
 function Base.copyto!(s2::Proposal,s1::Proposal)
     s2.tss  = s1.tss
@@ -46,6 +50,9 @@ function Base.copyto!(s2::Proposal,s1::Proposal)
     s2.ρ    = s1.ρ
     s2.Cp   = s1.Cp
     s2.k    = s1.k
+    s2.tχ   = s1.tχ
+    s2.τχ   = s1.τχ
+    s2.Fχ   = s1.Fχ
     return
 end
 

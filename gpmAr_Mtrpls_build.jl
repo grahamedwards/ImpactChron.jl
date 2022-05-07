@@ -200,7 +200,13 @@ function MetropolisAr(  time_domain::AbstractRange,
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
 # Convert thermal code output into a binned histogram
-    distₚ = histogramify(time_domain,dates,Vfrxn,Δd=Δd)
+    if iszero(pₚ.Fχ)
+        distₚ = histogramify(time_domain,dates,Vfrxn,Δd=Δd)
+    else
+        Iages,Ivols = ImpactResetAr(dates,Vfrxn,radii,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+        distₚ = histogramify(time_domain,Iages,Ivols,Δd=Δd)
+    end
+
 # Log likelihood of initial proposal
     ll = llₚ = ll_dist((bincenters,distₚ), mu_sorted, sigma_sorted) + ll_params(p,plims)
 
@@ -223,19 +229,23 @@ function MetropolisAr(  time_domain::AbstractRange,
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             PlntsmlAr!(dates,Vfrxn,radii,
-                        tₛₛ = pₚ.tss,     #solar system age, Ma
-                        rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
-                        tₐ = pₚ.ta,      # accretion time, My after CAIs
-                        R = pₚ.R,        # Body radius
-                        To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
-                        Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
-                        Tc = pₚ.Tc,      # Ar closure temperature, K
-                        ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
-                        K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
-                        Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                        Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
-
-            histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+                tₛₛ = pₚ.tss,     #solar system age, Ma
+                rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
+                tₐ = pₚ.ta,      # accretion time, My after CAIs
+                R = pₚ.R,        # Body radius
+                To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
+                Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
+                Tc = pₚ.Tc,      # Ar closure temperature, K
+                ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
+                K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
+                Cₚ = pₚ.Cp,      # Specific Heat Capacity
+                Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
+            if iszero(pₚ.Fχ)
+                histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+            else
+                Iages,Ivols = ImpactResetAr(dates,Vfrxn,radii,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+                histogramify!(distₚ,time_domain,Δd,Iages,Ivols)
+            end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
                 llₚ = ll_dist((bincenters,distₚ) , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
@@ -298,7 +308,12 @@ function MetropolisAr(  time_domain::AbstractRange,
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
 
-            histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+            if iszero(pₚ.Fχ)
+                histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+            else
+                Iages,Ivols = ImpactResetAr(dates,Vfrxn,radii,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+                histogramify!(distₚ,time_domain,Δd,Iages,Ivols)
+            end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0
                 llₚ = ll_dist((bincenters,distₚ) , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
