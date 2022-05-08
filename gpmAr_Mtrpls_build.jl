@@ -136,7 +136,7 @@ end
         println("---------------------------")
         stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
         println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
-        println("acceptance rate =",vreduce(+,acceptanceDist)/stepI)
+        stage == "Main Chain" && stageprintln("acceptance rate =",reduce(+,acceptanceDist)/stepI)
         println("ll=$ll \n")
         for v ∈ vars
             println(v," → ",getproperty(p,v))
@@ -242,7 +242,12 @@ function MetropolisAr(  time_domain::AbstractRange,
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
             #k == problem && println("problem"); flush(stdout)
-            if iszero(pₚ.Fχ)
+
+# If >10% of interior radius melts, reject proposal
+            if isnan(dates[div(nᵣ,10)])
+                fill!(distₚ,zero(eltype(distₚ)))
+# Only calculate Impact Resetting if flux is nonzero
+            elseif iszero(pₚ.Fχ)
                 histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
             else
                 Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
@@ -310,7 +315,12 @@ function MetropolisAr(  time_domain::AbstractRange,
                 Cₚ = pₚ.Cp,      # Specific Heat Capacity
                 Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
             #k == problem && println("problem"); flush(stdout)
-            if iszero(pₚ.Fχ)
+
+# If >10% of interior radius melts, reject proposal
+            if isnan(dates[div(nᵣ,10)])
+                fill!(distₚ,zero(eltype(distₚ)))
+# Only calculate Impact Resetting if flux is nonzero
+            elseif iszero(pₚ.Fχ)
                 histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
             else
                 Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
