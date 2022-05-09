@@ -132,11 +132,11 @@ function ll_params(p::Proposal,d::NamedTuple)
 end
 
 # Status function to keep user updated...
-    function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number)
+    function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number;accpt::AbstractVector=[])
         println("---------------------------")
         stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
         println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
-        stage == "Main Chain" && stageprintln("acceptance rate =",reduce(+,acceptanceDist)/stepI)
+        isempty(accpt) || println("acceptance rate =",reduce(+,accpt)/stepI)
         println("ll=$ll \n")
         for v ∈ vars
             println(v," → ",getproperty(p,v))
@@ -245,6 +245,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 
 # If >10% of interior radius melts, reject proposal
             if isnan(dates[div(nᵣ,10)])
+                printstyled("meltdown rejected\n"; color=:light_magenta);flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
             elseif iszero(pₚ.Fχ)
@@ -318,6 +319,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 
 # If >10% of interior radius melts, reject proposal
             if isnan(dates[div(nᵣ,10)])
+                printstyled("meltdown rejected\n"; color=:light_magenta); flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
             elseif iszero(pₚ.Fχ)
@@ -354,7 +356,7 @@ function MetropolisAr(  time_domain::AbstractRange,
         end
 
         llDist[i] = ll
-        i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start); flush(stdout)
+        i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
     end
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)
