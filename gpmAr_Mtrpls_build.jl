@@ -188,18 +188,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     step_σ=copy(pσ)
 
     # Calculate initial proposal distribution
-    dates,Vfrxn = PlntsmlAr(
-                tₛₛ = pₚ.tss,     #solar system age, Ma
-                rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
-                tₐ = pₚ.ta,      # accretion time, My after CAIs
-                R = pₚ.R,        # Body radius
-                To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
-                Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
-                Tc = pₚ.Tc,      # Ar closure temperature, K
-                ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
-                K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
-                Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
+    dates,Vfrxn = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # Convert thermal code output into a binned histogram
     if iszero(pₚ.Fχ)
         distₚ = histogramify(time_domain,dates,Vfrxn,Δd=Δd)
@@ -229,18 +218,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates,Vfrxn,
-                tₛₛ = pₚ.tss,     #solar system age, Ma
-                rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
-                tₐ = pₚ.ta,      # accretion time, My after CAIs
-                R = pₚ.R,        # Body radius
-                To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
-                Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
-                Tc = pₚ.Tc,      # Ar closure temperature, K
-                ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
-                K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
-                Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
+            PlntsmlAr!(dates, Vfrxn, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
             #k == problem && println("problem"); flush(stdout)
 
 # If >10% of interior radius melts, reject proposal
@@ -303,18 +281,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates,Vfrxn,
-                tₛₛ = pₚ.tss,     #solar system age, Ma
-                rAlo = pₚ.rAlo,  # initial solar ²⁶Al/²⁷Al
-                tₐ = pₚ.ta,      # accretion time, My after CAIs
-                R = pₚ.R,        # Body radius
-                To = exp(pₚ.Tm), # (lNrm) Disk temperature @ 2.5 au, K
-                Al_conc = exp(pₚ.cAl), # (lNrm) Fractional abundance of Al (g/g)
-                Tc = pₚ.Tc,      # Ar closure temperature, K
-                ρ = exp(pₚ.ρ),   # (lNrm) rock density, kg/m³
-                K = exp(pₚ.k),   # (lNrm) Thermal Conductivity
-                Cₚ = pₚ.Cp,      # Specific Heat Capacity
-                Δt = Δt,tmax=tmax,nᵣ=nᵣ,Tmax=Tmax,Tmin=Tmin)
+            PlntsmlAr!(dates, Vfrxn, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
             #k == problem && println("problem"); flush(stdout)
 
 # If >10% of interior radius melts, reject proposal

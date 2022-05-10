@@ -151,9 +151,9 @@ end
 function PlntsmlAr(;
             nᵣ::Integer,          # Number of simulated radial distances
             Δt::Number = 0.01,    # absolute timestep, default 10 ka
-            tmax::Number = 2000,  # maximum time allowed to model
-            Tmax::Number = 1500,  # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
-            Tmin::Number=0,
+            tmax::Number = 2000.,  # maximum time allowed to model
+            Tmax::Number = 1500.,  # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
+            Tmin::Number=0.,
             Tc::Number,
             tₛₛ::Number,
             tₐ::Number,         # accretion time
@@ -163,34 +163,50 @@ function PlntsmlAr(;
             rAlo::Number,         # initial solar ²⁶Al/²⁷Al
             ρ::Number,            # rock density
             K::Number,            # Thermal Conductivity
-            Cₚ::Number,           # Specific heat capacity
-            rmNaN::Bool=false)     # Remove NaNs (never warms) from cooling history.
+            Cₚ::Number)           # Specific heat capacity
 
+    p = Proposal(tₛₛ,rAlo,R,tₐ,Al_conc,To,Tc,ρ,Cₚ,K,0.,0.,0.)
     ages=Array{typeof(tₛₛ)}(undef,nᵣ)
     Vfrxn=Array{typeof(R)}(undef,nᵣ)
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    PlntsmlAr!(ages,Vfrxn,Tmax=Tmax,Tmin=Tmin,Tc=Tc,tₛₛ=tₛₛ,tₐ=tₐ,Δt=Δt,tmax=tmax,R=R,nᵣ=nᵣ,To=To,Al_conc=Al_conc,rAlo=rAlo,ρ=ρ,K=K,Cₚ=Cₚ,rmNaN=rmNaN)
+    PlntsmlAr!(ages,Vfrxn,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+    return ages,Vfrxn,radii
+end
+
+function PlntsmlAr(p::Proposal;
+            nᵣ::Integer,          # Number of simulated radial distances
+            Δt::Number = 0.01,    # absolute timestep, default 10 ka
+            tmax::Number = 2000.,  # maximum time allowed to model
+            Tmax::Number = 1500.,  # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
+            Tmin::Number = 0.)       # minimum temperature (K)
+    ages=Array{typeof(p.tss)}(undef,nᵣ)
+    Vfrxn=Array{typeof(p.R)}(undef,nᵣ)
+    radii = LinRange(0.5*p.R/nᵣ,p.R*(1-0.5/nᵣ),nᵣ)
+    PlntsmlAr!(ages,Vfrxn,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
     return ages,Vfrxn,radii
 end
 
 function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
-    Vfrxn::AbstractArray; # pre-allocated vector for volume fraction of each date
+    Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
+    p::Proposal;
     nᵣ::Integer,          # Number of simulated radial distances
     Δt::Number = 0.01,    # absolute timestep, default 10 ka
-    tmax::Number = 2000,  # maximum time allowed to model
-    Tmax::Number = 1500,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
-    Tmin::Number=0,       # minimum temperature (K)
-    Tc::Number,
-    tₛₛ::Number,
-    tₐ::Number,         # accretion time
-    R::Number,            # Body radius
-    To::Number,           # Disk temperature (K)
-    Al_conc::Number,      # Fractional abundance of Al (g/g)
-    rAlo::Number,         # initial solar ²⁶Al/²⁷Al
-    ρ::Number,            # rock density
-    K::Number,            # Thermal Conductivity
-    Cₚ::Number,           # Specific heat capacity
-    rmNaN::Bool=false)     # Remove NaNs (never warms) from cooling history.
+    tmax::Number = 2000.,  # maximum time allowed to model
+    Tmax::Number = 1500.,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
+    Tmin::Number=0.)       # minimum temperature (K)
+
+    Tc = p.Tc            # closure temperature
+    tₛₛ = p.tss           # age of CAIs
+    tₐ = p.ta            # accretion time
+    R = p.R              # body radius
+    rAlo = p.rAlo        # initial solar ²⁶Al/²⁷Al
+    Cₚ = p.Cp            # specific heat capacity
+    
+    To = exp(p.Tm)       # disk temperature (K) (lognormally distributed)
+    Al_conc = exp(p.cAl) # fractional abundance of Al (g/g) (lognormally distributed)
+    ρ = exp(p.ρ)         # rock density (lognormally distributed)
+    K = exp(p.k)         # thermal conductivity (lognormally distributed)
+
 
     κ = K / (ρ*Cₚ)
     s_a  = 3.155692608e7 # seconds per annum, for Physics™!
@@ -219,7 +235,6 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
     n=1:300 # Σ is an infinite summation, but get good returns on n=300
-
 
     # possibly: using Polyester: @batch
     @inbounds for i = 1:nᵣ
