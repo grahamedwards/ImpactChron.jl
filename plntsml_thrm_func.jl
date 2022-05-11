@@ -201,7 +201,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     R = p.R              # body radius
     rAlo = p.rAlo        # initial solar ²⁶Al/²⁷Al
     Cₚ = p.Cp            # specific heat capacity
-    
+
     To = exp(p.Tm)       # disk temperature (K) (lognormally distributed)
     Al_conc = exp(p.cAl) # fractional abundance of Al (g/g) (lognormally distributed)
     ρ = exp(p.ρ)         # rock density (lognormally distributed)
@@ -238,8 +238,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 
     # possibly: using Polyester: @batch
     @inbounds for i = 1:nᵣ
-        Tᵢ = 0.0 #
-        T = 0.0
+        Tᵢ = T = zero(To)
         HotEnough = false
         @inbounds for j = 1:length(time)
 
@@ -260,7 +259,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
             ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
-            T > Tᵢ && T>Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
+            HotEnough || T > Tᵢ && T > Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
             T > Tmax && break # This level is not chondritic if it melts.
 # compare T to Tc only if cooling & got hot enough
             if T < Tᵢ && T <= Tc && HotEnough
@@ -301,7 +300,7 @@ end
 """
 
 ## Naive Resampler
-
+"""
 function PlntsmlRsmpl(N,P::ResampleParams;
             Δt = 0.1,      # absolute timestep, default 10 ka
             tmax = 1000.,     # maximum time allowed to model
@@ -344,6 +343,7 @@ function PlntsmlRsmpl(N,P::ResampleParams;
     return ages
 
 end
+"""
 
 ## Impact Heater v0.0
 """
@@ -359,8 +359,6 @@ ImpactResetAr(  dates::AbsractArray,
                 Δt::Number,tmax::Number,nᵣ::Integer)
 
 Assumes impact heating depth of 20 km & impact reheating zone with z/D = 0.3
-
-
 """
 function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::Proposal;
                         #IzD::Number,   # depth/diameter ratio of impact reheating region

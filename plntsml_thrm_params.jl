@@ -56,8 +56,8 @@ function Base.copyto!(s2::Proposal,s1::Proposal)
     return
 end
 
-#vars =[:tss,:rAlo,:R,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k]
 
+"""
 ## Resample struct: convert these to namedtuples
 
 mutable struct ResampleParams
@@ -109,7 +109,7 @@ k = (; a=4. , b= 4. * rϵ)       # OC estimate, see below...
 
 
 plntsml_params = ResampleParams(tₛₛ_J08,rAlₒ_J08,Tm2d5,Radius,t_accr,Al_conc,T_olg,ρ,Cₚ,k)
-
+"""
 
 #####
 # MAY NEED TO MAKE FINITE DIFFERENCE FUNCTION TO TRACK CHANGING ρ, k, Cp

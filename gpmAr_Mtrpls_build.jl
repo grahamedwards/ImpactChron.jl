@@ -7,6 +7,8 @@ function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
     isempty(vars) ? v=keys(plims) : v=vars
     ll && (v=tuple(:ll,v...))
     nᵥ=length(v)
+
+    # isa(eltype(eltype(d)),String) && (v= String.(v))
 # Calculate number of rows needed to accomodate all variables in `cols` columns.
     rows = Int(ceil(nᵥ/cols,digits=0))
 
@@ -17,8 +19,9 @@ function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
         x = 1:length(y)
         if k == :ll
             panels[i] = plot(x,y,xticks=[],ylabel="ll",linecolor=:black) #use \scrl eventually
-            r = 100 * sum(d[:accept])/length(d[:accept])
-            annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:right,6))
+            r = 100 * round(sum(d[:accept])/length(d[:accept]),digits=3)
+            xlabel!("acceptance = $r %",xguidefontsize=6)
+            #annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:bottomleft,6))
         elseif isnan(last(y))
             panels[i] = plot([1,last(x)],fill(y[1],2),xticks=[],ylabel="$k",linecolor=:black)
         else
@@ -85,7 +88,7 @@ function ll_dist(   p_dist::Tuple{AbstractVector,AbstractVector},    # Proposed 
     end
 
 # Cycle through each datum in (mu,sigma)
-    @inbounds for j ∈ 1:nₘ
+    @inbounds for j ∈ 1:nₘ #might batch speed this up?
 # Find index of μ in the `dist` array
         iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
 
