@@ -240,6 +240,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     @inbounds for i = 1:nᵣ
         Tᵢ = T = zero(To)
         HotEnough = false
+        # warming = true
         @inbounds for j = 1:length(time)
 
             r = radii[i]
@@ -259,10 +260,11 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
             ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
-            HotEnough || T > Tᵢ && T > Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
             T > Tmax && break # This level is not chondritic if it melts.
+            HotEnough || T > Tᵢ && T > Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
+            #warming && Tᵢ > T && (T_peak = Tᵢ; warming=false)            
 # compare T to Tc only if cooling & got hot enough
-            if T < Tᵢ && T <= Tc && HotEnough
+            if HotEnough && T <= Tc && T < Tᵢ
                 ages[i]= tₛₛ - time_Ma[j]  # log time only when T falls below Tc
                 break               # kill loop
             else

@@ -8,7 +8,8 @@ function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
     ll && (v=tuple(:ll,v...))
     nᵥ=length(v)
 
-    # isa(eltype(eltype(d)),String) && (v= String.(v))
+#Convert to strings if necessary
+    isequal(eltype(keys(d)),String) ? (v= String.(v); llₛ = "ll" ; acpt = "accept") : (llₛ = :ll; acpt = :accept)
 # Calculate number of rows needed to accomodate all variables in `cols` columns.
     rows = Int(ceil(nᵥ/cols,digits=0))
 
@@ -17,27 +18,27 @@ function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
         k = v[i]
         y = d[k]
         x = 1:length(y)
-        if k == :ll
+        if k == llₛ
             panels[i] = plot(x,y,xticks=[],ylabel="ll",linecolor=:black) #use \scrl eventually
-            r = 100 * round(sum(d[:accept])/length(d[:accept]),digits=3)
+            r = 100 * round(sum(d[acpt])/length(d[acpt]),digits=3)
             xlabel!("acceptance = $r %",xguidefontsize=6)
             #annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:bottomleft,6))
         elseif isnan(last(y))
             panels[i] = plot([1,last(x)],fill(y[1],2),xticks=[],ylabel="$k",linecolor=:black)
         else
-            panels[i] = plot(x,y,xticks=[],ylabel="$k",linecolor=:black)
+            panels[i] = plot(x,y,xticks=[],linecolor=:black)
         end
 
-        if bounds && k != :ll
-            B = plims[k]
+        if bounds && k != llₛ
+            B = plims[Symbol(k)]
             if isa(B,Unf)
-                plot!([1,last(x)],fill(B.a,2),linecolor=:grey,linestyle=:solid)
+                plot!([1,last(x)],fill(B.a,2),ylabel="$k",linecolor=:grey,linestyle=:solid)
                 plot!([1,last(x)],fill(B.b,2),linecolor=:grey,linestyle=:solid)
             elseif isa(B,Nrm)
-                plot!([1,last(x)],fill(B.μ+B.σ,2),linecolor=:grey,linestyle=:dash)
+                plot!([1,last(x)],fill(B.μ+B.σ,2),ylabel="$k",linecolor=:grey,linestyle=:dash)
                 plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dash)
             elseif isa(B,lNrm)
-                plot!([1,last(x)],fill(exp(B.μ+B.σ),2),linecolor=:grey,linestyle=:dashdot)
+                plot!([1,last(x)],fill(exp(B.μ+B.σ),2),ylabel="log[" * "$k" * "]",linecolor=:grey,linestyle=:dashdot)
                 plot!([1,last(x)],fill(exp(B.μ-B.σ),2),linecolor=:grey,linestyle=:dashdot)
             end
         end
@@ -333,7 +334,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Record proposal values of unvaried parameters
         in(x,pvars) || (MetOut[x]= vcat(getproperty(p,x),fill(NaN,nsteps-1)))
 # Calculate exponent of lognormally distributed variables
-        isa(plims[x],lNrm) && vmapt!(exp,MetOut[x],MetOut[x])
+        #isa(plims[x],lNrm) && vmapt!(exp,MetOut[x],MetOut[x])
     end
     MetOut[:ll] = llDist
     MetOut[:accept] = acceptanceDist
