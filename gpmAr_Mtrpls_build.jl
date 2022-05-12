@@ -120,7 +120,7 @@ ll_param(x::Number,D::lNrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
     #lnx = log(x); return -lnx-(lnx-D.μ)*(lnx-D.μ) / (2*D.σ*D.σ)
 ll_param(x::T,D::Unf) where T<:Number = zero(T)
 
-function ll_params(p::Proposal,d::NamedTuple)
+function ll_params(p::NamedTuple,d::NamedTuple)
     ll = 0.
     ll += ll_param(p.Cp, d.Cp)
     ll += ll_param(p.R, d.R)
@@ -136,21 +136,21 @@ function ll_params(p::Proposal,d::NamedTuple)
 end
 
 # Status function to keep user updated...
-    function MetropolisStatus(p::Proposal,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number;accpt::AbstractVector=[])
+    function MetropolisStatus(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number;accpt::AbstractVector=[])
         println("---------------------------")
         stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
         println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
         isempty(accpt) || println("acceptance rate =",reduce(+,accpt)/stepI)
         println("ll=$ll \n")
         for v ∈ vars
-            println(v," → ",getproperty(p,v))
+            println(v," → ",p[v])
         end
         println("---------------------------")
     end
 
 function MetropolisAr(  time_domain::AbstractRange,
-                        p::Proposal,   # Parameter proposal
-                        pσ::Proposal, # proposed σ for pertrubations.
+                        p::NamedTuple,   # Parameter proposal
+                        pσ::NamedTuple, # proposed σ for pertrubations.
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray;# Observed 1σ's
@@ -187,9 +187,10 @@ function MetropolisAr(  time_domain::AbstractRange,
 
     # These quantities will be used more than once
     datarows = length(mu_sorted)
-    p = copy(p)
-    pₚ = copy(p)
-    step_σ=copy(pσ)
+    pₚ = p
+    #p = copy(p)
+    #pₚ = copy(p)
+    #step_σ=copy(pσ)
 
     # Calculate initial proposal distribution
     dates,Vfrxn = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
@@ -211,13 +212,12 @@ function MetropolisAr(  time_domain::AbstractRange,
     #@inbounds
     for i = 1:burnin
 # Start with fresh slate of parameters
-        copyto!(pₚ, p)
+        #copyto!(pₚ, p)
 
 # Adjust one parameter
         k = rand(pvars)
-        δpₖ = getproperty(step_σ,k)*randn()
-        setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
-            #pₚ[k] += δpₖ
+        δpₖ = pσ[k] * randn() #getproperty(step_σ,k)*randn()
+        pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
@@ -247,14 +247,13 @@ function MetropolisAr(  time_domain::AbstractRange,
             llₚ = -Inf
         end
 
-        # Decide to accept or reject the proposal
+# Decide to accept or reject the proposal
         if log(rand()) < (llₚ-ll)
-            # Record new step sigma
-            setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
-                #step_sigma[k] = abs(δpₖ)*stepfactor
-            # Record new parameters
-            copyto!(p, pₚ)
-            # Record new log likelihood
+# Record new step sigma
+            pσ = perturb(pσ,k,abs(δpₖ)*stepfactor) #setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
+# Record new parameters
+            p = pₚ  #copyto!(p, pₚ)
+# Record new log likelihood
             ll = llₚ
         end
         i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
@@ -273,14 +272,13 @@ function MetropolisAr(  time_domain::AbstractRange,
     for i=1:nsteps
 
         # Start with fresh slate of parameters
-        copyto!(pₚ, p)
+        #copyto!(pₚ, p)
 
         # Adjust one parameter
         k = rand(pvars)
         prt[i]=k
-        δpₖ = getproperty(step_σ,k)*randn()
-        setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
-            #pₚ[k] += δpₖ
+        δpₖ = pσ[k] * randn() #getproperty(step_σ,k)*randn()
+        pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
@@ -310,20 +308,19 @@ function MetropolisAr(  time_domain::AbstractRange,
             llₚ = -Inf
         end
 
-        # Decide to accept or reject the proposal
+# Decide to accept or reject the proposal
         if log(rand()) < (llₚ-ll)
-            # Record new step sigma
-            setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
-                #step_sigma[k] = abs(δpₖ)*stepfactor
-            # Record new parameters
-            copyto!(p, pₚ)
-            # Record new log likelihood
+# Record new step sigma
+            pσ = perturb(pσ,k,abs(δpₖ)*stepfactor) #setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
+# Record new parameters
+            p = pₚ  #copyto!(p, pₚ)
+# Record new log likelihood
             ll = llₚ
             acceptanceDist[i]=true
         end
 
         for j = 1:nᵥ
-            pDist[i,j] = getproperty(p,pvars[j])
+            pDist[i,j] = p[pvars[j]] #getproperty(p,pvars[j])
         end
 
         llDist[i] = ll

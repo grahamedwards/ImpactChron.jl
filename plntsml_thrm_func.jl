@@ -165,7 +165,7 @@ function PlntsmlAr(;
             K::Number,            # Thermal Conductivity
             Cₚ::Number)           # Specific heat capacity
 
-    p = Proposal(tₛₛ,rAlo,R,tₐ,Al_conc,To,Tc,ρ,Cₚ,K,0.,0.,0.)
+    p = (; tss=tₛₛ,rAlo=rAlo,R=R,ta=tₐ,cAl=Al_conc,Tm=To,Tc=Tc,ρ=ρ,Cp=Cₚ,k=K,tχ=0.,τχ=0.,Fχ=0.)
     ages=Array{typeof(tₛₛ)}(undef,nᵣ)
     Vfrxn=Array{typeof(R)}(undef,nᵣ)
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
@@ -173,7 +173,7 @@ function PlntsmlAr(;
     return ages,Vfrxn,radii
 end
 
-function PlntsmlAr(p::Proposal;
+function PlntsmlAr(p::NamedTuple;
             nᵣ::Integer,          # Number of simulated radial distances
             Δt::Number = 0.01,    # absolute timestep, default 10 ka
             tmax::Number = 2000.,  # maximum time allowed to model
@@ -188,7 +188,7 @@ end
 
 function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
-    p::Proposal;
+    p::NamedTuple;
     nᵣ::Integer,          # Number of simulated radial distances
     Δt::Number = 0.01,    # absolute timestep, default 10 ka
     tmax::Number = 2000.,  # maximum time allowed to model
@@ -262,7 +262,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 
             T > Tmax && break # This level is not chondritic if it melts.
             HotEnough || T > Tᵢ && T > Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
-            #warming && Tᵢ > T && (T_peak = Tᵢ; warming=false)            
+            #warming && Tᵢ > T && (T_peak = Tᵢ; warming=false)
 # compare T to Tc only if cooling & got hot enough
             if HotEnough && T <= Tc && T < Tᵢ
                 ages[i]= tₛₛ - time_Ma[j]  # log time only when T falls below Tc
@@ -362,7 +362,7 @@ ImpactResetAr(  dates::AbsractArray,
 
 Assumes impact heating depth of 20 km & impact reheating zone with z/D = 0.3
 """
-function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::Proposal;
+function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple;
                         #IzD::Number,   # depth/diameter ratio of impact reheating region
                         #Iz::Number,    # m | depth of impact reheating
                         Δt::Number,tmax::Number,nᵣ::Integer)

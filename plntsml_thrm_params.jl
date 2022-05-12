@@ -16,6 +16,29 @@ struct Unf
     b::Float64
 end
 
+
+function perturb(p::NamedTuple,k::Symbol,n::Number)
+
+    tss = ifelse(k==:tss,n,p.tss)
+    rAlo= ifelse(k==:rAlo,n,p.rAlo)
+    R   = ifelse(k==:R,n,p.R)
+    ta  = ifelse(k==:ta,n,p.ta)
+    cAl = ifelse(k==:cAl,n,p.cAl)
+    Tm  = ifelse(k==:Tm,n,p.Tm)
+    Tc  = ifelse(k==:Tc,n,p.Tc)
+    ρ   = ifelse(k==:ρ,n,p.ρ)
+    Cp  = ifelse(k==:Cp,n,p.Cp)
+    k   = ifelse(k==:k,n,p.k)
+    tχ  = ifelse(k==:tχ,n,p.tχ)
+    τχ  = ifelse(k==:τχ,n,p.τχ)
+    Fχ  = ifelse(k==:Fχ,n,p.Fχ)
+
+    (; tss,rAlo,R,ta,cAl,Tc,Tm,ρ,Cp,k,tχ,τχ,Fχ)
+end
+
+## Proposal: a mutable struct for holding proposal variables.
+## replaced with a NamedTuples framework on 220512, commit: 
+"""
 mutable struct Proposal #Planetesimal Proposal
 # Background Conditions
     tss::Float64   # age of CAIs (Ma)
@@ -55,11 +78,11 @@ function Base.copyto!(s2::Proposal,s1::Proposal)
     s2.Fχ   = s1.Fχ
     return
 end
-
-
 """
-## Resample struct: convert these to namedtuples
 
+
+## Resample struct: convert these to namedtuples
+"""
 mutable struct ResampleParams
 # Background Conditions
     tₛₛ::NamedTuple{(:μ,:σ), Tuple{Float64, Float64}}   # age of CAIs (Ma)
