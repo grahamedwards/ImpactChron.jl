@@ -38,8 +38,8 @@ function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
                 plot!([1,last(x)],fill(B.μ+B.σ,2),ylabel="$k",linecolor=:grey,linestyle=:dash)
                 plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dash)
             elseif isa(B,lNrm)
-                plot!([1,last(x)],fill(exp(B.μ+B.σ),2),ylabel="log[" * "$k" * "]",linecolor=:grey,linestyle=:dashdot)
-                plot!([1,last(x)],fill(exp(B.μ-B.σ),2),linecolor=:grey,linestyle=:dashdot)
+                plot!([1,last(x)],fill(B.μ+B.σ,2),ylabel="log[" * "$k" * "]",linecolor=:grey,linestyle=:dashdot)
+                plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dashdot)
             end
         end
     end
@@ -56,60 +56,48 @@ end
 ## Log-likelihood calculation
 
 """
-Log-likelihood notes...
+ll_dist(x::AbstractVector,dist::AbstractVector,mu::AbstractVector,sigma::AbstractVector)
+
+where `x` contains the bincenters of a normalized histogram `dist`,
+and the vectors mu and sigma respectively contain the mean and 1σ of the observations.
 
 """
-function ll_dist(   p_dist::Tuple{AbstractVector,AbstractVector},    # Proposed distribution (ages,proportions)
+function ll_dist(   x::AbstractRange, dist::AbstractVector,#p_dist::Tuple{AbstractVector,AbstractVector},    # Proposed distribution (ages,proportions)
                     mu::AbstractVector,      # 1D Array/Vector of observed μ's (sorted)
                     sigma::AbstractVector)   # 1D Array/Vector of observed σ's (sorted)
 
 # Define some frequently used variables
-    ll = zero(float(eltype(p_dist[2])))
+    ll = zero(float(eltype(dist)))
     nₘ = length(mu)            # n of "Measured" data
-    nₚ = length(p_dist[1])     # N of "Proposed" distribution data
-
+    nₚ = length(x)     # n of bincenters
+    nbtwns = nₚ - 1   # n of spaces between bin centers.
+    Δx = step(x)
+    xᵣ = abs(last(x) - first(x)) # range of x
     #tkr = zeros(nₘ)
-# Sort relative to ages in x this saves a lot of extra abs() tests
-    i_sort = sortperm(p_dist[1])
-    x = p_dist[1][i_sort]
-    dist = p_dist[2][i_sort]
-
-# Calculate area under each dist[x] and sum to estimate integral ∫distdx.
-    distdx = Vector{float(eltype(dist))}(undef,nₚ)
-    distdx[1] = 0.5 * (x[2] - x[1]) * dist[1]
-    distdx[end] = 0.5 * (last(x) - x[end-1]) * dist[end]
-
-    ∫distdx = distdx[1] + distdx[end]
-
-    if nₚ > 2
-        @inbounds for k ∈ 2:nₚ-1
-            distdx[k] = 0.5 * (x[k+1] - x[k-1]) * dist[k]
-            ∫distdx += distdx[k]
-        end
-    end
 
 # Cycle through each datum in (mu,sigma)
     @inbounds for j ∈ 1:nₘ #might batch speed this up?
 # Find index of μ in the `dist` array
-        iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
-
+        iₓ = ceil(Int, (mu[j]-x[1]) / xᵣ * nbtwns + 1)
+                # formerly iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
 # If possible, prevent aliasing problems by interpolation
         if (iₓ>1) && (iₓ<=nₚ) && ( (2sigma[j]) < (x[iₓ]-mu[j]) ) && ( (2sigma[j])<(mu[j]-x[iₓ-1]) )
             # && (sigma[j] < (x[iₓ]-x[iₓ-1]) ) # original threshold, see notes.
-# Interpolate corresponding distribution value, note: (x[iₓ]-x[iₓ-1]) cancels in second term
-            likelihood = dist[iₓ] * (x[iₓ]-x[iₓ-1]) - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])
-            #likelihood = 6sigma[j] * (dist[iₓ] - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1]) / (x[iₓ]-x[iₓ-1]) )
-                    #alternate likelihood calculation that only integrates "width" of mu distribution...
+# Interpolate corresponding distribution value, note: Δx cancels in second term
+            likelihood = dist[iₓ] * Δx - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])
+            #likelihood = 6 * sigma[j] * ( dist[iₓ] - (dist[iₓ]-dist[iₓ-1]) * (x[iₓ]-mu[j]) / Δx)
+                    #alternate likelihood calculation that only integrates some "width"(e.g. 3σ) of mu distribution...
 # Otherwise, sum contributions from Gaussians at each point in distribution
         else
             likelihood = zero(float(eltype(dist)))
             @turbo for i ∈ 1:nₚ     # @turbo faster than @tturbo
 # Likelihood curve follows a Gaussian PDF.
-                likelihood += ( distdx[i] / (sigma[j] * sqrt(2*π)) ) *
+                likelihood += ( dist[i] / (sigma[j] * sqrt(2*π)) ) *
                         exp( - (x[i]-mu[j])*(x[i]-mu[j]) / (2*sigma[j]*sigma[j]) )
             end
+            likelihood*=Δx
         end
-        ll += log(likelihood/∫distdx)
+        ll += log(likelihood)
 # Normalize by total area under curve for intercomparability among proposals.
     end
     return ll
@@ -172,7 +160,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 
 # Calculate bincenters for time_domain
     Δd = step(time_domain) #calculate time_domain step
-    bincenters = LinRange(first(time_domain)+0.5*Δd,last(time_domain) - 0.5Δd,length(time_domain)-1)
+    bincenters = LinRange(first(time_domain) + 0.5Δd, last(time_domain) - 0.5Δd, length(time_domain)-1)
 
 # If no plims given, set ranges to
     plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf,:U),length(pvars)))...) )
@@ -203,7 +191,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     end
 
 # Log likelihood of initial proposal
-    ll = llₚ = ll_dist((bincenters,distₚ), mu_sorted, sigma_sorted) + ll_params(p,plims)
+    ll = llₚ = ll_dist(bincenters, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
 
 # Start the clock
     start = time()
@@ -238,7 +226,7 @@ function MetropolisAr(  time_domain::AbstractRange,
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
-                llₚ = ll_dist((bincenters,distₚ) , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(bincenters, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -299,7 +287,7 @@ function MetropolisAr(  time_domain::AbstractRange,
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0
-                llₚ = ll_dist((bincenters,distₚ) , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(bincenters, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end

@@ -18,7 +18,9 @@ end
 
 
 function perturb(p::NamedTuple,k::Symbol,n::Number)
-
+    tχ  = ifelse(k==:tχ,n,p.tχ)
+    τχ  = ifelse(k==:τχ,n,p.τχ)
+    Fχ  = ifelse(k==:Fχ,n,p.Fχ)
     tss = ifelse(k==:tss,n,p.tss)
     rAlo= ifelse(k==:rAlo,n,p.rAlo)
     R   = ifelse(k==:R,n,p.R)
@@ -29,15 +31,11 @@ function perturb(p::NamedTuple,k::Symbol,n::Number)
     ρ   = ifelse(k==:ρ,n,p.ρ)
     Cp  = ifelse(k==:Cp,n,p.Cp)
     k   = ifelse(k==:k,n,p.k)
-    tχ  = ifelse(k==:tχ,n,p.tχ)
-    τχ  = ifelse(k==:τχ,n,p.τχ)
-    Fχ  = ifelse(k==:Fχ,n,p.Fχ)
-
     (; tss,rAlo,R,ta,cAl,Tc,Tm,ρ,Cp,k,tχ,τχ,Fχ)
 end
-
+xx
 ## Proposal: a mutable struct for holding proposal variables.
-## replaced with a NamedTuples framework on 220512, commit: 
+## replaced with a NamedTuples framework on 220512, commit: 2d37788
 """
 mutable struct Proposal #Planetesimal Proposal
 # Background Conditions

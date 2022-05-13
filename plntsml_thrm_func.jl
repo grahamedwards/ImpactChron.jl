@@ -98,7 +98,7 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,Δd::Number,x:
             println("Time domain bounds exceeded. Proposal rejected.")
             flush(stdout)
         elseif (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1
-            for i ∈ (xmin):(xmax) # 1 step outward of xmin,xmax to get peripheral values
+            @inbounds for i ∈ (xmin):(xmax) # 1 step outward of xmin,xmax to get peripheral values
                 l = searchsortedfirst(xₛ , domain[i]) # lower index
                 u = searchsortedlast(xₛ , domain[i+1]) # upper index
 # Ensure values of (xₛ,yₛ) fall within bounds (if not, searchsortedfirst/searchsortedlast return l > u)
@@ -108,6 +108,10 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,Δd::Number,x:
             dist[xmin] = 1.0 / Δd
         end
     end
+
+    ∫distdx = vreduce(+,dist) * Δd
+    vmap!(x -> x/∫distdx,dist,dist)
+
     return dist
 end
 
@@ -385,7 +389,7 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple;
     Ilog = BitVector(undef,length(Itime))
 
     @inbounds @batch for i ∈ eachindex(Itime)
-        p_hit = Δt * Fᵢ * exp(-λ*Itime[i])
+        p_hit = Δt * Fᵢ * exp(-λ*Itime[i]) #CREATE A SUMMED p_hit FROM MULTIPLE STAGES OF IMPACT FLUX
         Ilog[i] = ifelse( rand() < p_hit, true,false)
     end
 # Create vector of absolute impact dates from drawing
