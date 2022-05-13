@@ -1,6 +1,6 @@
 
 using LoopVectorization,Polyester
-using Random; rng = MersenneTwister()
+using Random; #rng = MersenneTwister()
 using Distributions
 
 """
@@ -170,10 +170,11 @@ function PlntsmlAr(;
             Cₚ::Number)           # Specific heat capacity
 
     p = (; tss=tₛₛ,rAlo=rAlo,R=R,ta=tₐ,cAl=Al_conc,Tm=To,Tc=Tc,ρ=ρ,Cp=Cₚ,k=K,tχ=0.,τχ=0.,Fχ=0.)
-    ages=Array{typeof(tₛₛ)}(undef,nᵣ)
-    Vfrxn=Array{typeof(R)}(undef,nᵣ)
+    ages=Array{float(typeof(tₛₛ))}(undef,nᵣ)
+    Vfrxn=Array{float(typeof(R))}(undef,nᵣ)
+    peakT=Array{float(typeof(To))}(undef,nᵣ)
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    PlntsmlAr!(ages,Vfrxn,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+    PlntsmlAr!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
     return ages,Vfrxn,radii
 end
 
@@ -183,15 +184,17 @@ function PlntsmlAr(p::NamedTuple;
             tmax::Number = 2000.,  # maximum time allowed to model
             Tmax::Number = 1500.,  # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
             Tmin::Number = 0.)       # minimum temperature (K)
-    ages=Array{typeof(p.tss)}(undef,nᵣ)
-    Vfrxn=Array{typeof(p.R)}(undef,nᵣ)
+    ages=Array{float(typeof(p.tss))}(undef,nᵣ)
+    Vfrxn=Array{float(typeof(p.R))}(undef,nᵣ)
+    peakT=Array{float(typeof(p.Tm))}(undef,nᵣ)
     radii = LinRange(0.5*p.R/nᵣ,p.R*(1-0.5/nᵣ),nᵣ)
-    PlntsmlAr!(ages,Vfrxn,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-    return ages,Vfrxn,radii
+    PlntsmlAr!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+    return ages,Vfrxn,radii,peakT
 end
 
 function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
+    peakT::AbstractArray, # pre-allocated vector for each date's peak temperature
     p::NamedTuple;
     nᵣ::Integer,          # Number of simulated radial distances
     Δt::Number = 0.01,    # absolute timestep, default 10 ka
@@ -242,9 +245,8 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 
     # possibly: using Polyester: @batch
     @inbounds for i = 1:nᵣ
-        Tᵢ = T = zero(To)
+        Tᵢ = T = Tₚₖ = zero(To)
         HotEnough = false
-        # warming = true
         @inbounds for j = 1:length(time)
 
             r = radii[i]
@@ -264,18 +266,23 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
             ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
             (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
 
-            T > Tmax && break # This level is not chondritic if it melts.
-            HotEnough || T > Tᵢ && T > Tmin && (HotEnough = true) # Only becomes true if T exceeds Tmin while warming.
-            #warming && Tᵢ > T && (T_peak = Tᵢ; warming=false)
-# compare T to Tc only if cooling & got hot enough
-            if HotEnough && T <= Tc && T < Tᵢ
-                ages[i]= tₛₛ - time_Ma[j]  # log time only when T falls below Tc
+# While the shell is warming...
+            if T > Tᵢ
+# Ensure the shell remains chondritic (does not melt):
+                T > Tmax && break
+# Check whether the shell gets `HotEnough` (hotter than Tmin)
+                HotEnough = ifelse(T > Tmin,true,false)
+# Record warmest temperature yet:
+                Tₚₖ = T
+# compare T to Tc only if cooling (T < Tᵢ) & it got `HotEnough`
+            elseif (T <= Tc) & HotEnough
+                ages[i] = tₛₛ - time_Ma[j]  # log time only when T falls below Tc
+                peakT[i] = Tₚₖ
                 break               # kill loop
-            else
-                Tᵢ = T
             end
-        end
-    end
+            Tᵢ = T
+        end # of j (time) loop
+    end     # of i (radius) loop
 end
 """
 ## rmNaN // Remove NaN code
