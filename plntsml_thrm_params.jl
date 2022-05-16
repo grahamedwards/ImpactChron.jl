@@ -16,11 +16,24 @@ struct Unf
     b::Float64
 end
 
+"""
+perturb(p::NamedTuple,k::Symbol,n::Number)
+
+Returns a NamedTuple identical* to `p`,
+with one field (key `k`) changed to `n`
+
+*as long as the order of fields in p is as below.
+
+Fields: tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχ,τχ,Fχ
+"""
 
 function perturb(p::NamedTuple,k::Symbol,n::Number)
-    tχ  = ifelse(k==:tχ,n,p.tχ)
-    τχ  = ifelse(k==:τχ,n,p.τχ)
-    Fχ  = ifelse(k==:Fχ,n,p.Fχ)
+    tχβ  = ifelse(k==:tχ,n,p.tχβ)
+    τχβ  = ifelse(k==:τχ,n,p.τχβ)
+    Fχβ  = ifelse(k==:Fχ,n,p.Fχβ)
+    tχα  = ifelse(k==:tχ,n,p.tχα)
+    τχα  = ifelse(k==:τχ,n,p.τχα)
+    Fχα  = ifelse(k==:Fχ,n,p.Fχα)
     tss = ifelse(k==:tss,n,p.tss)
     rAlo= ifelse(k==:rAlo,n,p.rAlo)
     R   = ifelse(k==:R,n,p.R)
@@ -31,9 +44,12 @@ function perturb(p::NamedTuple,k::Symbol,n::Number)
     ρ   = ifelse(k==:ρ,n,p.ρ)
     Cp  = ifelse(k==:Cp,n,p.Cp)
     k   = ifelse(k==:k,n,p.k)
-    (; tss,rAlo,R,ta,cAl,Tc,Tm,ρ,Cp,k,tχ,τχ,Fχ)
+    (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ)
 end
-xx
+
+"...params load successful"
+
+
 ## Proposal: a mutable struct for holding proposal variables.
 ## replaced with a NamedTuples framework on 220512, commit: 2d37788
 """
@@ -224,5 +240,3 @@ k_CK(T) = 1.26 + 0.0011 * T # Modeled over 100 - 300 K Opeil+2010
 ρ_R = [3.14 , 0]    # extracted w/o uncertainty from text.
                     # Actually look at p. 274 to account for wXing.
 """
-
-"...params load successful"

@@ -61,12 +61,18 @@ plot_radii = plot(time_Ma,T[1,:], label = string(Int(r_rng[1]/1000), " km"))
 """
 histogramify
 ~~~~~~~~~~~~
-converts fractional abundances `y` of model outputs `x`
-into a histogram over centers of bins in `domain`
+histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector;Δd::Number)
 
-Assumes that Σy=1:
-This allows us to skip calculating this value to normalize values of dist,
-    so that ∫ dist dx = 1
+Constructs histogram over centers of `domain` from model outputs in x with corresponding
+abundances in y. Requires that each value of x falls within the bounds of `domain`.
+
+
+
+Normalizes the output, such that for output `dist` ∑ dist(xᵢ) * Δx (for each xᵢ in the bincenters of x)
+
+Returns only the histogram masses, bincenters must be calculated externally.
+
+REMOVE THE Δd input. This is just asking for mistakes. It takes <2 ns.
 
 """
 function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector;Δd::Number=0.)
@@ -385,22 +391,47 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple;
 
 # Declare variables from input
     tₛₛ = p.tss
+    tₐ =p.ta
     R = p.R # m | asteroid radius
-    tᵢ = p.tχ # Ma after CAIs
-    Fᵢ = p.Fχ #Initial impactor flux Ma⁻¹
-    λ = 1/p.τχ  # Ma⁻¹ | decay constant of impact flux
+    tᵅ = p.tχα # Ma after CAIs
+    Fᵅ = p.Fχα #Initial impactor flux Ma⁻¹
+    λᵅ = 1/p.τχα  # Ma⁻¹ | decay constant of impact flux
+    tᵝ = p.tχβ # Ma after CAIs
+    Fᵝ = p.Fχβ #Initial impactor flux Ma⁻¹
+    λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
+
+
 
 # Step 1: Impact Events
 # Draw impact dates from flux distribution
-    Itime = 0. : Δt : (tmax-tᵢ) # timeseries for potential impacts in Ma after tᵢ
+    Itime = tₐ : Δt : tmax # timeseries for potential impacts in Ma after CAIs
     Ilog = BitVector(undef,length(Itime))
 
     @inbounds @batch for i ∈ eachindex(Itime)
-        p_hit = Δt * Fᵢ * exp(-λ*Itime[i]) #CREATE A SUMMED p_hit FROM MULTIPLE STAGES OF IMPACT FLUX
-        Ilog[i] = ifelse( rand() < p_hit, true,false)
+
+        if (Itime[i]>tᵝ) && (Itime[i]>tᵅ) # tᵝ and tᵅ are both active
+            Itᵅ = Itime[i] - tᵅ
+            Itᵝ = Itime[i] - tᵝ
+# Calculate the union of the probablities for both impact fluxes
+    # P(A∪B) = P(A)+P(B) - P(A∩B) = -(P(A)-1)*(P(B)-1)+1, as long as A,B are independent
+            p_hit = Δt * ( -( Fᵝ*exp(-λᵝ*Itᵝ)-1 ) * ( Fᵅ*exp(-λᵅ*Itᵅ)-1 ) + 1 )
+            Ilog[i] = ifelse( rand() < p_hit, true,false)
+
+        elseif (Itime[i]>tᵝ) && (Itime[i]<tᵅ) # only tᵝ is active
+            Itᵝ = Itime[i] - tᵝ
+            p_hit = Δt * Fᵝ * exp(-λᵝ*Itime[i])
+            Ilog[i] = ifelse( rand() < p_hit, true,false)
+
+        elseif (Itime[i]<tᵝ) && (Itime[i]>tᵅ) # only tᵅ is active
+            Itᵅ = Itime[i] - tᵅ
+            p_hit = Δt * Fᵅ * exp(-λᵅ*Itime[i])
+            Ilog[i] = ifelse( rand() < p_hit, true,false)
+        else
+            Ilog[i]=false
+        end
     end
 # Create vector of absolute impact dates from drawing
-    impacts = (tₛₛ - tᵢ) .- Itime[Ilog]
+    impacts = tₛₛ .- Itime[Ilog]
 
 # Step 2: Resetting Ar-Ar on the body
 # Define depths for each radial node.
