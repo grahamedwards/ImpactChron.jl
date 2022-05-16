@@ -184,10 +184,10 @@ function MetropolisAr(  time_domain::AbstractRange,
     dates,Vfrxn = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # Convert thermal code output into a binned histogram
     if iszero(pₚ.Fχ)
-        distₚ = histogramify(time_domain,dates,Vfrxn,Δd=Δd)
+        distₚ = histogramify(time_domain,dates,Vfrxn)
     else
         Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-        distₚ = histogramify(time_domain,Iages,Ivols,Δd=Δd)
+        distₚ = histogramify(time_domain,Iages,Ivols)
     end
 
 # Log likelihood of initial proposal
@@ -219,10 +219,10 @@ function MetropolisAr(  time_domain::AbstractRange,
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
             elseif iszero(pₚ.Fχ)
-                histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+                histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
                 Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,Δd,Iages,Ivols)
+                histogramify!(distₚ,time_domain,Iages,Ivols)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
@@ -280,10 +280,10 @@ function MetropolisAr(  time_domain::AbstractRange,
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
             elseif iszero(pₚ.Fχ)
-                histogramify!(distₚ,time_domain,Δd,dates,Vfrxn)
+                histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
                 Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,Δd,Iages,Ivols)
+                histogramify!(distₚ,time_domain,Iages,Ivols)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0

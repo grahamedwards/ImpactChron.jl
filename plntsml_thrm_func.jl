@@ -75,16 +75,17 @@ Returns only the histogram masses, bincenters must be calculated externally.
 REMOVE THE Δd input. This is just asking for mistakes. It takes <2 ns.
 
 """
-function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector;Δd::Number=0.)
-    iszero(Δd) && (Δd=step(domain))
+function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
     dist = Vector{float(eltype(y))}(undef,length(domain)-1)
-    histogramify!(dist,domain,Δd,x,y)
+    histogramify!(dist,domain,x,y)
     return dist
 end
 
-function histogramify!(dist::AbstractVector,domain::AbstractRange,Δd::Number,x::AbstractVector,y::AbstractVector)
+function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 # Declare distribution vector
     fill!(dist,zero(eltype(dist)))
+# Calculate Δd
+    Δd = step(domain)
 # Sort (x,y) values in order of ascending x (e.g. dates) for search efficiency
     i_sorted = sortperm(x)
     x_sort = x[i_sorted]
