@@ -358,7 +358,7 @@ using DelimitedFiles
 function nt2csv(filename::String,N::NamedTuple)
     kz = keys(N)
     nₖ = length(kz)
-    rows = maximum( length(ont[i]) for i ∈ kz)
+    rows = maximum( length(N[i]) for i ∈ kz)
     A = Array{Any}(undef,rows+1,nₖ) # preallocate output array
     for i ∈ 1:nₖ
         k = kz[i]
