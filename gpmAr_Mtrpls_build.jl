@@ -70,66 +70,13 @@ function perturb(p::NamedTuple,k::Symbol,n::Number)
     (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ)
 end
 
-
-## Plot Evolution of proposals
-function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
-                        ll::Bool=true,bounds::Bool=true)
-    isempty(vars) ? v=keys(plims) : v=vars
-    ll && (v=tuple(:ll,v...))
-    nᵥ=length(v)
-
-#Convert to strings if necessary
-    isequal(eltype(keys(d)),String) ? (v= String.(v); llₛ = "ll" ; acpt = "accept") : (llₛ = :ll; acpt = :accept)
-# Calculate number of rows needed to accomodate all variables in `cols` columns.
-    rows = Int(ceil(nᵥ/cols,digits=0))
-
-    panels = Vector{Any}(nothing,nᵥ)
-    for i ∈ 1:nᵥ
-        k = v[i]
-        y = d[k]
-        x = 1:length(y)
-        if k == llₛ
-            panels[i] = plot(x,y,xticks=[],ylabel="ll",linecolor=:black) #use \scrl eventually
-            r = 100 * round(sum(d[acpt])/length(d[acpt]),digits=3)
-            xlabel!("acceptance = $r %",xguidefontsize=6)
-            #annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:bottomleft,6))
-        elseif isnan(last(y))
-            panels[i] = plot([1,last(x)],fill(y[1],2),xticks=[],ylabel="$k",linecolor=:black)
-        else
-            panels[i] = plot(x,y,xticks=[],linecolor=:black)
-        end
-
-        if bounds && k != llₛ
-            B = plims[Symbol(k)]
-            if isa(B,Unf)
-                plot!([1,last(x)],fill(B.a,2),ylabel="$k",linecolor=:grey,linestyle=:solid)
-                plot!([1,last(x)],fill(B.b,2),linecolor=:grey,linestyle=:solid)
-            elseif isa(B,Nrm)
-                plot!([1,last(x)],fill(B.μ+B.σ,2),ylabel="$k",linecolor=:grey,linestyle=:dash)
-                plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dash)
-            elseif isa(B,lNrm)
-                plot!([1,last(x)],fill(B.μ+B.σ,2),ylabel="log[" * "$k" * "]",linecolor=:grey,linestyle=:dashdot)
-                plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dashdot)
-            end
-        end
-    end
-    sbplts=rows*cols
-    Δplts = sbplts-length(panels)
-    if Δplts > 0
-        blnkplt = plot(legend=false,grid=false,foreground_color_subplot=:white)
-        [ push!(panels,blnkplt) for j ∈ 1:Δplts]
-    end
-
-    plot(panels...,layout=grid(rows,cols),labels="")
-end
-
 ## Log-likelihood calculation
 
 """
 ll_dist(x::AbstractVector,dist::AbstractVector,mu::AbstractVector,sigma::AbstractVector)
 
 where `x` contains the bincenters of a normalized histogram `dist`,
-and the vectors mu and sigma respectively contain the mean and 1σ of the observations.
+and the vectors `mu` and `sigma` respectively contain the mean and 1σ of the observations.
 
 """
 function ll_dist(   x::AbstractRange, dist::AbstractVector,#p_dist::Tuple{AbstractVector,AbstractVector},    # Proposed distribution (ages,proportions)
@@ -193,6 +140,9 @@ function ll_params(p::NamedTuple,d::NamedTuple)
     return ll
 end
 
+
+## Metropolis Function
+
 # Status function to keep user updated...
     function MetropolisStatus(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number;accpt::AbstractVector=[])
         println("---------------------------")
@@ -206,6 +156,7 @@ end
         println("---------------------------")
     end
 
+# The Metropolis algorithm applied to Ar-Ar measured thermal histories in meteorites
 function MetropolisAr(  time_domain::AbstractRange,
                         p::NamedTuple,   # Parameter proposal
                         pσ::NamedTuple, # proposed σ for pertrubations.
@@ -251,9 +202,9 @@ function MetropolisAr(  time_domain::AbstractRange,
     #step_σ=copy(pσ)
 
     # Calculate initial proposal distribution
-    dates,Vfrxn = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+    dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # Convert thermal code output into a binned histogram
-    if iszero(pₚ.Fχ)
+    if iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
         distₚ = histogramify(time_domain,dates,Vfrxn)
     else
         Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
@@ -280,7 +231,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates, Vfrxn, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
             #k == problem && println("problem"); flush(stdout)
 
 # If >10% of interior radius melts, reject proposal
@@ -288,7 +239,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                 printstyled("meltdown rejected\n"; color=:light_magenta);flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
-            elseif iszero(pₚ.Fχ)
+            elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
                 Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
@@ -341,7 +292,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates, Vfrxn, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
             #k == problem && println("problem"); flush(stdout)
 
 # If >10% of interior radius melts, reject proposal
@@ -349,7 +300,7 @@ function MetropolisAr(  time_domain::AbstractRange,
                 printstyled("meltdown rejected\n"; color=:light_magenta); flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
-            elseif iszero(pₚ.Fχ)
+            elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
                 Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
@@ -396,3 +347,5 @@ function MetropolisAr(  time_domain::AbstractRange,
     MetOut[:prt] = prt
     return MetOut #(; MetOut...) # convert to NamedTuple
 end
+
+"...Mtrpls load successful"
