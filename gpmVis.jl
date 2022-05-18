@@ -1,5 +1,30 @@
 ## Functions to aid visualization of Metropolis code outputs.
 using Plots;gr()
+using DelimitedFiles
+
+## Load data from a csv
+
+function csv2nt(filename::String;symbol::Bool=true)
+    A = readdlm(filename,',') #Input Array
+    kz = Tuple(Symbol.(A[1,:]))
+    pN = Vector{Union{Vector{Float64},Vector{Symbol},Vector{Bool},Number}}(undef,length(kz)) #proto-NamedTuple Vector{Vector}
+    for i = 1:length(kz)
+        T = typeof(A[2,i])
+        if T <: Number
+            if isnan(A[3,i])
+                pN[i] = float(A[2,i])
+            else
+                pN[i] = convert(Vector{T},A[2:end,i])
+            end
+        elseif T <: AbstractString
+            symbol ? pN[i] = convert(Vector{Symbol},Symbol.(A[2:end,i])) : pN[i] = A[2:end,i]
+        else
+            k = kz[i]
+            println("key $k did not match any criteria"); flush(stdout)
+        end
+    end
+    return NamedTuple{kz}(pN)
+end
 
 ## Plot Evolution of proposals
 function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
@@ -51,4 +76,38 @@ function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),
     end
 
     plot(panels...,layout=grid(rows,cols),labels="")
+end
+
+
+using KernelDensity, StatGeochem
+function BootstrapKDE_xD(data::AbstractArray{<:Number}, sigma::AbstractArray{<:Number}; cutoff::Number=-0.05)
+# Array to hold stacked, scaled data
+    allscaled = Array{float(eltype(data)),1}([])
+    agemin = agemax = zero(float(eltype(ages)))
+# For each row of data
+    for i=1:size(data,2)
+        μ, σ = data[:,i], sigma[:,i]
+
+# Maximum extent of expected analytical tail (beyond eruption/deposition/cutoff)
+        maxTailLength = nanmean(σ) .* norm_quantile(1 - 1/(1+countnotnans(μ)))
+        included = (μ .- nanminimum(μ)) .>= maxTailLength
+        included .|= μ .> nanmedian(μ) # Don't exclude more than half (could only happen in underdispersed datasets)
+        included .&= .!isnan.(μ) # Exclude NaNs
+
+# Include and scale only those data not within the expected analytical tail
+        if sum(included)>0
+            agemin = minimum(data[included,i])
+            agemax = maximum(data[included,i])
+            scaled = data[included,i] .- minimum(data[included,i])
+            if maximum(scaled) > 0
+                scaled = scaled ./ maximum(scaled)
+            end
+            append!(allscaled, scaled)
+        end
+    end
+
+# Calculate kernel density estimate, truncated at 0
+    kd = kde(allscaled,npoints=2^7)
+    t = kd.x .> cutoff
+    return range(agemin,agemax,sum(t)), kd.density[t]
 end

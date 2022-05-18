@@ -338,14 +338,41 @@ function MetropolisAr(  time_domain::AbstractRange,
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)
 # Record proposal values of unvaried parameters
-        in(x,pvars) || (MetOut[x]= vcat(getproperty(p,x),fill(NaN,nsteps-1)))
+        in(x,pvars) || (MetOut[x]= p[x]
 # Calculate exponent of lognormally distributed variables
         #isa(plims[x],lNrm) && vmapt!(exp,MetOut[x],MetOut[x])
     end
     MetOut[:ll] = llDist
     MetOut[:accept] = acceptanceDist
     MetOut[:prt] = prt
-    return MetOut #(; MetOut...) # convert to NamedTuple
+    return (; MetOut...) # convert to NamedTuple
+end
+
+
+
+
+
+
+## save data to a csv:
+using DelimitedFiles
+function nt2csv(filename::String,N::NamedTuple)
+    kz = keys(N)
+    nₖ = length(kz)
+    rows = maximum( length(ont[i]) for i ∈ kz)
+    A = Array{Any}(undef,rows+1,nₖ) # preallocate output array
+    for i ∈ 1:nₖ
+        k = kz[i]
+        if length(N[k]) == rows
+            A[:,i] = vcat(k,N[k])
+        elseif isone(length(N[k]))
+            A[1,i] = k
+            A[2,i] = N[k]
+            A[3:end,i] = NaN
+        else
+            println("key $k didn't save correctly")
+        end
+    end
+    writedlm(filename,A,',')
 end
 
 "...Mtrpls load successful"
