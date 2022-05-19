@@ -3,11 +3,10 @@ using Plots;gr()
 using DelimitedFiles
 
 ## Load data from a csv
-
 function csv2nt(filename::String;symbol::Bool=true)
     A = readdlm(filename,',') #Input Array
     kz = Tuple(Symbol.(A[1,:]))
-    pN = Vector{Union{Vector{Float64},Vector{Symbol},Vector{Bool},Number}}(undef,length(kz)) #proto-NamedTuple Vector{Vector}
+    pN = Vector{Union{AbstractVector,Number}}(undef,length(kz)) #proto-NamedTuple Vector{Vector}
     for i = 1:length(kz)
         T = typeof(A[2,i])
         if T <: Number
