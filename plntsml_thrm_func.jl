@@ -375,20 +375,21 @@ ImpactResetAr ~ reheat volumes for an exponential impact flux
 
 ImpactResetAr(  dates::AbsractArray,
                 Vfrxn::AbstractArray,
-                p::Proposal;
+                p::NamedTuple,
+                c::NamedTuple
                 Δt::Number,tmax::Number,nᵣ::Integer)
 
-Assumes impact heating depth of 20 km & impact reheating zone with z/D = 0.3
+Simulates an impact history from _χ parameters in `p`, and resets Ar-Ar
+cooling `dates` and fractional volumes (`Vfraxn`)
+based on impact/crater properties described in `c`.
+Impact site morphologies may be described by a conical (`cone`),
+parabolic (`pbla`), or hemispheric (`hemi`) approximation. 
+
+`Δt`, `tmax`, and `nᵣ` respectively define the timestep, model duration,
+and radial nodes, as in `PlntsmlAr` function.
 """
-function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple;
-                        #IzD::Number,   # depth/diameter ratio of impact reheating region
-                        #Iz::Number,    # m | depth of impact reheating
+function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
-#
-# FOR NOW
-    IzD = 0.3
-    Iz = 20e3 # m | impact heating depth
-    rIz = 0.5/IzD # ratio of impact crater radius / depth
 
 # Declare variables from input
     tₛₛ = p.tss
@@ -400,8 +401,6 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple;
     tᵝ = p.tχβ # Ma after CAIs
     Fᵝ = p.Fχβ #Initial impactor flux Ma⁻¹
     λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
-
-
 
 # Step 1: Impact Events
 # Draw impact dates from flux distribution
@@ -438,27 +437,50 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple;
 # Define depths for each radial node.
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
 # Identify base of impact-affected zone
-    I_r_baseᵢ = searchsortedfirst(radii,R-Iz) # deepest reheated radius index
-    I_r_base = radii[I_r_baseᵢ] #radial node at base of reheating zone.
+    r_baseₕ = searchsortedfirst(radii,R-zₕ) # deepest reheated radius index
+    r_baseₑ = searchsortedfirst(radii,R-zₑ) # deepest excavated radius index
 # Calculate important node thicknesses and body volume.
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
 # Create impact fractional volume vector
-    I_Vfrxn = zeros(eltype(Vfrxn),length(impacts))
-
+    iVfrxn = zeros(eltype(Vfrxn),length(impacts))
+# Establish functions describing the shape of impact processes.
+    Φe = c.shpₑ
+    Φh = c.shpₕ
     @inbounds for imp ∈ eachindex(impacts)
-        @inbounds for r ∈ I_r_baseᵢ:nᵣ
-            x = (radii[r]+Iz-R) * rIz
-            I_Vfrxnᵣ = x^2 * Δr / Vbody # note: π removed for cancelling out Vbody
-# Only reset material that reflects primary cooling.
-            I_Vfrxnᵣ = ifelse(Vfrxn[r] > I_Vfrxnᵣ, I_Vfrxnᵣ, Vfrxn[r])
-# Add reheated fractions to total reheated volume
-            I_Vfrxn[imp] += I_Vfrxnᵣ
+# Crater excavation and volume removal
+        @inbounds for r ∈ r_baseₑ:nᵣ
+            x = Φe(radii[r],R,c.zₑ,c.dₑ/2) # calculate radius of excavation at this depth
+            iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
+# Only remove material that's still there:
+            lost = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
 # Subtract reheated fraction from Vfrxn.
-            Vfrxn[r] -= I_Vfrxnᵣ
+            Vfrxn[r] -= lost
+        end
+# Sub-crater impact site reheating and Ar-Ar resetting.
+        @inbounds for r ∈ r_baseₕ:(r_baseₑ-1)
+            x = Φh(radii[r],R,c.zₕ,c.dₕ/2) # calculate radius of reheating at this depth
+            iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
+# Only reset material that reflects primary cooling.
+            reheated = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
+# Add reheated fractions to total reheated volume
+            iVfrxn[imp] += reheated
+# Subtract reheated fraction from Vfrxn.
+            Vfrxn[r] -= reheated
         end
     end
-    return vcat(dates,impacts),vcat(Vfrxn,I_Vfrxn)
+    return vcat(dates,impacts),vcat(Vfrxn,iVfrxn)
 end
+
+## Impact shape functions
+# Rᵢ (radial depth), R (body radius), z (impact depth), r (impact radius)
+# Conical approximation
+cone(Rᵢ::Number,R::Number,z::Number,r::Number) = (Rᵢ+z-R) * r/z
+# Parabolic approximation
+pbla(Rᵢ::Number,R::Number,z::Number,r::Number) = r * sqrt((Rᵢ+z-R)/z)
+# Hemispheric approximation, assumes r = z
+hemi(Rᵢ::Number,R::Number,z::Number,r::Number) = sqrt( z*z - (Rᵢ-R)*(Rᵢ-R) )
+
+
 
 "...func load successful"

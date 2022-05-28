@@ -3,9 +3,9 @@
 ## Parameters & parameter functions for metropolis code.
 
 """
-```julia
+
 lNrm(μ::Float64,σ::Float64)
-```
+
 Immutable struct to describe normally distributed data,
     reported as mean (`μ`) and 1σ (`σ`)
 """
@@ -15,9 +15,9 @@ struct Nrm
 end
 
 """
-```julia
+
 lNrm(μ::Float64,σ::Float64)
-```
+
 Immutable struct to describe lognormally distributed data,
     reported as log-space mean (`μ`) and 1σ (`σ`)
 """
@@ -27,9 +27,9 @@ struct lNrm
 end
 
 """
-```julia
+
 Unf(a::Float64,b::Float64)
-```
+
 Immurable struct to describe uniformly distributed data,
     reported as minimum (`a`) and maximum (`b`).
 """
@@ -39,9 +39,9 @@ struct Unf
 end
 
 """
-```julia
+
 perturb(p::NamedTuple,k::Symbol,n::Number)
-```
+
 
 Return a NamedTuple identical to `p`,
 with one field (key `k`) changed to the value of `n`.
@@ -162,7 +162,8 @@ function MetropolisAr(  time_domain::AbstractRange,
                         pσ::NamedTuple, # proposed σ for pertrubations.
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
-                        sigma::AbstractArray;# Observed 1σ's
+                        sigma::AbstractArray, # Observed 1σ's
+                        crater::NamedTuple; # crater/impact parameters
                         plims::NamedTuple=(g=(),), # Paramter distributions.
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int=10000,  # Post burn-in iterations
@@ -184,7 +185,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     bincenters = LinRange(first(time_domain) + 0.5Δd, last(time_domain) - 0.5Δd, length(time_domain)-1)
 
 # If no plims given, set ranges to
-    plims[1] == () && ( plims = (;zip(pvars,fill((-Inf,Inf,:U),length(pvars)))...) )
+    plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
 
     # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
     stepfactor = 2.9
@@ -207,7 +208,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     if iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
         distₚ = histogramify(time_domain,dates,Vfrxn)
     else
-        Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+        Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,crater,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
         distₚ = histogramify(time_domain,Iages,Ivols)
     end
 
@@ -242,7 +243,7 @@ function MetropolisAr(  time_domain::AbstractRange,
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
-                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,crater,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
                 histogramify!(distₚ,time_domain,Iages,Ivols)
             end
 # Ensure the returned distribution is nonzero
@@ -303,7 +304,7 @@ function MetropolisAr(  time_domain::AbstractRange,
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
-                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,crater,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
                 histogramify!(distₚ,time_domain,Iages,Ivols)
             end
 # Ensure the returned distribution is nonzero
@@ -338,7 +339,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)
 # Record proposal values of unvaried parameters
-        in(x,pvars) || (MetOut[x]= p[x]
+        in(x,pvars) || (MetOut[x]= p[x])
 # Calculate exponent of lognormally distributed variables
         #isa(plims[x],lNrm) && vmapt!(exp,MetOut[x],MetOut[x])
     end
