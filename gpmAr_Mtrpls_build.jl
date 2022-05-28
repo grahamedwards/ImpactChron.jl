@@ -3,9 +3,9 @@
 ## Parameters & parameter functions for metropolis code.
 
 """
-
+```julia
 lNrm(μ::Float64,σ::Float64)
-
+```
 Immutable struct to describe normally distributed data,
     reported as mean (`μ`) and 1σ (`σ`)
 """
@@ -15,9 +15,9 @@ struct Nrm
 end
 
 """
-
+```julia
 lNrm(μ::Float64,σ::Float64)
-
+```
 Immutable struct to describe lognormally distributed data,
     reported as log-space mean (`μ`) and 1σ (`σ`)
 """
@@ -27,9 +27,9 @@ struct lNrm
 end
 
 """
-
+```julia
 Unf(a::Float64,b::Float64)
-
+```
 Immurable struct to describe uniformly distributed data,
     reported as minimum (`a`) and maximum (`b`).
 """
@@ -39,10 +39,9 @@ struct Unf
 end
 
 """
-
+```julia
 perturb(p::NamedTuple,k::Symbol,n::Number)
-
-
+```
 Return a NamedTuple identical to `p`,
 with one field (key `k`) changed to the value of `n`.
 Note that `==` identity is preserved only if the
@@ -73,8 +72,9 @@ end
 ## Log-likelihood calculation
 
 """
+```julia
 ll_dist(x::AbstractVector,dist::AbstractVector,mu::AbstractVector,sigma::AbstractVector)
-
+```
 where `x` contains the bincenters of a normalized histogram `dist`,
 and the vectors `mu` and `sigma` respectively contain the mean and 1σ of the observations.
 
@@ -266,7 +266,7 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Record new log likelihood
             ll = llₚ
         end
-        i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
+        iszero(i%updateN) && MetropolisStatus(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
     end
 
 # Hooray, we finished the burn-in, let's tell someone!
@@ -334,7 +334,7 @@ function MetropolisAr(  time_domain::AbstractRange,
         end
 
         llDist[i] = ll
-        i%updateN == 0 && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
+        iszero(i%updateN) && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
     end
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)
