@@ -346,7 +346,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     MetOut[:ll] = llDist
     MetOut[:accept] = acceptanceDist
     MetOut[:prt] = prt
-    return (; MetOut...) # convert to NamedTuple
+    return MetOut
 end
 
 
