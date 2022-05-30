@@ -1,0 +1,13 @@
+name = "ImpactChron"
+uuid = "3f0f4203-a938-45d2-b827-eebee779515b"
+authors = ["Graham Harper Edwards"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
