@@ -251,8 +251,8 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,
 # Define depths for each radial node.
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
 # Identify base of impact-affected zone
-    r_baseₕ = searchsortedfirst(radii,R-zₕ) # deepest reheated radius index
-    r_baseₑ = searchsortedfirst(radii,R-zₑ) # deepest excavated radius index
+    r_baseₕ = searchsortedfirst(radii,R-c.zₕ) # deepest reheated radius index
+    r_baseₑ = searchsortedfirst(radii,R-c.zₑ) # deepest excavated radius index
 # Calculate important node thicknesses and body volume.
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
