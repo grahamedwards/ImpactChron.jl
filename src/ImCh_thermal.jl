@@ -1,126 +1,9 @@
+## Thermal codes describing primary planetesimal cooling and impact reheating.
+    # plntsml_Tz
+    # PlntsmlAr
+    # ImpactResetAr
+    # Impact shape functions: cone, pbla, hemi
 
-using LoopVectorization,Polyester
-using Random; #rng = MersenneTwister()
-using Distributions
-
-"""
-Reference info:
-t_acr = 2.13 # Ma after CAIs
-    Al_conc = 1.18 /100  # Concentration of Al in chondrite (kg/kg)
-    ρ  = 3210   # kg/m3 | density
-    cp = 950   # J/(kg K) | specific heat capacity
-    k  = 4      # W/(mK) | H chond upperbound, Yomogida & Matsui (1983)
-    #kappa  = K/(ρ*cp) # m²/s | Thermal diffusivity
-    rAlo = 5.23e-5 # initial solar ²⁶Al/²⁷Al | Jacobsen et al. (2008)
-    To = 250;   # K, ambient temp Woolum & Cassen (1999)
-
-const s_a  = 365.2422*24*60*60 # seconds per annum
-const λ_Al = (log(2)/7.17e5)  / s_a # s⁻¹ | decay constant of Al in s
-const H_Al = 0.355 # W/kg (Castillo-Rogez et al., 2009) hard
-
-
-s_a  = 365.2422*24*60*60 # seconds per annum
-λ_Al = (log(2)/7.17e5)  / s_a # s⁻¹ | decay constant of Al in s
-H_Al = 0.355 # W/kg (Castillo-Rogez et al., 2009)
-
-radius = 150e3 # m | Radius
-Δr = 10e3 # m | radial distance increment
-
-t_run = 100. # Ma after CAIs
-Δt    = 0.1 # Ma
-
-#### temporary
-Al_conc = 1.18 /100
-rAlo = 5.11e-5
-ρ = 3210
-t_acr = 2.13
-####
-
-time_Ma = collect( t_acr : Δt : t_run )
-time_s  = time_Ma .* 1e6 .* s_a
-
-r_rng = collect( 1000. : Δr : radius )
-
-Aₒ = ρ*Al_conc*rAlo*H_Al*exp(-λ_Al*time_s[1]) # W/m³ |
-    # Volumetric heat production at instant of accretion
-
-T = plntsml_Tz(time_s,r_rng,
-                To = 250., Ao = Aₒ, λ = λ_Al,
-                K = 4., κ = 4/(ρ*950.) )
-
-##
-
-plot_radii = plot(time_Ma,T[1,:], label = string(Int(r_rng[1]/1000), " km"))
-    for i = 2:length(r_rng)
-        plot!(plot_radii,time_Ma,T[i,:], label = string(Int(r_rng[i]/1000), " km"))
-    end
-    plot(plot_radii, xlabel = "time (Ma after CAIs)", ylabel = "Temperature (K)")
-"""
-## Functions!
-
-"""
-histogramify
-~~~~~~~~~~~~
-histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector;Δd::Number)
-
-Constructs histogram over centers of `domain` from model outputs in x with corresponding
-abundances in y. Requires that each value of x falls within the bounds of `domain`.
-
-
-
-Normalizes the output, such that for output `dist` ∑ dist(xᵢ) * Δx (for each xᵢ in the bincenters of x)
-
-Returns only the histogram masses, bincenters must be calculated externally.
-
-REMOVE THE Δd input. This is just asking for mistakes. It takes <2 ns.
-
-"""
-function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
-    dist = Vector{float(eltype(y))}(undef,length(domain)-1)
-    histogramify!(dist,domain,x,y)
-    return dist
-end
-
-function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
-# Declare distribution vector
-    fill!(dist,zero(eltype(dist)))
-# Calculate Δd
-    Δd = step(domain)
-# Sort (x,y) values in order of ascending x (e.g. dates) for search efficiency
-    i_sorted = sortperm(x)
-    x_sort = x[i_sorted]
-    y_sort = y[i_sorted]
-# Remove any NaNs to ensure
-    firstNaN = searchsortedfirst(x_sort,NaN)
-    xₛ = view(x_sort,1:firstNaN-1)
-    yₛ = view(y_sort,1:firstNaN-1)
-# Ensure NaN removal did not delete all elements of x & y
-    if length(xₛ)>0
-# Identify indices of domain that bound all values of x
-        xmin = searchsortedfirst(domain,first(xₛ)) - 1
-        xmax = searchsortedlast(domain,last(xₛ)) + 1
-# Ensure that xmin and xmax are defined in domain
-        if iszero(xmin) || xmax > length(domain)
-            printstyled("CAUTION: "; color=:yellow)
-            println("Time domain bounds exceeded. Proposal rejected.")
-            flush(stdout)
-        elseif (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1
-            @inbounds for i ∈ (xmin):(xmax) # 1 step outward of xmin,xmax to get peripheral values
-                l = searchsortedfirst(xₛ , domain[i]) # lower index
-                u = searchsortedlast(xₛ , domain[i+1]) # upper index
-# Ensure values of (xₛ,yₛ) fall within bounds (if not, searchsortedfirst/searchsortedlast return l > u)
-                u >= l && ( dist[i] = vreduce(+,yₛ[l:u])/Δd )
-            end
-        elseif (xmax - xmin) == 1
-            dist[xmin] = 1.0 / Δd
-        end
-    end
-
-    ∫distdx = vreduce(+,dist) * Δd
-    vmap!(x -> x/∫distdx,dist,dist)
-
-    return dist
-end
 
 function plntsml_Tz(time::AbstractArray,radii::AbstractArray;
     To::Float64,
@@ -291,81 +174,9 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
         end # of j (time) loop
     end     # of i (radius) loop
 end
-"""
-## rmNaN // Remove NaN code
-    if !rmNaN #remove NaN option.
-        dates = tₛₛ .- ages
-        volumes = shell_vol/last(vols)
-        radii_out = radii
-    else rmNaN
-        Xnan = .!isnan.(ages)
-        dates = tₛₛ .- ages[Xnan]
-        volumes = shell_vol[Xnan]/last(vols)
-        radii_out = radii[Xnan]
-    end
-
-## ~histogramify~ WITHIN PlntsmlAr
-    if time_domain == 0:0
-        return dates,volumes,radii_out
-    elseif length(dates) > 1 # Ensure more than 1 radius
-# Return histogram of data binned by `time_domain`
-        bincenters,dist = histogramify(time_domain,dates,volumes)
-        return bincenters,dist,time_domain
-    else
-        Δtd = step(time_domain)
-        bincenters = (first(time_domain) + 0.5Δtd) : Δtd : (last(time_domain) - 0.5Δtd)
-        dist = zeros(length(bincenters))
-        return bincenters,dist,time_domain
-    end
-"""
-
-## Naive Resampler
-"""
-function PlntsmlRsmpl(N,P::ResampleParams;
-            Δt = 0.1,      # absolute timestep, default 10 ka
-            tmax = 1000.,     # maximum time allowed to model
-            nᵣ = 100,        # # radial nodes
-            ArDates::Function=PlntsmlAr)
-
-    Tₒ(x::AbstractVector) = 100. * rand() + x[rand(1:40)] # sample from histogram bins of x
-
-    dtₛₛ = Normal(P.tₛₛ.μ,P.tₛₛ.σ)       #solar system age, Ma
-    drAlₒ = Normal(P.rAlₒ.μ,P.rAlₒ.σ)     # initial solar ²⁶Al/²⁷Al
-    # skip P.Tm since this is done with custom function Tₒ
-    dR = Uniform(P.R.a,P.R.b)   # Body radius
-    dtₐ = Uniform(P.tₐ.a,P.tₐ.b)      # Accretion date, My after CAIs
-    dcAl = Uniform(P.cAl.a,P.cAl.b)  # Fractional abundance of Al (g/g)
-    dTc = Normal(P.Tc.μ,P.Tc.σ)       # Ar closure temperature, K
-    dρ = Uniform(P.ρ.a,P.ρ.b)       # rock density, kg/m³
-    dCₚ = Uniform(P.Cₚ.a,P.Cₚ.b) # Specific Heat Capacity
-    dk = Uniform(P.k.a,P.k.b)          # Thermal Conductivity
 
 
-    ages = Array{Float64}(undef,nᵣ,N)
-
-    for i ∈ 1:N
-
-        ages[:,i] = ArDates(  tₛₛ = rand(dtₛₛ),       #solar system age, Ma
-                rAlo = rand(drAlₒ),     # initial solar ²⁶Al/²⁷Al
-                tₐ = rand(dtₐ),      # accretion time, My after CAIs
-                R = rand(dR),      # Body radius
-                To = Tₒ(P.Tm),       # Disk temperature @ 2.5 au, K
-                Al_conc = rand(dcAl),   # Fractional abundance of Al (g/g)
-                Tc = rand(dTc),       # Ar closure temperature, K
-                ρ = rand(dρ),       # rock density, kg/m³
-                K = rand(dk),          # Thermal Conductivity
-                Cₚ = rand(dCₚ),     # Specific Heat Capacity
-                Δt = Δt,      # absolute timestep, default 10 ka
-                tmax = tmax,     # maximum time allowed to model
-                nᵣ = nᵣ,        # radial nodes
-                rmNaN=false)[1] # allow NaNs to remain
-    end
-    return ages
-
-end
-"""
-
-## Impact Heater v0.0
+## Impact (Re)Heater v0.0
 """
 ImpactResetAr ~ reheat volumes for an exponential impact flux
                 described by parameters in p {::Proposal}
@@ -383,10 +194,13 @@ Simulates an impact history from _χ parameters in `p`, and resets Ar-Ar
 cooling `dates` and fractional volumes (`Vfraxn`)
 based on impact/crater properties described in `c`.
 Impact site morphologies may be described by a conical (`cone`),
-parabolic (`pbla`), or hemispheric (`hemi`) approximation. 
+parabolic (`pbla`), or hemispheric (`hemi`) approximation.
 
 `Δt`, `tmax`, and `nᵣ` respectively define the timestep, model duration,
 and radial nodes, as in `PlntsmlAr` function.
+
+Note that Vfrxn is overwritten.
+
 """
 function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
@@ -480,7 +294,3 @@ cone(Rᵢ::Number,R::Number,z::Number,r::Number) = (Rᵢ+z-R) * r/z
 pbla(Rᵢ::Number,R::Number,z::Number,r::Number) = r * sqrt((Rᵢ+z-R)/z)
 # Hemispheric approximation, assumes r = z
 hemi(Rᵢ::Number,R::Number,z::Number,r::Number) = sqrt( z*z - (Rᵢ-R)*(Rᵢ-R) )
-
-
-
-"...func load successful"
