@@ -123,13 +123,13 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Record new log likelihood
             ll = llₚ
         end
-        iszero(i%updateN) && MetropolisStatus(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
+        iszero(i%updateN) && ImpactChron.MetropolisStatus(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
     end
 
 # Hooray, we finished the burn-in, let's tell someone!
     println("===  BURN IN COMPLETE  ===\n\n")
     println("Post-Burn-In Status:")
-    MetropolisStatus(p,pvars,ll,0,0,"",start)
+    ImpactChron.MetropolisStatus(p,pvars,ll,0,0,"",start)
     println("== == == == == == == == ==")
     println("Now beginning $nsteps Markov chain iterations...")
     flush(stdout)
@@ -191,7 +191,7 @@ function MetropolisAr(  time_domain::AbstractRange,
         end
 
         llDist[i] = ll
-        iszero(i%updateN) && MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
+        iszero(i%updateN) && ImpactChron.MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
     end
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)

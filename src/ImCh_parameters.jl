@@ -1,5 +1,4 @@
 ## Parameters & parameter functions for planetesimal thermal model & metropolis code.
-## Parameters & parameter functions for metropolis code.
 
 """
 ```julia
