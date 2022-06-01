@@ -2,9 +2,9 @@
 
 """
 ```julia
-lNrm(μ::Float64,σ::Float64)
+Nrm(μ::Float64,σ::Float64)
 ```
-Immutable struct to describe normally distributed data,
+Immutable `struct` to describe normally distributed data,
     reported as mean (`μ`) and 1σ (`σ`)
 """
 struct Nrm
@@ -16,7 +16,7 @@ end
 ```julia
 lNrm(μ::Float64,σ::Float64)
 ```
-Immutable struct to describe lognormally distributed data,
+Immutable `struct` to describe lognormally distributed data,
     reported as log-space mean (`μ`) and 1σ (`σ`)
 """
 struct lNrm
@@ -28,7 +28,7 @@ end
 ```julia
 Unf(a::Float64,b::Float64)
 ```
-Immurable struct to describe uniformly distributed data,
+Immurable `struct` to describe uniformly distributed data,
     reported as minimum (`a`) and maximum (`b`).
 """
 struct Unf
