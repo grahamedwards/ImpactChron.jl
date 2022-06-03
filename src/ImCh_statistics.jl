@@ -144,7 +144,7 @@ where
 `mu` and `sigma` respectively contain the mean and 1σ of the observations.
 
 """
-function ll_dist(   x::AbstractRange, dist::AbstractVector,#p_dist::Tuple{AbstractVector,AbstractVector},    # Proposed distribution (ages,proportions)
+function ll_dist(   x::AbstractRange, dist::AbstractVector,
                     mu::AbstractVector,      # 1D Array/Vector of observed μ's (sorted)
                     sigma::AbstractVector)   # 1D Array/Vector of observed σ's (sorted)
 
@@ -160,20 +160,17 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,#p_dist::Tuple{Abstra
 # Cycle through each datum in (mu,sigma)
     @inbounds for j ∈ 1:nₘ #might batch speed this up?
 # Find index of μ in the `dist` array
-        iₓ = ceil(Int, (mu[j]-x[1]) / xᵣ * nbtwns + 1)
-                # formerly iₓ = searchsortedfirst(x,mu[j]) # x[iₓ] ≥ mu[j]
+        iₓ = ceil(Int, (mu[j]-x[1]) / xᵣ * nbtwns + 1) # x[iₓ] ≥ mu[j], equivalent to searchsortedfirst(x,mu[j])
 # If possible, prevent aliasing problems by interpolation
         if (iₓ>1) && (iₓ<=nₚ) && ( (2sigma[j]) < (x[iₓ]-mu[j]) ) && ( (2sigma[j])<(mu[j]-x[iₓ-1]) )
             # && (sigma[j] < (x[iₓ]-x[iₓ-1]) ) # original threshold, see notes.
 # Interpolate corresponding distribution value, note: Δx cancels in second term
             likelihood = dist[iₓ] * Δx - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])
-            #likelihood = 6 * sigma[j] * ( dist[iₓ] - (dist[iₓ]-dist[iₓ-1]) * (x[iₓ]-mu[j]) / Δx)
-                    #alternate likelihood calculation that only integrates some "width"(e.g. 3σ) of mu distribution...
 # Otherwise, sum contributions from Gaussians at each point in distribution
         else
             likelihood = zero(float(eltype(dist)))
             @turbo for i ∈ 1:nₚ     # @turbo faster than @tturbo
-# Likelihood curve follows a Gaussian PDF.
+# Likelihood curve follows a Gaussian PDF about mu[j]
                 likelihood += ( dist[i] / (sigma[j] * sqrt(2*π)) ) *
                         exp( - (x[i]-mu[j])*(x[i]-mu[j]) / (2*sigma[j]*sigma[j]) )
             end

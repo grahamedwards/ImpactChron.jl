@@ -28,7 +28,7 @@ end
 ```julia
 Unf(a::Float64,b::Float64)
 ```
-Immurable `struct` to describe uniformly distributed data,
+Immutable `struct` to describe uniformly distributed data,
     reported as minimum (`a`) and maximum (`b`).
 """
 struct Unf
