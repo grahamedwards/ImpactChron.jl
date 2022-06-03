@@ -13,10 +13,12 @@ histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 ```
 
 Constructs histogram over (linear) midpoints of `domain` from model outputs in x with corresponding
-abundances in y. Requires that each value of x falls within the bounds of `domain`.
+abundances in y.
 
-Normalizes the output, such that for output `dist` ∑ dist[xᵢ] * Δx = 1
-(for each xᵢ in the bincenters of x)
+Normalizes the output, such that for output `dist` ∑ dist[dᵢ] * Δd = 1
+(for each dᵢ in the bincenters of domain with step-size Δd), so long as all x ∈ domain.
+If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the corresponding xₒᵤₜ of each yₒᵤₜ is ∉ domain.
+
 
 Returns only the histogram masses, bincenters must be calculated externally.
 e.g.
@@ -28,7 +30,7 @@ bincenters= LinRange( first(domain)+Δd/2, last(domain)-Δd/2, length(domain)-1)
 """
 function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
     dist = Vector{float(eltype(y))}(undef,length(domain)-1)
-    histogramify!(dist,domain,x,y)
+    histogramify!(dist,domain,xₒ,yₒ)
     return dist
 end
 
@@ -36,21 +38,21 @@ end
 ```julia
 histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 ```
-In-place `histogramify` that ouputs to a pre-allocated vector `dist`
+In-place `histogramify` that overwites a pre-allocated vector `dist`.
 
-see `histogramify`
+see `histogramify`for details
 """
 
 function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
-# Declare distribution vector
+# start with a zero distribution
     fill!(dist,zero(eltype(dist)))
 # Calculate Δd
     Δd = step(domain)
-# Sort (x,y) values in order of ascending x (e.g. dates) for search efficiency
+# Sort (x,y) values in order of ascending x (e.g. dates)
     i_sorted = sortperm(x)
     x_sort = x[i_sorted]
     y_sort = y[i_sorted]
-# Remove any NaNs to ensure
+# Remove any NaNs to ensure math works
     firstNaN = searchsortedfirst(x_sort,NaN)
     xₛ = view(x_sort,1:firstNaN-1)
     yₛ = view(y_sort,1:firstNaN-1)
@@ -62,21 +64,22 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
         xmin = searchsortedfirst(domain,first(xₛ)) - 1
         xmax = searchsortedlast(domain,last(xₛ)) + 1
 # Ensure that xmin & xmax are within the domain
-    # If first(xₛ) < first(domain), xmin = 0
-        xmin = ifelse(iszero(xmin),1,xmin)
-    # If last(xₛ) > last(domain), xmax = length(domain) + 1
-        xmax = ifelse(xmax>length(domain),length(domain)-1,xmax) # this should never happen. Could remove, but takes <2ns and prevents a segfault if disaster strikes.
+        xmin = ifelse(iszero(xmin),1,xmin) # # If first(xₛ) < first(domain), xmin = 0
+        xmax = ifelse(xmax>length(domain),length(domain)-1,xmax) # If last(xₛ) > last(domain), xmax = length(domain) + 1
+            # this should never happen. Could remove, but takes <2ns and prevents a segfault if disaster strikes.
 
-        if (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1
-            @inbounds for i ∈ xmin:xmax
-                l = searchsortedfirst(xₛ , domain[i]) # lower index
-                u = searchsortedlast(xₛ , domain[i+1]) # upper index
-# Ensure values of (xₛ,yₛ) fall within bounds (if not, searchsortedfirst/searchsortedlast return l > u)
-                u >= l && ( dist[i] = vreduce(+,yₛ[l:u]) / ∑yΔd )
+# Ensure any x ∈ domain. # If all x > domain xmin(=len)>xmax(=len-1). If all x < domain xmin=xmax=1. Either case iszero(dist) = true.
+        if (xmax - xmin) > 0
+            @batch for i ∈ xmin:xmax
+            l = searchsortedfirst(xₛ , domain[i]) # lower index
+            u = searchsortedlast(xₛ , domain[i+1]) # upper index
+# If xₛ does not fall within domain[i:i+1], l > u and for-loop won't run.
+                @inbounds for j = l:u
+                    dist[i] += yₛ[j]
+                end
+                dist[i] /= ∑yΔd
             end
-        elseif (xmax - xmin) == 1
-            dist[xmin] = 1.0
-        end # Note: if each x > OR < domain , xmin >= xmax, and iszero(dist)=true
+        end
     end
     return dist
 end
