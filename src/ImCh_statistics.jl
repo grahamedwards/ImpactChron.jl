@@ -56,29 +56,29 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
     yₛ = view(y_sort,1:firstNaN-1)
 # Ensure NaN removal did not delete all elements of x & y
     if length(xₛ)>0
-# Identify indices of domain that bound all values of x
+# Identify indices of domain that bound ALL values of x
         xmin = searchsortedfirst(domain,first(xₛ)) - 1
         xmax = searchsortedlast(domain,last(xₛ)) + 1
-# Ensure that xmin and xmax are defined in domain
-        if iszero(xmin) || xmax > length(domain)
-            printstyled("CAUTION: "; color=:yellow)
-            println("Time domain bounds exceeded. Proposal rejected.")
-            flush(stdout)
-        elseif (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1
-            @inbounds for i ∈ (xmin):(xmax) # 1 step outward of xmin,xmax to get peripheral values
+# Ensure that xmin & xmax are within the domain
+    # If first(xₛ) < first(domain), xmin = 0
+        xmin = ifelse(iszero(xmin),1,xmin)
+    # If last(xₛ) > last(domain), xmax = length(domain) + 1
+        xmax = ifelse(xmax>length(domain),length(domain)-1,xmax) # this should never happen. Could remove, but takes <2ns and prevents a segfault if disaster strikes.
+
+        if (xmax - xmin) > 1 # if only 1 bin filled, xmax-xmin=1
+            @inbounds for i ∈ xmin:xmax
                 l = searchsortedfirst(xₛ , domain[i]) # lower index
                 u = searchsortedlast(xₛ , domain[i+1]) # upper index
 # Ensure values of (xₛ,yₛ) fall within bounds (if not, searchsortedfirst/searchsortedlast return l > u)
-                u >= l && ( dist[i] = vreduce(+,yₛ[l:u])/Δd )
+                u >= l && ( dist[i] = vreduce(+,yₛ[l:u]) )
             end
         elseif (xmax - xmin) == 1
-            dist[xmin] = 1.0 / Δd
-        end
+            dist[xmin] = 1.0
+        end # Note: if each x > OR < domain , xmin >= xmax, and iszero(dist)=true
+# Normalize
+        ∫distdx = vreduce(+,dist) * Δd
+        vmap!(x -> x/∫distdx,dist,dist)
     end
-
-    ∫distdx = vreduce(+,dist) * Δd
-    vmap!(x -> x/∫distdx,dist,dist)
-
     return dist
 end
 
