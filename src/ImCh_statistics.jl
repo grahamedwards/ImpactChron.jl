@@ -30,7 +30,7 @@ bincenters= LinRange( first(domain)+Δd/2, last(domain)-Δd/2, length(domain)-1)
 """
 function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
     dist = Vector{float(eltype(y))}(undef,length(domain)-1)
-    histogramify!(dist,domain,xₒ,yₒ)
+    histogramify!(dist,domain,x,y)
     return dist
 end
 
@@ -44,7 +44,7 @@ see `histogramify`for details
 """
 
 function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
-# start with a zero distribution
+# start with a fresh zero distribution
     fill!(dist,zero(eltype(dist)))
 # Calculate Δd
     Δd = step(domain)
