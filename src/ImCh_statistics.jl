@@ -56,6 +56,8 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
     yₛ = view(y_sort,1:firstNaN-1)
 # Ensure NaN removal did not delete all elements of x & y
     if length(xₛ)>0
+# Calculate area under an unbounded binspace for normalizing relative to all of the (x,y) space
+        ∑yΔd = vreduce(+,yₛ) * Δd
 # Identify indices of domain that bound ALL values of x
         xmin = searchsortedfirst(domain,first(xₛ)) - 1
         xmax = searchsortedlast(domain,last(xₛ)) + 1
@@ -70,14 +72,11 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
                 l = searchsortedfirst(xₛ , domain[i]) # lower index
                 u = searchsortedlast(xₛ , domain[i+1]) # upper index
 # Ensure values of (xₛ,yₛ) fall within bounds (if not, searchsortedfirst/searchsortedlast return l > u)
-                u >= l && ( dist[i] = vreduce(+,yₛ[l:u]) )
+                u >= l && ( dist[i] = vreduce(+,yₛ[l:u]) / ∑yΔd )
             end
         elseif (xmax - xmin) == 1
             dist[xmin] = 1.0
         end # Note: if each x > OR < domain , xmin >= xmax, and iszero(dist)=true
-# Normalize
-        ∫distdx = vreduce(+,dist) * Δd
-        vmap!(x -> x/∫distdx,dist,dist)
     end
     return dist
 end
