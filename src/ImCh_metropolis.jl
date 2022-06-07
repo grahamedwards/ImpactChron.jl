@@ -44,22 +44,26 @@ function MetropolisAr(  time_domain::AbstractRange,
 # If no plims given, set ranges to
     plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
 
-    # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
+# Check that all proposed parameters do not violate uniform distribution bounds
+    for i ∈ keys(plims)
+        isa(plims[i],Unf) && ( plims[i].a < p[i] < plims[i].b || error("Initial proposal for $i exceeds permissible bounds ($(plims[i].a),$(plims[i].b))") )
+    end
+# standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
     stepfactor = 2.9
 
-    # Sort the dataset from youngest to oldest
+# Sort the dataset from youngest to oldest
     sI = sortperm(mu)
     mu_sorted = mu[sI] # Sort means
     sigma_sorted = sigma[sI] # Sort uncertainty
 
-    # These quantities will be used more than once
+# These quantities will be used more than once
     datarows = length(mu_sorted)
     pₚ = p
     #p = copy(p)
     #pₚ = copy(p)
     #step_σ=copy(pσ)
 
-    # Calculate initial proposal distribution
+# Calculate initial proposal distribution
     dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # Convert thermal code output into a binned histogram
     if iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
