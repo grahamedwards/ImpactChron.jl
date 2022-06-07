@@ -246,7 +246,8 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,
     end
 # Create vector of absolute impact dates from drawing
     impacts = Itime[Ilog]
-    impacts .*= -1. .+= tₛₛ # equivalent to impacts = tₛₛ .- Itime[Ilog] but one less allocation
+    impacts .*= -1.
+    impacts .+= tₛₛ # equivalent to impacts = tₛₛ .- Itime[Ilog] but one less allocation
 # Step 2: Resetting Ar-Ar on the body
 # Define depths for each radial node.
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
