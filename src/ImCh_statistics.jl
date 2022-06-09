@@ -71,8 +71,8 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
 # Ensure any x ∈ domain. # If all x > domain xmin(=len)>xmax(=len-1). If all x < domain xmin=xmax=1. Either case iszero(dist) = true.
         if (xmax - xmin) > 0
             @batch for i ∈ xmin:xmax
-            l = searchsortedfirst(xₛ , domain[i]) # lower index
-            u = searchsortedlast(xₛ , domain[i+1]) # upper index
+                l = searchsortedfirst(xₛ , domain[i]) # lower index
+                u = searchsortedlast(xₛ , domain[i+1]) # upper index
 # If xₛ does not fall within domain[i:i+1], l > u and for-loop won't run.
                 @inbounds for j = l:u
                     dist[i] += yₛ[j]
