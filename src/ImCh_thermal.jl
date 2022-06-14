@@ -126,8 +126,9 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 
     fill!(ages,NaN) # Vector{Float64}(undef,length(radii))
 
-    time_Ma = tₐ : Δt : tmax  # time in Ma (after CAIs)
-    time  = (0. : Δt : tmax - tₐ) * 1e6 * s_a # time in s (after accretion)
+    tₒ = ceil(tₐ/Δt) * Δt # Make the first timestep (after accretion) a multiple of Δt.
+    time_Ma = tₒ : Δt : tmax  # time in Ma (after CAIs)
+    time  = (0. : Δt : tmax - tₒ) * 1e6 * s_a # time in s (after accretion)
 
     Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
@@ -207,7 +208,7 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,
 
 # Declare variables from input
     tₛₛ = p.tss
-    tₐ =p.ta
+    tₒ = ceil(p.ta/Δt) * Δt #Set initial time equal to that in planetesimal thermal code.
     R = p.R # m | asteroid radius
     tᵅ = p.tχα # Ma after CAIs
     Fᵅ = p.Fχα #Initial impactor flux Ma⁻¹
@@ -218,7 +219,7 @@ function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,
 
 # Step 1: Impact Events
 # Draw impact dates from flux distribution
-    Itime = tₐ : Δt : tmax # timeseries for potential impacts in Ma after CAIs
+    Itime = tₒ : Δt : tmax # timeseries for potential impacts in Ma after CAIs
     Ilog = BitVector(undef,length(Itime))
 
     @inbounds @batch for i ∈ eachindex(Itime)
