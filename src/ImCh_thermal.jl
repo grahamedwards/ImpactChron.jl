@@ -203,89 +203,104 @@ and radial nodes, as in `PlntsmlAr` function.
 Note that Vfrxn is overwritten.
 
 """
-function ImpactResetAr( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
+function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray, dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
 
 # Declare variables from input
     tₛₛ = p.tss
-    tₒ = ceil(p.ta/Δt) * Δt #Set initial time equal to that in planetesimal thermal code.
     R = p.R # m | asteroid radius
-    tᵅ = p.tχα # Ma after CAIs
+    tᵅ = tₛₛ - p.tχα # Ma after CAIs
     Fᵅ = p.Fχα #Initial impactor flux Ma⁻¹
     λᵅ = 1/p.τχα  # Ma⁻¹ | decay constant of impact flux
-    tᵝ = p.tχβ # Ma after CAIs
+    tᵝ = tₛₛ - p.tχβ # Ma after CAIs
     Fᵝ = p.Fχβ #Initial impactor flux Ma⁻¹
     λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
 
-# Step 1: Impact Events
-# Draw impact dates from flux distribution
-    Itime = tₒ : Δt : tmax # timeseries for potential impacts in Ma after CAIs
-    Ilog = BitVector(undef,length(Itime))
-
-    @inbounds @batch for i ∈ eachindex(Itime)
-
-        if (Itime[i]>tᵝ) && (Itime[i]>tᵅ) # tᵝ and tᵅ are both active
-            Itᵅ = Itime[i] - tᵅ
-            Itᵝ = Itime[i] - tᵝ
-# Calculate the union of the probablities for both impact fluxes
-    # P(A∪B) = P(A)+P(B) - P(A∩B) = -(P(A)-1)*(P(B)-1)+1, as long as A,B are independent
-            p_hit = Δt * ( -( Fᵝ*exp(-λᵝ*Itᵝ)-1 ) * ( Fᵅ*exp(-λᵅ*Itᵅ)-1 ) + 1 )
-            Ilog[i] = ifelse( rand() < p_hit, true,false)
-
-        elseif (Itime[i]>tᵝ) && (Itime[i]<tᵅ) # only tᵝ is active
-            Itᵝ = Itime[i] - tᵝ
-            p_hit = Δt * Fᵝ * exp(-λᵝ*Itime[i])
-            Ilog[i] = ifelse( rand() < p_hit, true,false)
-
-        elseif (Itime[i]<tᵝ) && (Itime[i]>tᵅ) # only tᵅ is active
-            Itᵅ = Itime[i] - tᵅ
-            p_hit = Δt * Fᵅ * exp(-λᵅ*Itime[i])
-            Ilog[i] = ifelse( rand() < p_hit, true,false)
-        else
-            Ilog[i]=false
-        end
+# Set-up the time-depth array
+    solartime = tₛₛ : -Δt : (tₛₛ-tmax)
+# Set all cells to zero
+    @tturbo for i ∈ eachindex(tₓr) #faster than fill!(tₓr,0.)
+        tₓr[i] = zero(eltype(tₓr))
     end
-# Create vector of absolute impact dates from drawing
-    impacts = Itime[Ilog]
-    impacts .*= -1.
-    impacts .+= tₛₛ # equivalent to impacts = tₛₛ .- Itime[Ilog] but one less allocation
-# Step 2: Resetting Ar-Ar on the body
-# Define depths for each radial node.
+# Populate each shell with primary cooling date.
+    @inbounds for i in 1:nᵣ
+        tᵢ = searchsortedfirst(solartime,dates[i],rev=true)
+        tcoolₒ[i]=ifelse(isnan(dates[i]),zero(tᵢ),tᵢ) # Save index for excavation/reheating loops below
+        tₓr[tᵢ,i] = ifelse(isnan(dates[i]),tₓr[tᵢ,i],Vfrxn[i])
+    end
+
+# Calculate "number" of impacts at each timestep
+    @tturbo for i ∈ eachindex(solartime)
+        Iᵅ = ifelse(solartime[i] <= tᵅ, Fᵅ*exp(-λᵅ * (tᵅ-solartime[i]) ), zero(Fᵅ) )
+        Iᵝ = ifelse(solartime[i] <= tᵝ, Fᵝ*exp(-λᵝ* (tᵝ-solartime[i]) ), zero(Fᵝ) )
+        impacts[i] = Δt * (Iᵅ + Iᵝ)
+    end
+
+# Ensure that for any impact is a "natural number" ~ no partial impacts
+# for impacts < 1, keep adding until reach a "whole" impact of that size
+    hitpile = zero(eltype(impacts)) # piles up fractional impacts
+    @inbounds for i ∈ eachindex(impacts)
+        hitpile += impacts[i]
+        hit = hitpile > 1
+        impacts[i] = ifelse(hit, floor(hitpile),zero(hitpile))
+        hitpile = ifelse(hit, zero(hitpile), hitpile)
+    end
+
+# Time to reheat this planetesimal:
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-# Identify base of impact-affected zone
     r_baseₕ = searchsortedfirst(radii,R-c.zₕ) # deepest reheated radius index
     r_baseₑ = searchsortedfirst(radii,R-c.zₑ) # deepest excavated radius index
-# Calculate important node thicknesses and body volume.
+
+    ntimes = length(solartime) # full length of time columns in timeXdepth array
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
-# Create impact fractional volume vector
-    iVfrxn = zeros(eltype(Vfrxn),length(impacts))
-# Establish functions describing the shape of impact processes.
-    Φe = c.shpₑ
-    Φh = c.shpₕ
-    @inbounds for imp ∈ eachindex(impacts)
-# Crater excavation and volume removal
-        @inbounds for r ∈ r_baseₑ:nᵣ
-            x = Φe(radii[r],R,c.zₑ,c.dₑ/2) # calculate radius of excavation at this depth
-            iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
-# Only remove material that's still there:
-            lost = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
-# Subtract reheated fraction from Vfrxn.
-            Vfrxn[r] -= lost
-        end
-# Sub-crater impact site reheating and Ar-Ar resetting.
-        @inbounds for r ∈ r_baseₕ:(r_baseₑ-1)
-            x = Φh(radii[r],R,c.zₕ,c.dₕ/2) # calculate radius of reheating at this depth
-            iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
-# Only reset material that reflects primary cooling.
-            reheated = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
-# Add reheated fractions to total reheated volume
-            iVfrxn[imp] += reheated
-# Subtract reheated fraction from Vfrxn.
-            Vfrxn[r] -= reheated
+
+# At excavated depths, material is removed
+    ejectshape = c.shpₑ
+    @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
+        x = ejectshape(radii[r],R,c.zₑ,c.dₑ/2) # Excavated radius at this depth
+        iVfrxn = x * x * Δr / Vbody # Fractional volume excavated from this shell. note: π removed for cancelling out Vbody
+        tₒ = tcoolₒ[r] # Time index of primary cooling date
+        if !iszero(tₒ)
+        # For each timestep after primary cooling...
+            primdate = tₓr[tₒ,r]
+            @turbo for t ∈ (tₒ+1):ntimes
+        # Subtract crater ejecta for that layer.
+                primdate -= iVfrxn * impacts[t]
+            end
+        # Ensure that tₓr[tₒ,r] ≥ 0 (i.e. non-negative volume)
+            tₓr[tₒ,r]= ifelse(primdate<0, zero(iVfrxn),primdate)
         end
     end
-    return vcat(dates,impacts),vcat(Vfrxn,iVfrxn)
+
+# At reheated depths
+    reheatshape = c.shpₕ
+#TEST WHETHER THIS @batch is faster or if @tturbo below is faster
+    @batch for r ∈ r_baseₕ:(r_baseₑ-1) # radial node
+        x = reheatshape(radii[r],R,c.zₕ,c.dₕ/2) # calculate radius of interest at this depth
+        iVfrxn = x * x * Δr / Vbody # Fractional volume removed per impact. note: π removed for cancelling out Vbody
+        tₒ = tcoolₒ[r] # Time index of primary cooling date
+
+        ndates = 0  # Number of cooling dates to divide resetting among
+        @inbounds for t ∈ (tₒ+1):ntimes # Model impact thermal history after primary cooling date
+            if !iszero(impacts[t]) # see if there is an impact at time `t`
+                ndates += 1 #
+                reheat = impacts[t] * iVfrxn / ndates #fraction of material reheated for each cooling date
+                reheated = zero(reheat) # This will be the tracker of amount of material reheated.
+
+                @turbo for i ∈ tₒ:(t-1) # for each preceding timestep
+                    parcel = tₓr[i,r] # fractional volume with cooling date `i` at this timestep
+# Tf there is no material in parcel (iszero=true), there is nothing to reheat.
+                    rh1 = ifelse(iszero(parcel), zero(parcel), reheat)
+# only reheat as much material as is present.
+                    rh2 = ifelse(reheat<parcel,reheat,parcel)
+                    tₓr[i,r] = parcel - rh2 # subtract the amount of reheated material (if already zero, subtracts itself == 0)
+                    reheated += rh2 # add the reheated material into the reheated group
+                end
+                tₓr[t,r] = reheated # add all the reheated material to this new time window (it is 0 before, so = is equivalent to += )
+            end
+        end
+    end
 end
 
 ## Impact shape functions
