@@ -87,7 +87,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     peakT::AbstractArray, # pre-allocated vector for each date's peak temperature
     p::NamedTuple;
     nᵣ::Integer,          # Number of simulated radial distances
-    Δt::Number = 0.01,    # absolute timestep, default 10 ka
+    Δt::Number = 0.1,    # absolute timestep, default 10 ka
     tmax::Number = 2000.,  # maximum time allowed to model
     Tmax::Number = 1500.,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
     Tmin::Number=0.)       # minimum temperature (K)
@@ -125,11 +125,12 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     end
 
     fill!(ages,NaN) # Vector{Float64}(undef,length(radii))
-
-    tₒ = ceil(tₐ/Δt) * Δt # Make the first timestep (after accretion) a multiple of Δt.
-    time_Ma = tₒ : Δt : tmax  # time in Ma (after CAIs)
-    time  = (0. : Δt : tmax - tₒ) * 1e6 * s_a # time in s (after accretion)
-
+# Time Management
+    tₐ_ = ceil(tₐ/Δt) * Δt # Make the first timestep (after accretion) a multiple of Δt.
+    tₐadj = tₐ_-tₐ
+    time  = (tₐadj : Δt : tmax - tₐ_ ) * 1e6 * s_a # time in s (after accretion) adjusted for rounding in tₐ_
+    convert2Ma = tₛₛ - tₐ_
+# Initial ²⁶Al heat production
     Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
     n=1:300 # Σ is an infinite summation, but get good returns on n=300
@@ -167,7 +168,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
                 Tₚₖ = T
 # compare T to Tc only if cooling (T < Tᵢ) & it got `HotEnough`
             elseif (T <= Tc) & HotEnough
-                ages[i] = tₛₛ - time_Ma[j]  # log time only when T falls below Tc
+                ages[i] = convert2Ma - Δt*(j-1)  # log time only when T falls below Tc (calculated from Δt and timestep j)
                 peakT[i] = Tₚₖ
                 break               # kill loop
             end
@@ -177,7 +178,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 end
 
 
-## Impact (Re)Heater v0.0
+## Impact (Re)Heater v2
 """
 ImpactResetAr ~ reheat volumes for an exponential impact flux
                 described by parameters in p {::Proposal}
