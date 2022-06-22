@@ -307,6 +307,8 @@ end
 """
 This is the old ImpactRestAr. Needs to be largely rewritten to a framework similar to ImpactResetArray.
 Most importantly, replace probabilistic maths with number of hits at each timestep maths.
+
+First getting ImpactResetArray operating
 """
 function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
