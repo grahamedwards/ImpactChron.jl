@@ -249,17 +249,14 @@ function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::
 
 # Time to reheat this planetesimal:
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    r_baseₕ = searchsortedfirst(radii,R-c.zₕ) # deepest reheated radius index
-    r_baseₑ = searchsortedfirst(radii,R-c.zₑ) # deepest excavated radius index
-
     ntimes = length(solartime) # full length of time columns in timeXdepth array
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
 
 # At excavated depths, material is removed
-    ejectshape = c.shpₑ
+    r_baseₑ = searchsortedfirst(radii,R-c.zₑ) # deepest excavated radius index
     @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
-        x = ejectshape(radii[r],R,c.zₑ,c.dₑ/2) # Excavated radius at this depth
+        x = area_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
         iVfrxn = x * x * Δr / Vbody # Fractional volume excavated from this shell. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
         if !iszero(tₒ)
@@ -274,11 +271,11 @@ function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::
         end
     end
 
-# At reheated depths
-    reheatshape = c.shpₕ
+# Identify an dperturb reheated depths
+    r_baseₕ = searchsortedfirst(radii,R-c.zₕ) # deepest reheated radius index
 #TEST WHETHER THIS @batch is faster or if @tturbo below is faster
     @batch for r ∈ r_baseₕ:(r_baseₑ-1) # radial node
-        x = reheatshape(radii[r],R,c.zₕ,c.dₕ/2) # calculate radius of interest at this depth
+        x = area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
         iVfrxn = x * x * Δr / Vbody # Fractional volume removed per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
 
@@ -308,7 +305,7 @@ end
 This is the old ImpactRestAr. Needs to be largely rewritten to a framework similar to ImpactResetArray.
 Most importantly, replace probabilistic maths with number of hits at each timestep maths.
 
-First getting ImpactResetArray operating
+CURRENTLY NOT FUNCTIONAL
 """
 function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
@@ -368,12 +365,10 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
 # Create impact fractional volume vector
     iVfrxn = zeros(eltype(Vfrxn),length(impacts))
 # Establish functions describing the shape of impact processes.
-    Φe = c.shpₑ
-    Φh = c.shpₕ
     @inbounds for imp ∈ eachindex(impacts)
 # Crater excavation and volume removal
         @inbounds for r ∈ r_baseₑ:nᵣ
-            x = Φe(radii[r],R,c.zₑ,c.dₑ/2) # calculate radius of excavation at this depth
+            x = area_at_depth(radii[r],R,c.excavate_shape) # calculate radius of excavation at this depth
             iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
 # Only remove material that's still there:
             lost = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
@@ -382,7 +377,7 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
         end
 # Sub-crater impact site reheating and Ar-Ar resetting.
         @inbounds for r ∈ r_baseₕ:(r_baseₑ-1)
-            x = Φh(radii[r],R,c.zₕ,c.dₕ/2) # calculate radius of reheating at this depth
+            x = area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
             iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
 # Only reset material that reflects primary cooling.
             reheated = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
@@ -397,10 +392,29 @@ end
 
 
 ## Impact shape functions
-# Rᵢ (radial depth), R (body radius), z (impact depth), r (impact radius)
-# Conical approximation
-cone(Rᵢ::Number,R::Number,z::Number,r::Number) = (Rᵢ+z-R) * r/z
-# Parabolic approximation
-pbla(Rᵢ::Number,R::Number,z::Number,r::Number) = r * sqrt((Rᵢ+z-R)/z)
-# Hemispheric approximation, assumes r = z
-hemi(Rᵢ::Number,R::Number,z::Number,r::Number) = sqrt( z*z - (Rᵢ-R)*(Rᵢ-R) )
+"""
+area_at_depth(rᵢ::Number, R::Number, x::T) where T<:{Cone,Parabola,Hemisphere}
+
+Calculates the circular area at body radial depth rᵢ (for a body with radius, R) of an impact-affected region,
+where the volume of the region is approximated by a cone (x::Cone), paraboloid of rotation (x::Parabola),
+or hemisphere (x::Hemisphere) with a given maximum depth (x.z) and surface radius (x.r).
+
+"""
+area_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
+area_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -R) / x.z ) # Parabolic approximation
+area_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.z*x.z - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes r = z
+
+struct Cone{T<:Number}
+    z::T
+    r::T
+end
+
+struct Parabola{T<:Number}
+    z::T
+    r::T
+end
+
+struct Hemisphere{T<:Number}
+    z::T
+    r::T
+end
