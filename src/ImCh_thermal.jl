@@ -223,7 +223,7 @@ function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::
         tₓr[i] = zero(eltype(tₓr))
     end
 # Populate each shell with primary cooling date.
-    taᵢ = searchsortedfirst(solartime,p.ta,rev=true) # identify index of accretion.
+    taᵢ = searchsortedfirst(solartime,tₛₛ-p.ta,rev=true) # identify index of accretion.
     @inbounds for i in 1:nᵣ
         tᵢ = searchsortedfirst(solartime,dates[i],rev=true)
         tᵢ = ifelse(isnan(dates[i]),taᵢ,tᵢ) # if isnan(dates[i])==true, set cooling date to accretion (e.g. chondrules reflect high-T event)
@@ -245,21 +245,20 @@ function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
 
-""" # Remove excavation for now.
+### Remove excavation for now.
 # At excavated depths, material is removed
-    r_baseₑ = searchsortedfirst(radii,R-c.excavate_shape.z) # deepest excavated radius index
-    @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
-        x = area_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
-        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume of shell of each excavation. note: π removed for cancelling out Vbody
-        tₒ = tcoolₒ[r] # Time index of primary cooling date
+#    r_baseₑ = searchsortedfirst(radii,R-c.excavate_shape.z) # deepest excavated radius index
+#    @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
+#        x = area_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
+#        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume of shell of each excavation. note: π removed for cancelling out Vbody
+#        tₒ = tcoolₒ[r] # Time index of primary cooling date
 # For each timestep after primary cooling...
-        primdate = tₓr[tₒ,r]
-        @turbo for t ∈ (tₒ+1):ntimes
-            primdate -= iVfrxn * impacts[t] # Subtract crater ejecta for that layer
-        end
-        tₓr[tₒ,r]= ifelse(primdate<0, zero(iVfrxn),primdate) # Ensure that tₓr[tₒ,r] ≥ 0 (i.e. non-negative volume)
-    end
-"""
+#        primdate = tₓr[tₒ,r]
+#        @turbo for t ∈ (tₒ+1):ntimes
+#            primdate -= iVfrxn * impacts[t] # Subtract crater ejecta for that layer
+#        end
+#        tₓr[tₒ,r]= ifelse(primdate<0, zero(iVfrxn),primdate) # Ensure that tₓr[tₒ,r] ≥ 0 (i.e. non-negative volume)
+#    end
 
 # Identify an dperturb reheated depths
     r_baseₕ = searchsortedfirst(radii,R-c.reheat_shape.z) # deepest reheated radius index
