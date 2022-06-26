@@ -228,7 +228,10 @@ function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::
         tᵢ = searchsortedfirst(solartime,dates[i],rev=true)
         tᵢ = ifelse(isnan(dates[i]),taᵢ,tᵢ) # if isnan(dates[i])==true, set cooling date to accretion (e.g. chondrules reflect high-T event)
         tcoolₒ[i]= tᵢ # Save index for excavation/reheating loops below
-        tₓr[tᵢ,i] = one(eltype(tₓr)) # Set primary cooling date as a value of 1 in timeXradius array
+        #tₓr[tᵢ,i] = Vfrxn[i] # Place fraction of body volume at primary cooling date. Implement this for full speed
+### FOR TROUBLESHOOTING:
+        tₓr[tᵢ,i] = one(eltype(tₓr)) #Place 1 at primary cooling date in timeXradius array. Implement this for easier troubleshooting.
+
     end
 
 # Calculate "number" of impacts at each timestep
