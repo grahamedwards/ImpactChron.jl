@@ -20,12 +20,13 @@ Normalizes the output, such that for output `dist` ∑ dist[dᵢ] * Δd = 1
 If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the corresponding xₒᵤₜ of each yₒᵤₜ is ∉ domain.
 
 
-Returns only the histogram masses, bincenters must be calculated externally.
+Returns only the histogram masses, centers of time bins must be calculated externally.
 e.g.
 ```julia
 Δd = step(domain)
 bincenters= LinRange( first(domain)+Δd/2, last(domain)-Δd/2, length(domain)-1)
 ```
+or see `rangemidpoints`
 
 """
 function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
