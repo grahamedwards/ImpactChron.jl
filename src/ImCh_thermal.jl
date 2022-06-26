@@ -180,28 +180,27 @@ end
 
 ## Impact (Re)Heater v2
 """
-ImpactResetAr ~ reheat volumes for an exponential impact flux
-                described by parameters in p {::Proposal}
-                p.tχ ~ instability start time
-                p.τχ ~ e-folding timescale of impact flux
-                p.Fχ ~ initial impact flux
-
 ImpactResetAr(  dates::AbsractArray,
                 Vfrxn::AbstractArray,
                 p::NamedTuple,
                 c::NamedTuple
                 Δt::Number,tmax::Number,nᵣ::Integer)
 
-Simulates an impact history from _χ parameters in `p`, and resets Ar-Ar
+Simulates an impact history from -χ parameters in `p`, and resets Ar-Ar
 cooling `dates` and fractional volumes (`Vfraxn`)
 based on impact/crater properties described in `c`.
-Impact site morphologies may be described by a conical (`cone`),
-parabolic (`pbla`), or hemispheric (`hemi`) approximation.
+Impact site geometries are codified by types (`Cone`,`Parabola`,`Hemisphere`)
+defined in `c` and are calculated by dispatch into the function `area_at_depth`.
+
+Impact flux follows an exponential decay described by parameters in `p`:
+\np.tχ ~ instability start time
+\np.τχ ~ e-folding timescale of impact flux
+\np.Fχ ~ initial impact flux
+
 
 `Δt`, `tmax`, and `nᵣ` respectively define the timestep, model duration,
-and radial nodes, as in `PlntsmlAr` function.
+and radial nodes, as in the `PlntsmlAr` function.
 
-Note that Vfrxn is overwritten.
 
 """
 function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray, dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
@@ -224,88 +223,95 @@ function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::
         tₓr[i] = zero(eltype(tₓr))
     end
 # Populate each shell with primary cooling date.
+    taᵢ = searchsortedfirst(solartime,p.ta,rev=true) # identify index of accretion.
     @inbounds for i in 1:nᵣ
         tᵢ = searchsortedfirst(solartime,dates[i],rev=true)
-        tcoolₒ[i]=ifelse(isnan(dates[i]),zero(tᵢ),tᵢ) # Save index for excavation/reheating loops below
-        tₓr[tᵢ,i] = ifelse(isnan(dates[i]),tₓr[tᵢ,i],Vfrxn[i])
+        tᵢ = ifelse(isnan(dates[i]),taᵢ,tᵢ) # if isnan(dates[i])==true, set cooling date to accretion (e.g. chondrules reflect high-T event)
+        tcoolₒ[i]= tᵢ # Save index for excavation/reheating loops below
+        tₓr[tᵢ,i] = one(eltype(tₓr)) # Set primary cooling date as a value of 1 in timeXradius array
     end
 
 # Calculate "number" of impacts at each timestep
     @tturbo for i ∈ eachindex(solartime)
         Iᵅ = ifelse(solartime[i] <= tᵅ, Fᵅ*exp(-λᵅ * (tᵅ-solartime[i]) ), zero(Fᵅ) )
-        Iᵝ = ifelse(solartime[i] <= tᵝ, Fᵝ*exp(-λᵝ* (tᵝ-solartime[i]) ), zero(Fᵝ) )
+        Iᵝ = ifelse(solartime[i] <= tᵝ, Fᵝ*exp(-λᵝ * (tᵝ-solartime[i]) ), zero(Fᵝ) )
         impacts[i] = Δt * (Iᵅ + Iᵝ)
     end
 
-# Ensure that for any impact is a "natural number" ~ no partial impacts
-# for impacts < 1, keep adding until reach a "whole" impact of that size
-    hitpile = zero(eltype(impacts)) # piles up fractional impacts
-    @inbounds for i ∈ eachindex(impacts)
-        hitpile += impacts[i]
-        hit = hitpile > 1
-        impacts[i] = ifelse(hit, floor(hitpile),zero(hitpile))
-        hitpile = ifelse(hit, zero(hitpile), hitpile)
-    end
-
 # Time to reheat this planetesimal:
+# First identify some useful variables
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
     ntimes = length(solartime) # full length of time columns in timeXdepth array
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
 
+""" # Remove excavation for now.
 # At excavated depths, material is removed
-    r_baseₑ = searchsortedfirst(radii,R-c.zₑ) # deepest excavated radius index
+    r_baseₑ = searchsortedfirst(radii,R-c.excavate_shape.z) # deepest excavated radius index
     @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
         x = area_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
-        iVfrxn = x * x * Δr / Vbody # Fractional volume excavated from this shell. note: π removed for cancelling out Vbody
+        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume of shell of each excavation. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
-        if !iszero(tₒ)
-        # For each timestep after primary cooling...
-            primdate = tₓr[tₒ,r]
-            @turbo for t ∈ (tₒ+1):ntimes
-        # Subtract crater ejecta for that layer.
-                primdate -= iVfrxn * impacts[t]
-            end
-        # Ensure that tₓr[tₒ,r] ≥ 0 (i.e. non-negative volume)
-            tₓr[tₒ,r]= ifelse(primdate<0, zero(iVfrxn),primdate)
+# For each timestep after primary cooling...
+        primdate = tₓr[tₒ,r]
+        @turbo for t ∈ (tₒ+1):ntimes
+            primdate -= iVfrxn * impacts[t] # Subtract crater ejecta for that layer
         end
+        tₓr[tₒ,r]= ifelse(primdate<0, zero(iVfrxn),primdate) # Ensure that tₓr[tₒ,r] ≥ 0 (i.e. non-negative volume)
     end
+"""
 
 # Identify an dperturb reheated depths
-    r_baseₕ = searchsortedfirst(radii,R-c.zₕ) # deepest reheated radius index
+    r_baseₕ = searchsortedfirst(radii,R-c.reheat_shape.z) # deepest reheated radius index
 #TEST WHETHER THIS @batch is faster or if @tturbo below is faster
-    @batch for r ∈ r_baseₕ:(r_baseₑ-1) # radial node
+    @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
         x = area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
-        iVfrxn = x * x * Δr / Vbody # Fractional volume removed per impact. note: π removed for cancelling out Vbody
+        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume removed per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
-
-        ndates = 0  # Number of cooling dates to divide resetting among
+###!!! Test if faster to have branching condition OR to just do all the impacts and @turbo the whole thing.
         @inbounds for t ∈ (tₒ+1):ntimes # Model impact thermal history after primary cooling date
             if !iszero(impacts[t]) # see if there is an impact at time `t`
-                ndates += 1 #
-                reheat = impacts[t] * iVfrxn / ndates #fraction of material reheated for each cooling date
-                reheated = zero(reheat) # This will be the tracker of amount of material reheated.
-
+                tₓr[t,r] = reheat = impacts[t] * iVfrxn # reheated fraction of layer
                 @turbo for i ∈ tₒ:(t-1) # for each preceding timestep
-                    parcel = tₓr[i,r] # fractional volume with cooling date `i` at this timestep
-# Tf there is no material in parcel (iszero=true), there is nothing to reheat.
-                    rh1 = ifelse(iszero(parcel), zero(parcel), reheat)
-# only reheat as much material as is present.
-                    rh2 = ifelse(reheat<parcel,reheat,parcel)
-                    tₓr[i,r] = parcel - rh2 # subtract the amount of reheated material (if already zero, subtracts itself == 0)
-                    reheated += rh2 # add the reheated material into the reheated group
+                    tₓr[i,r] *= (1-reheat)
                 end
-                tₓr[t,r] = reheated # add all the reheated material to this new time window (it is 0 before, so = is equivalent to += )
             end
         end
     end
 end
+
 
 """
 This is the old ImpactRestAr. Needs to be largely rewritten to a framework similar to ImpactResetArray.
 Most importantly, replace probabilistic maths with number of hits at each timestep maths.
 
 CURRENTLY NOT FUNCTIONAL
+
+
+FORMER DOCUMENTATION:
+
+ImpactResetAr ~ reheat volumes for an exponential impact flux
+                described by parameters in p {::Proposal}
+                p.tχ ~ instability start time
+                p.τχ ~ e-folding timescale of impact flux
+                p.Fχ ~ initial impact flux
+
+ImpactResetAr(  dates::AbsractArray,
+                Vfrxn::AbstractArray,
+                p::NamedTuple,
+                c::NamedTuple
+                Δt::Number,tmax::Number,nᵣ::Integer)
+
+Simulates an impact history from _χ parameters in `p`, and resets Ar-Ar
+cooling `dates` and fractional volumes (`Vfraxn`)
+based on impact/crater properties described in `c`.
+Impact site morphologies may be described by a conical (`cone`),
+parabolic (`pbla`), or hemispheric (`hemi`) approximation.
+
+`Δt`, `tmax`, and `nᵣ` respectively define the timestep, model duration,
+and radial nodes, as in `PlntsmlAr` function.
+
+Note that Vfrxn is overwritten.
 """
 function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
@@ -391,7 +397,20 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
 end
 
 
-## Impact shape functions
+## Impact shape functions & struct support
+struct Cone{T<:Number}
+    z::T
+    r::T
+end
+struct Parabola{T<:Number}
+    z::T
+    r::T
+end
+struct Hemisphere{T<:Number}
+    z::T
+    r::T
+end
+
 """
 area_at_depth(rᵢ::Number, R::Number, x::T) where T<:{Cone,Parabola,Hemisphere}
 
@@ -403,18 +422,3 @@ or hemisphere (x::Hemisphere) with a given maximum depth (x.z) and surface radiu
 area_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
 area_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -R) / x.z ) # Parabolic approximation
 area_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.z*x.z - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes r = z
-
-struct Cone{T<:Number}
-    z::T
-    r::T
-end
-
-struct Parabola{T<:Number}
-    z::T
-    r::T
-end
-
-struct Hemisphere{T<:Number}
-    z::T
-    r::T
-end
