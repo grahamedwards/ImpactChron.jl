@@ -54,7 +54,7 @@ histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 ```
 
 Constructs histogram over (linear) midpoints of `domain` from model outputs in x with corresponding
-abundances in y.
+abundances in y. Does not require a constant step in `x`.
 
 Normalizes the output, such that for output `dist` ∑ dist[dᵢ] * Δd = 1
 (for each dᵢ in the bincenters of domain with step-size Δd), so long as all x ∈ domain.
@@ -62,13 +62,13 @@ If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) 
 
 ***
 ```julia
-histogramify(domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractVector)
+histogramify(domain::AbstractRange, timeseries::AbstractVector, A::AbstractMatrix)
 ```
 
 Constructs histogram over (linear) midpoints of `domain` from model outputs in A,
-with columns corresponding to elements of `timeseries`.
+with columns corresponding to elements of `timeseries`. Normalizes the output as above.
 
-Normalizes the output as above. 
+NOTE: Unlike the method above, this assumes a constant timestep for `timeseries` to speed up calcutaion.
 
 ***
 ***
@@ -87,7 +87,7 @@ function histogramify(domain::AbstractRange, x::AbstractVector, y::AbstractVecto
     return dist
 end
 
-function histogramify(domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractVector)
+function histogramify(domain::AbstractRange, timeseries::AbstractVector, A::AbstractMatrix)
     dist = Vector{float(eltype(y))}(undef,length(domain)-1)
     histogramify!(dist,domain,A,timeseries)
     return dist
@@ -97,13 +97,13 @@ end
 ```julia
 histogramify!(dist::AbstractVector, domain::AbstractRange, x::AbstractVector, y::AbstractVector)
 
-histogramify!(dist::AbstractVector, domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractRange)
+histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::AbstractRange, A::AbstractMatrix)
 ```
 In-place `histogramify` that overwites a pre-allocated vector `dist`.
-The two methods differ in the 3rd input, either a Vector or a Matrix,
+The two methods differ in the last (4ᵗʰ) input, either a Vector or a Matrix,
 depending on the impact resetting function employed.
 
-see `histogramify`for details
+see `histogramify`for details 
 """
 
 function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
@@ -147,7 +147,7 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
     return dist
 end
 
-function histogramify!(dist::AbstractVector, domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractRange)
+function histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::AbstractRange, A::AbstractMatrix)
 # First reverse timeseries so it ascends like domain.
     issorted(timeseries) && throw(ArgumentError("timeseries must be descending: step(timeseries)<0"))
     x=reverse(timeseries)
