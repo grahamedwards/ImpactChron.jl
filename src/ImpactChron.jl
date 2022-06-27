@@ -15,10 +15,10 @@ using DelimitedFiles
 export  Nrm, lNrm, Unf, perturb
 include("ImCh_parameters.jl")
 
-export  histogramify, histogramify!, ll_param, ll_params, ll_dist
+export  rangemidpoints, turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist
 include("ImCh_statistics.jl")
 
-export plntsml_Tz, PlntsmlAr, PlntsmlAr!, ImpactResetAr, cone, pbla, hemi
+export plntsml_Tz, PlntsmlAr, PlntsmlAr!, ImpactResetArray, area_at_depth
 include("ImCh_thermal.jl")
 
 export MetropolisAr
