@@ -47,7 +47,7 @@ end
 ```julia
 rangemidpoints(x::AbstractRange)
 ```
-Calculate a `LinRange` of the midpoints of each step in `x`(``<:AbstractRange`).
+Calculate a `LinRange` of the midpoints of each step in `x`(`<:AbstractRange`).
 """
 rangemidpoints(x::AbstractRange) = LinRange(first(x) + 0.5step(x), last(x) - 0.5step(x), length(x)-1)
 
