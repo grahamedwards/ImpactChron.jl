@@ -37,17 +37,21 @@ function MetropolisAr(  time_domain::AbstractRange,
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ) # Array to track proposal evolutions
     prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
 
+# Time Management:
 # Calculate bincenters for time_domain
-    Δd = step(time_domain) #calculate time_domain step
-    bincenters = LinRange(first(time_domain) + 0.5Δd, last(time_domain) - 0.5Δd, length(time_domain)-1)
+    bincenters = rangemidpoints(time_domain)
+# Declare solartime variable: the comprehensive timeseries of the model solar system history.
+    # First ensure that age of CAIs (tₛₛ) is constant
+    :tss ∉ pvars ? solartime = (p.tss:-Δt:p.tss-tmax) : error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
 
-# If no plims given, set ranges to
+# Deal with statistical bounds of proposal variables
+# If no plims given, set infinite ranges to explore the studio space.
     plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
-
 # Check that all proposed parameters do not violate uniform distribution bounds
     for i ∈ keys(plims)
         isa(plims[i],Unf) && ( plims[i].a < p[i] < plims[i].b || error("Initial proposal for $i exceeds permissible bounds ($(plims[i].a),$(plims[i].b))") )
     end
+
 # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
     stepfactor = 2.9
 
@@ -57,22 +61,20 @@ function MetropolisAr(  time_domain::AbstractRange,
     sigma_sorted = sigma[sI] # Sort uncertainty
 
 # These quantities will be used more than once
-    datarows = length(mu_sorted)
-    pₚ = p
-    #p = copy(p)
-    #pₚ = copy(p)
-    #step_σ=copy(pσ)
+    tₓr = Array{eltype(solartime)}(undef,length(solartime),nᵣ) # time x radial position array to be used in impact resetting scheme
+    impacts = Vector{Float64}(undef,length(solartime)) # tracker of # of impacts at each timestep
+    tcoolₒ = Vector{Int64}(undef,nᵣ) # tracker of indices of primary cooling date in solartime and time columns of tₓr
 
 # Calculate initial proposal distribution
+    pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
     dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # Convert thermal code output into a binned histogram
     if iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
         distₚ = histogramify(time_domain,dates,Vfrxn)
     else
-        Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,crater,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-        distₚ = histogramify(time_domain,Iages,Ivols)
+        impact_reset_array!(tₓr, solartime, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+        distₚ = histogramify(time_domain,solartime,tₓr)
     end
-
 # Log likelihood of initial proposal
     ll = llₚ = ll_dist(bincenters, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
 
@@ -104,8 +106,8 @@ function MetropolisAr(  time_domain::AbstractRange,
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
-                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,crater,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,Iages,Ivols)
+                impact_reset_array!(tₓr, solartime, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                histogramify!(distₚ,time_domain,solartime,tₓr)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
@@ -165,8 +167,8 @@ function MetropolisAr(  time_domain::AbstractRange,
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
-                Iages,Ivols = ImpactResetAr(dates,Vfrxn,pₚ,crater,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,Iages,Ivols)
+                impact_reset_array!(tₓr, solartime, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                histogramify!(distₚ,time_domain,solartime,tₓr)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0
