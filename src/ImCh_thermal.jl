@@ -180,6 +180,7 @@ end
 
 ## Impact (Re)Heater v2
 """
+
 ```julia
 impact_reset_array(tₓr::AbstractArray, solartime::AbstractRange, impacts::AbstractArray, tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
@@ -205,7 +206,6 @@ Impact flux follows an exponential decay described by parameters in `p`:
 \np.τχ ~ e-folding timescale of impact flux
 \np.Fχ ~ initial impact flux
 """
-
 function impact_reset_array(tₓr::AbstractArray,solartime::AbstractRange,impacts::AbstractArray,tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
                             p::NamedTuple,c::NamedTuple;

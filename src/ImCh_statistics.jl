@@ -8,6 +8,7 @@
         # ll_dist
 
 """
+
 ```julia
 turbosum(x::AbstractArray)
 ```
@@ -26,6 +27,7 @@ function turbosum(x::AbstractArray)
 end
 
 """
+
 ```julia
 turbosum(x::AbstractArray)
 ```
@@ -41,6 +43,7 @@ function tturbosum(x::AbstractArray)
 end
 
 """
+
 ```julia
 rangemidpoints(x::AbstractRange)
 ```
@@ -94,6 +97,7 @@ function histogramify(domain::AbstractRange, timeseries::AbstractVector, A::Abst
 end
 
 """
+
 ```julia
 histogramify!(dist::AbstractVector, domain::AbstractRange, x::AbstractVector, y::AbstractVector)
 
@@ -103,9 +107,8 @@ In-place `histogramify` that overwites a pre-allocated vector `dist`.
 The two methods differ in the last (4ᵗʰ) input, either a Vector or a Matrix,
 depending on the impact resetting function employed.
 
-see `histogramify`for details 
+see `histogramify`for details
 """
-
 function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 # start with a fresh zero distribution
     fill!(dist,zero(eltype(dist)))
@@ -207,6 +210,7 @@ end
 ## Log-likelihood calculators
 
 """
+
 ```julia
 ll_param(x::Number,D::T) -> T ∈ {Nrm,lNrm,Unf}
 
@@ -229,6 +233,7 @@ ll_param(x::T,D::Unf) where T<:Number = zero(T)
 
 
 """
+
 ```julia
 ll_params(p::NamedTuple,d::NamedTuple)
 ```
@@ -253,6 +258,7 @@ function ll_params(p::NamedTuple,d::NamedTuple)
 end
 
 """
+
 ```julia
 ll_dist(x::AbstractVector,dist::AbstractVector,mu::AbstractVector,sigma::AbstractVector)
 ```
