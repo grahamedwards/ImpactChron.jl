@@ -92,7 +92,7 @@ end
 
 function histogramify(domain::AbstractRange, timeseries::AbstractVector, A::AbstractMatrix)
     dist = Vector{float(eltype(y))}(undef,length(domain)-1)
-    histogramify!(dist,domain,A,timeseries)
+    histogramify!(dist,domain,timeseries,A)
     return dist
 end
 
