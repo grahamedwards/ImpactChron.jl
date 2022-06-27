@@ -180,31 +180,36 @@ end
 
 ## Impact (Re)Heater v2
 """
-ImpactResetAr(  dates::AbsractArray,
-                Vfrxn::AbstractArray,
-                p::NamedTuple,
-                c::NamedTuple
-                Δt::Number,tmax::Number,nᵣ::Integer)
-
-Simulates an impact history from -χ parameters in `p`, and resets Ar-Ar
-cooling `dates` and fractional volumes (`Vfraxn`)
+```julia
+impact_reset_array(tₓr::AbstractArray, solartime::AbstractRange, impacts::AbstractArray, tcoolₒ::AbstractArray,
+                            dates::AbstractArray,Vfrxn::AbstractArray,
+                            p::NamedTuple,c::NamedTuple;
+                                nᵣ::Integer)
+```
+Simulates an impact history from -χ parameters in `p` (below), and resets Ar-Ar
+primary planetesimal cooling `dates` and fractional volumes (`Vfraxn`)
 based on impact/crater properties described in `c`.
+
+Depth-cooling age (relative) abundances are tracked in array `tₓr` (time x radial depth),
+with dimensions (time,radius) = (length(solartime),nᵣ),
+where `nᵣ` describes the number of radial nodes, as in the `PlntsmlAr` function.
+
+`impacts` and `tcoolₒ` are pre-allocated vectors that respectively record
+the number of impacts at each time step and the index of the primary cooling date in `solartime`.
+
 Impact site geometries are codified by types (`Cone`,`Parabola`,`Hemisphere`)
-defined in `c` and are calculated by dispatch into the function `area_at_depth`.
+defined in `c` and calculated in the `area_at_depth`.
 
 Impact flux follows an exponential decay described by parameters in `p`:
 \np.tχ ~ instability start time
 \np.τχ ~ e-folding timescale of impact flux
 \np.Fχ ~ initial impact flux
-
-
-`Δt`, `tmax`, and `nᵣ` respectively define the timestep, model duration,
-and radial nodes, as in the `PlntsmlAr` function.
-
-
 """
-function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray, dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
-                        Δt::Number,tmax::Number,nᵣ::Integer)
+
+function impact_reset_array(tₓr::AbstractArray,solartime::AbstractRange,impacts::AbstractArray,tcoolₒ::AbstractArray,
+                            dates::AbstractArray,Vfrxn::AbstractArray,
+                            p::NamedTuple,c::NamedTuple;
+                                nᵣ::Integer)
 
 # Declare variables from input
     tₛₛ = p.tss
@@ -216,9 +221,9 @@ function ImpactResetArray(tₓr::AbstractArray,impacts::AbstractArray,tcoolₒ::
     Fᵝ = p.Fχβ #Initial impactor flux Ma⁻¹
     λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
 
-# Set-up the time-depth array
-    solartime = tₛₛ : -Δt : (tₛₛ-tmax)
-# Set all cells to zero
+# Calculate timestep
+    Δt = abs(step(solartime))
+# Set all cells in tₓr to zero
     @tturbo for i ∈ eachindex(tₓr) #faster than fill!(tₓr,0.)
         tₓr[i] = zero(eltype(tₓr))
     end
