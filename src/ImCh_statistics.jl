@@ -1,4 +1,5 @@
-## Functions used for statistical purposes:
+## Functions used for statistical purposes & math support:
+    # turbosum & tturbosum
     # rangemidpoints
     # histogramify ~ converts data into binned histogram
     # log-likelihood calculators
@@ -6,7 +7,38 @@
         # ll_params
         # ll_dist
 
+"""
+```julia
+turbosum(x::AbstractArray)
+```
+Fast summing of x with the power of LoopVectorization.jl's @turbo,
+since vreduce will not accept views of arrays.
 
+Faster than reduce for length(x)>≈200
+"""
+
+function turbosum(x::AbstractArray)
+    ∑x = zero(eltype(x))
+    @turbo for i in 1:length(x)
+        ∑x += x[i]
+    end
+    return ∑x
+end
+
+"""
+```julia
+turbosum(x::AbstractArray)
+```
+Fast summing of x with the power of LoopVectorization.jl's @tturbo (multithreaded turbo),
+since vreduce will not accept views of arrays. Use
+"""
+function tturbosum(x::AbstractArray)
+    ∑x = zero(eltype(x))
+    @tturbo for i in 1:length(x)
+        ∑x += x[i]
+    end
+    return ∑x
+end
 
 """
 ```julia
@@ -28,7 +60,18 @@ Normalizes the output, such that for output `dist` ∑ dist[dᵢ] * Δd = 1
 (for each dᵢ in the bincenters of domain with step-size Δd), so long as all x ∈ domain.
 If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the corresponding xₒᵤₜ of each yₒᵤₜ is ∉ domain.
 
+***
+```julia
+histogramify(domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractVector)
+```
 
+Constructs histogram over (linear) midpoints of `domain` from model outputs in A,
+with columns corresponding to elements of `timeseries`.
+
+Normalizes the output as above. 
+
+***
+***
 Returns only the histogram masses, centers of time bins must be calculated externally.
 e.g.
 ```julia
@@ -38,17 +81,27 @@ bincenters= LinRange( first(domain)+Δd/2, last(domain)-Δd/2, length(domain)-1)
 or see `rangemidpoints`
 
 """
-function histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
+function histogramify(domain::AbstractRange, x::AbstractVector, y::AbstractVector)
     dist = Vector{float(eltype(y))}(undef,length(domain)-1)
     histogramify!(dist,domain,x,y)
     return dist
 end
 
+function histogramify(domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractVector)
+    dist = Vector{float(eltype(y))}(undef,length(domain)-1)
+    histogramify!(dist,domain,A,timeseries)
+    return dist
+end
+
 """
 ```julia
-histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
+histogramify!(dist::AbstractVector, domain::AbstractRange, x::AbstractVector, y::AbstractVector)
+
+histogramify!(dist::AbstractVector, domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractRange)
 ```
 In-place `histogramify` that overwites a pre-allocated vector `dist`.
+The two methods differ in the 3rd input, either a Vector or a Matrix,
+depending on the impact resetting function employed.
 
 see `histogramify`for details
 """
@@ -94,6 +147,63 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
     return dist
 end
 
+function histogramify!(dist::AbstractVector, domain::AbstractRange, A::AbstractMatrix, timeseries::AbstractRange)
+# First reverse timeseries so it ascends like domain.
+    issorted(timeseries) && throw(ArgumentError("timeseries must be descending: step(timeseries)<0"))
+    x=reverse(timeseries)
+
+    ∑A = vreduce(+,A) # Sum entirety of A for normalizing at end. Could turn off if no ejection.
+
+    x₁ = first(x)
+    xₓ = last(x)
+    Δx = step(x)
+
+    d₁ = first(domain)
+    dₓ = last(domain)
+    Δd = step(domain)
+
+# If domain extends before x, fill outer bins with 0.
+    if d₁ < x₁
+        first_x_in_d = searchsortedfirst(domain,x₁)
+        dist[1:first_x_in_d-1] .= zero(eltype(A))
+    else
+        first_x_in_d=1
+    end
+# If domain extends after x, fill outer bins with 0.
+    if dₓ >  xₓ
+        last_x_in_d = searchsortedlast(domain,xₓ)
+        dist[last_x_in_d:end] .= zero(eltype(A))
+    else
+        last_x_in_d=length(domain)
+    end
+# d₁ > x₁ & dₓ <  xₓ don't matter, those x's are lost because outside of range of interest
+
+    if Δd == Δx # each index of x will fall within ∈ [ domain[i], domain[i+1] ]
+        nₓ = length(x)
+        for i ∈ first_x_in_d:last_x_in_d
+# Extract view of A that corresponds to timewindow, corrected for the descending nature of time across A.
+            vA= view(A,nₓ-i+1,:)
+# Sum across date rows of vA
+            dist[i]=turbosum(vA)/(∑A*Δd)
+        end
+    elseif Δd > 2Δx # Always at least 2 x-steps within each domain step.
+        nbtwns = length(x) - 1   # n of spaces between bin centers.
+        xspan = abs(last(x) - first(x)) # range of x
+        nₓ = length(x)
+        @batch for i ∈ first_x_in_d:last_x_in_d-1
+# Find indices of x, such that ix₋ ≤ domain[i] < ix₊
+            ix₋ = ceil(Int, (domain[i]-first(x)) / xspan * nbtwns + 1) # x[i₋] is equivalent to searchsortedfirst(x,d[i])
+            ix₊ = floor(Int, (domain[i+1]-first(x)) / xspan * nbtwns + 1) # x[i₋] is the last < domain[i], equivalent to an inequality only searchsortedlast(x,d[i])
+# Extract view of A that corresponds to timewindow, corrected for the descending nature of time across A.
+            vA = view(A,nₓ-(ix₊-1):nₓ-(ix₋-1),:)
+# Sum across date rows of vA
+            dist[i] = turbosum(vA)/(∑A*Δd)
+        end
+    else
+        error("Either step(domain)<step(timeseries) or step(timeseries) < step(domain) ≤ 2*step(solartime)... \n histogramify will not work under these conditions")
+    end
+    return dist
+end
 ## Log-likelihood calculators
 
 """
