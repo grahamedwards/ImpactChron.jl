@@ -182,7 +182,7 @@ end
 """
 
 ```julia
-impact_reset_array(tₓr::AbstractArray, solartime::AbstractRange, impacts::AbstractArray, tcoolₒ::AbstractArray,
+impact_reset_array!(tₓr::AbstractArray, solartime::AbstractRange, impacts::AbstractArray, tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
                             p::NamedTuple,c::NamedTuple;
                                 nᵣ::Integer)
@@ -205,8 +205,9 @@ Impact flux follows an exponential decay described by parameters in `p`:
 \np.tχ ~ instability start time
 \np.τχ ~ e-folding timescale of impact flux
 \np.Fχ ~ initial impact flux
+
 """
-function impact_reset_array(tₓr::AbstractArray,solartime::AbstractRange,impacts::AbstractArray,tcoolₒ::AbstractArray,
+function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impacts::AbstractArray,tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
                             p::NamedTuple,c::NamedTuple;
                                 nᵣ::Integer)
