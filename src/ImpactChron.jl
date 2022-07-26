@@ -12,7 +12,7 @@ using DelimitedFiles
 #using Random; #rng = MersenneTwister()
 #using Distributions
 
-export  Nrm, lNrm, Unf, perturb
+export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere
 include("ImCh_parameters.jl")
 
 export  rangemidpoints, turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist

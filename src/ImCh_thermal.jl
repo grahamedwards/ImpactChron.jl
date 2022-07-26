@@ -258,7 +258,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impac
 # At excavated depths, material is removed
 #    r_baseₑ = searchsortedfirst(radii,R-c.excavate_shape.z) # deepest excavated radius index
 #    @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
-#        x = area_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
+#        x = ImpactChron.area_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
 #        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume of shell of each excavation. note: π removed for cancelling out Vbody
 #        tₒ = tcoolₒ[r] # Time index of primary cooling date
 # For each timestep after primary cooling...
@@ -273,7 +273,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impac
     r_baseₕ = searchsortedfirst(radii,R-c.reheat_shape.z) # deepest reheated radius index
 #TEST WHETHER THIS @batch is faster or if @tturbo below is faster
     @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
-        x = area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
+        x = ImpactChron.area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
         iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume removed per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
 ###!!! Test if faster to have branching condition OR to just do all the impacts and @turbo the whole thing.
@@ -345,6 +345,10 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
         if (Itime[i]>tᵝ) && (Itime[i]>tᵅ) # tᵝ and tᵅ are both active
             Itᵅ = Itime[i] - tᵅ
             Itᵝ = Itime[i] - tᵝ
+
+###########################
+### THE FOLLOWING PROBABILITIES SECTION IS MATHEMATICALLY INCORRECT AND NEEDS TO BE UPDATED ###
+###########################
 # Calculate the union of the probablities for both impact fluxes
     # P(A∪B) = P(A)+P(B) - P(A∩B) = -(P(A)-1)*(P(B)-1)+1, as long as A,B are independent
             p_hit = Δt * ( -( Fᵝ*exp(-λᵝ*Itᵝ)-1 ) * ( Fᵅ*exp(-λᵅ*Itᵅ)-1 ) + 1 )
@@ -382,7 +386,7 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
     @inbounds for imp ∈ eachindex(impacts)
 # Crater excavation and volume removal
         @inbounds for r ∈ r_baseₑ:nᵣ
-            x = area_at_depth(radii[r],R,c.excavate_shape) # calculate radius of excavation at this depth
+            x = ImpactChron.area_at_depth(radii[r],R,c.excavate_shape) # calculate radius of excavation at this depth
             iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
 # Only remove material that's still there:
             lost = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
@@ -391,7 +395,7 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
         end
 # Sub-crater impact site reheating and Ar-Ar resetting.
         @inbounds for r ∈ r_baseₕ:(r_baseₑ-1)
-            x = area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
+            x = ImpactChron.area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
             iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
 # Only reset material that reflects primary cooling.
             reheated = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
@@ -405,22 +409,12 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
 end
 
 
-## Impact shape functions & struct support
-struct Cone{T<:Number}
-    z::T
-    r::T
-end
-struct Parabola{T<:Number}
-    z::T
-    r::T
-end
-struct Hemisphere{T<:Number}
-    z::T
-    r::T
-end
+## Impact shape functions (struct support in ImCh_parameters.jl)
 
 """
+```julia
 area_at_depth(rᵢ::Number, R::Number, x::T) where T<:{Cone,Parabola,Hemisphere}
+```
 
 Calculates the circular area at body radial depth rᵢ (for a body with radius, R) of an impact-affected region,
 where the volume of the region is approximated by a cone (x::Cone), paraboloid of rotation (x::Parabola),

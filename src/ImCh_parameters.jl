@@ -1,5 +1,6 @@
 ## Parameters & parameter functions for planetesimal thermal model & metropolis code.
 
+## Distribution structs
 """
 ```julia
 Nrm(μ::Float64,σ::Float64)
@@ -36,6 +37,26 @@ struct Unf
     b::Float64
 end
 
+
+## Structure support for area_at_depth
+
+struct Cone{T<:Number}
+    z::T
+    r::T
+end
+
+struct Parabola{T<:Number}
+    z::T
+    r::T
+end
+
+struct Hemisphere{T<:Number}
+    z::T
+    r::T
+end
+
+
+## Function(s)
 """
 ```julia
 perturb(p::NamedTuple,k::Symbol,n::Number)
