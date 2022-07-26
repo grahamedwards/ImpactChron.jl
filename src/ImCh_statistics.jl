@@ -12,8 +12,8 @@
 ```julia
 turbosum(x::AbstractArray)
 ```
-Fast summing of x with the power of LoopVectorization.jl's @turbo,
-since vreduce will not accept views of arrays.
+Fast summing of x with the power of LoopVectorization.jl's @turbo.
+Since `vreduce` does not accept `view`s, we `turbosum`!
 
 Faster than reduce for length(x)>≈200
 """
@@ -29,10 +29,9 @@ end
 """
 
 ```julia
-turbosum(x::AbstractArray)
+tturbosum(x::AbstractArray)
 ```
-Fast summing of x with the power of LoopVectorization.jl's @tturbo (multithreaded turbo),
-since vreduce will not accept views of arrays. Use
+Fast summing of x with the power of LoopVectorization.jl's @tturbo (multithreaded turbo).
 """
 function tturbosum(x::AbstractArray)
     ∑x = zero(eltype(x))

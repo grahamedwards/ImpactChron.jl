@@ -269,7 +269,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impac
 #        tₓr[tₒ,r]= ifelse(primdate<0, zero(iVfrxn),primdate) # Ensure that tₓr[tₒ,r] ≥ 0 (i.e. non-negative volume)
 #    end
 
-# Identify an dperturb reheated depths
+# Identify and perturb reheated depths
     r_baseₕ = searchsortedfirst(radii,R-c.reheat_shape.z) # deepest reheated radius index
 #TEST WHETHER THIS @batch is faster or if @tturbo below is faster
     @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
