@@ -17,7 +17,7 @@ dist1 = histogramify(hstdmn,xhst,yhst)
 dist2=zero(dist1)
 histogramify!(dist2,hstdmn,xhst,yhst)
 # See how they do!
-@test dist1 ≈ dist2 ≈ hist_test_ans
+@test dist1 == dist2 == hist_test_ans
 
 ## Test ll_param for Unf
 @test iszero(ll_param(5.,Unf(1.,3.)))
