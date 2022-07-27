@@ -63,16 +63,6 @@ Normalizes the output, such that for output `dist` ∑ dist[dᵢ] * Δd = 1
 If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the corresponding xₒᵤₜ of each yₒᵤₜ is ∉ domain.
 
 ***
-```julia
-histogramify(domain::AbstractRange, timeseries::AbstractVector, A::AbstractMatrix)
-```
-
-Constructs histogram over (linear) midpoints of `domain` from model outputs in A,
-with columns corresponding to elements of `timeseries`. Normalizes the output as above.
-
-NOTE: Unlike the method above, this assumes a constant timestep for `timeseries` to speed up calcutaion.
-
-***
 ***
 Returns only the histogram masses, centers of time bins must be calculated externally.
 e.g.
@@ -89,24 +79,16 @@ function histogramify(domain::AbstractRange, x::AbstractVector, y::AbstractVecto
     return dist
 end
 
-function histogramify(domain::AbstractRange, timeseries::AbstractVector, A::AbstractMatrix)
-    dist = Vector{float(eltype(A))}(undef,length(domain)-1)
-    histogramify!(dist,domain,timeseries,A)
-    return dist
-end
 
 """
 
 ```julia
 histogramify!(dist::AbstractVector, domain::AbstractRange, x::AbstractVector, y::AbstractVector)
 
-histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::AbstractRange, A::AbstractMatrix)
 ```
 In-place `histogramify` that overwites a pre-allocated vector `dist`.
-The two methods differ in the last (4ᵗʰ) input, either a Vector or a Matrix,
-depending on the impact resetting function employed.
 
-see `histogramify`for details
+see `histogramify` for details
 """
 function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 # start with a fresh zero distribution
@@ -149,125 +131,7 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
     return dist
 end
 
-function histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::AbstractRange, A::AbstractMatrix)
-# First reverse timeseries so it ascends like domain.
-    issorted(timeseries) && throw(ArgumentError("timeseries must be descending: step(timeseries)<0"))
-    x=reverse(timeseries)
 
-    ∑A = vreduce(+,A) # Sum entirety of A for normalizing at end. Could turn off if no ejection.
-
-    x₁ = first(x)
-    xₓ = last(x)
-    Δx = step(x)
-
-    d₁ = first(domain)
-    dₓ = last(domain)
-    Δd = step(domain)
-
-# If domain extends before x, fill outer bins with 0.
-    if d₁ < x₁
-        first_x_in_d = searchsortedfirst(domain,x₁)-1
-        dist[1:first_x_in_d] .= zero(eltype(A))
-        first_d_in_x = 1 # first i where x[i]≥d₁
-    else
-        first_x_in_d = 1
-        first_d_in_x=searchsortedfirst(x,d₁) # first i where x[i]≥d₁
-    end
-# If domain extends after x, fill outer bins with 0.
-    if dₓ >  xₓ
-        last_x_in_d = searchsortedlast(domain,xₓ)+1
-        dist[last_x_in_d-1:end] .= zero(eltype(A))
-        last_d_in_x = length(x) # last i where x[i]<dₓ
-    else
-        last_x_in_d=length(domain)
-        last_d_in_x = seachsortedfirst(x,dₓ) # last i where x[i]<dₓ
-    end
-# d₁ > x₁ & dₓ <  xₓ don't matter, those x's are lost because outside of range of interest
-
-    if Δd == Δx # each index of x will fall within ∈ [ domain[i], domain[i+1] ]
-        nₓ = length(x)
-        idist = first_x_in_d
-        for i ∈ first_d_in_x:last_d_in_x
-# Extract view of A that corresponds to timewindow, corrected for the descending nature of time across A.
-            vA= view(A,nₓ-i+1,:)
-# Sum across date rows of vA
-            dist[idist]= turbosum(vA)/(∑A*Δd)
-            idist+=1
-        end
-    elseif Δd > 2Δx # Always at least 2 x-steps within each domain step.
-        domain_to_x = (length(x) - 1) / abs(last(x) - first(x))  # multiplicative factor to convert domain values to corresponding index in x
-        nₓ = length(x)
-# Calculate the first non-zero value of dist outside of loop.
-    # because indices are adjusted to bound all x ∈ domain, interpolations in the loop below will exceed bounds for first and last index
-    # Note: since x=reverse(timeseries), +/- 1's to account for indexing are skipped since they cancel out.
-        ix₊ = floor(Int, (domain[2]-first(x)) * domain_to_x) # see notes below in loop
-        dist[first_x_in_d] = turbosum(view(A,(nₓ-ix₊ : 1+nₓ-first_d_in_x),:)) / (∑A*Δd)
-
-        @batch for i ∈ first_x_in_d+1 : last_x_in_d-2 # Exclude outermost indices
-# Find indices of x, such that (ix₋+1) < domain[i] < (ix₊+1), and no [ix₋,ix₊] overlap.
-            ix₋ = ix₊ +1 # The new lower bound is one x-index forward from the upperbound of the last step.
-            ix₊ = floor(Int, (domain[i+1]-first(x)) * domain_to_x) # ix₊+1 is the last x[iₓ] ≤ domain[i], equivalent to searchsortedlast(x,d[i])-1
-# Extract view of A that corresponds to timewindow, corrected for the descending timesteps across A.
-            vA = view(A,(nₓ-ix₊):(nₓ-ix₋),:)    # would subtract 1 from ix₋/₊, but this is accomplished by not adding 1 in index interpolation above.
-# Sum across date rows of vA
-            dist[i] = turbosum(vA)/(∑A*Δd) # ((nₓ-ix₊),(nₓ-ix₋)) #
-        end
-# Calculate the first non-zero value of dist outside of loop.
-        dist[last_x_in_d-1] = turbosum(view(A,(nₓ-floor(Int,1+(domain[last_x_in_d-1]-first(x))*domain_to_x) : nₓ-last_d_in_x+1),:)) / (∑A*Δd)
-    else
-        error("Either step(domain)<step(timeseries) or step(timeseries) < step(domain) ≤ 2*step(solartime)... \n histogramify will not work under these conditions")
-    end
-    return dist
-end
-## Log-likelihood calculators
-
-"""
-
-```julia
-ll_param(x::Number,D::T) -> T ∈ {Nrm,lNrm,Unf}
-
-Calculate the log-likelihood that `x` is drawn from a distribution
-`D`, where D may be...
-Normal (`Nrm`), with mean D.μ and 1σ = D.σ
-
-Lognormal (`lNrm`), with logspace mean D.μ and 1σ = D.σ. Assumes x is already in logspace.
-
-Uniform (`Unf`) with lowerbound D.a and upperbound D.b
-(D::Unf always returns loglikelihhood of zero, bounds test is done earlier to speed up code.)
-
-see `ImCh_parameters.jl` for construction of T-structs
-
-"""
-ll_param(x::Number,D::Nrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
-ll_param(x::Number,D::lNrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
-    #lnx = log(x); return -lnx-(lnx-D.μ)*(lnx-D.μ) / (2*D.σ*D.σ)
-ll_param(x::T,D::Unf) where T<:Number = zero(T)
-
-
-"""
-
-```julia
-ll_params(p::NamedTuple,d::NamedTuple)
-```
-Calculate log-likelihood for a number of proposals in `p`
-with corresponding distributions in `d`
-
-Currently does not evaluate impact (_χ_) parameters.
-"""
-function ll_params(p::NamedTuple,d::NamedTuple)
-    ll = 0.
-    ll += ll_param(p.Cp, d.Cp)
-    ll += ll_param(p.R, d.R)
-    ll += ll_param(p.Tc, d.Tc)
-    ll += ll_param(p.Tm, d.Tm)
-    ll += ll_param(p.cAl, d.cAl)
-    ll += ll_param(p.k, d.k)
-    ll += ll_param(p.rAlo, d.rAlo)
-    ll += ll_param(p.ta, d.ta)
-    ll += ll_param(p.tss, d.tss)
-    ll += ll_param(p.ρ, d.ρ)
-    return ll
-end
 
 """
 

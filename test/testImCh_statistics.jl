@@ -19,31 +19,6 @@ histogramify!(dist2,hstdmn,xhst,yhst)
 # See how they do!
 @test dist1 ≈ dist2 ≈ hist_test_ans
 
-# Matrix-based histogramify(!)
-# Δdomain > 2*Δtimeseries
-hstimeseries = 10:-1:5.
-hstmat = [  0.  .4  0.
-            0.2 0.  0.1
-            0.3 0.1 0.1
-            0.1 0.2 0.
-            0.  0.1 0.2
-            0.1 0.1 0.0 ]
-rowsums = reduce(+,hstmat,dims=2)
-hist_mat_test_ans_I = [sum(rowsums[5:6]),sum(rowsums[2:4]),sum(rowsums[1:1])] / (sum(hstmat)*step(hstdmn))
-@test hist_mat_test_ans ≈ histogramify(hstdmn,hstimeseries,hstmat)
-
-# Δdomain = Δtimeseries
-# Overlapping domain and timeseries steps. Very ugly and generally should be avoided. Shifts such that bincenter < model value.
-hstdmn2= 3:1:12.
-hist_mat_test_ans_II = vcat(0,reverse(reduce(+,hstmat,dims=2)) / (sum(hstmat)*step(hstdmn2)),0,0)
-@test  hist_mat_test_ans_II ≈ histogramify(hstdmn2,hstimeseries,hstmat)
-
-# Non-overlapping steps
-hstimeseries2 = 11:-3:5.
-hstmat2 = hstmat[1:3,:]
-hist_mat_test_ans_III = reverse(reduce(+,hstmat2,dims=2))/(sum(hstmat2)*step(hstdmn))
-@test hist_mat_test_ans_III ≈ histogramify(hstdmn,hstimeseries2,hstmat2)
-
 ## Test ll_param for Unf
 @test iszero(ll_param(5.,Unf(1.,3.)))
 @test iszero(ll_param(2.,Unf(1.,3.)))
