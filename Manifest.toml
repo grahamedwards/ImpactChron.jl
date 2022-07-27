@@ -370,6 +370,12 @@ git-tree-sha1 = "c81cd227862cf6892d4751c7842aaa856f10269a"
 uuid = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
 version = "0.21.35"
 
+[[VectorizedStatistics]]
+deps = ["LoopVectorization", "Static"]
+git-tree-sha1 = "355787cde0d7ca1d84b9292a9dd4a178fabe91f0"
+uuid = "3b853605-1c98-4422-8364-4bd93ee0529e"
+version = "0.4.3"
+
 [[Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
