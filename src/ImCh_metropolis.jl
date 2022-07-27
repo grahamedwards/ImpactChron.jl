@@ -23,8 +23,8 @@ function MetropolisAr(  time_domain::AbstractRange,
                         crater::NamedTuple; # crater/impact parameters
                         plims::NamedTuple=(g=(),), # Paramter distributions.
                         burnin::Int=0,      # Burn-in iterations
-                        nsteps::Int=10000,  # Post burn-in iterations
-                        Δt::Number= 0.1,    # Time-step (Ma)
+                        nsteps::Int,  # Post burn-in iterations
+                        Δt::Number= 1.,    # Time-step (Ma)
                         tmax::Number=2000,  # Max model duration (Ma, starts at CAIs)
                         Tmax::Number=1500,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
                         Tmin::Number=0,     # minimum temperature (K)
@@ -42,8 +42,8 @@ function MetropolisAr(  time_domain::AbstractRange,
     bincenters = rangemidpoints(time_domain)
 # Declare solartime variable: the comprehensive timeseries of the model solar system history.
     # First ensure that age of CAIs (tₛₛ) is constant
-    :tss ∉ pvars ? solartime = (p.tss:-Δt:p.tss-tmax) : error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
-
+    :tss ∉ pvars ? age = collect(p.tss:-Δt:p.tss-tmax) : error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
+    time = collect(0:Δt:tmax)
 # Deal with statistical bounds of proposal variables
 # If no plims given, set infinite ranges to explore the studio space.
     plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
@@ -61,9 +61,9 @@ function MetropolisAr(  time_domain::AbstractRange,
     sigma_sorted = sigma[sI] # Sort uncertainty
 
 # These quantities will be used more than once
-    tₓr = Array{eltype(solartime)}(undef,length(solartime),nᵣ) # time x radial position array to be used in impact resetting scheme
-    impacts = Vector{Float64}(undef,length(solartime)) # tracker of # of impacts at each timestep
-    tcoolₒ = Vector{Int64}(undef,nᵣ) # tracker of indices of primary cooling date in solartime and time columns of tₓr
+    tₓr = Array{eltype(solartime)}(undef,length(age),nᵣ) # time x radial position array to be used in impact resetting scheme
+    impacts = Vector{Float64}(undef,length(age)) # tracker of # of impacts at each timestep
+    tcoolₒ = Vector{Int64}(undef,nᵣ) # tracker of indices of primary cooling date in age and time columns of tₓr
 
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
@@ -72,8 +72,8 @@ function MetropolisAr(  time_domain::AbstractRange,
     if iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
         distₚ = histogramify(time_domain,dates,Vfrxn)
     else
-        impact_reset_array!(tₓr, solartime, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
-        distₚ = histogramify(time_domain,solartime,tₓr)
+        impact_reset_array!(tₓr, age, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+        distₚ = histogramify(time_domain,age,tₓr)
     end
 # Log likelihood of initial proposal
     ll = llₚ = ll_dist(bincenters, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
@@ -106,8 +106,8 @@ function MetropolisAr(  time_domain::AbstractRange,
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, solartime, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,solartime,tₓr)
+                impact_reset_array!(tₓr, age, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                histogramify!(distₚ,time_domain,age,tₓr)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
@@ -167,8 +167,8 @@ function MetropolisAr(  time_domain::AbstractRange,
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
                 histogramify!(distₚ,time_domain,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, solartime, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,solartime,tₓr)
+                impact_reset_array!(tₓr, age, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                histogramify!(distₚ,time_domain,age,tₓr)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0
