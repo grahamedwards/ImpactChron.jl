@@ -1,6 +1,6 @@
 ## Functions used for statistical purposes & math support:
     # turbosum & tturbosum
-    # rangemidpoints
+    # rangemidpoints & rangemidbounds
     # histogramify ~ converts data into binned histogram
     # log-likelihood calculators
         # ll_param
@@ -49,6 +49,14 @@ rangemidpoints(x::AbstractRange)
 Calculate a `LinRange` of the midpoints of each step in `x`(`<:AbstractRange`).
 """
 rangemidpoints(x::AbstractRange) = LinRange(first(x) + 0.5step(x), last(x) - 0.5step(x), length(x)-1)
+
+"""
+```julia
+rangebinbounds(x::AbstractRange)
+```
+Calculate a `LinRange` of the linear bounds for each "midpoint" step in `x`.
+"""
+rangemidbounds(x::AbstractRange) = LinRange(first(x) - 0.5step(x), last(x) + 0.5step(x), length(x)+1)
 
 """
 ```julia
@@ -131,7 +139,55 @@ function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVec
     return dist
 end
 
+## Log-likelihood calculators
 
+"""
+
+```julia
+ll_param(x::Number,D::T) -> T ∈ {Nrm,lNrm,Unf}
+
+Calculate the log-likelihood that `x` is drawn from a distribution
+`D`, where D may be...
+Normal (`Nrm`), with mean D.μ and 1σ = D.σ
+
+Lognormal (`lNrm`), with logspace mean D.μ and 1σ = D.σ. Assumes x is already in logspace.
+
+Uniform (`Unf`) with lowerbound D.a and upperbound D.b
+(D::Unf always returns loglikelihhood of zero, bounds test is done earlier to speed up code.)
+
+see `ImCh_parameters.jl` for construction of T-structs
+
+"""
+ll_param(x::Number,D::Nrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
+ll_param(x::Number,D::lNrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
+    #lnx = log(x); return -lnx-(lnx-D.μ)*(lnx-D.μ) / (2*D.σ*D.σ)
+ll_param(x::T,D::Unf) where T<:Number = zero(T)
+
+
+"""
+
+```julia
+ll_params(p::NamedTuple,d::NamedTuple)
+```
+Calculate log-likelihood for a number of proposals in `p`
+with corresponding distributions in `d`
+
+Currently does not evaluate impact (_χ_) parameters.
+"""
+function ll_params(p::NamedTuple,d::NamedTuple)
+    ll = 0.
+    ll += ll_param(p.Cp, d.Cp)
+    ll += ll_param(p.R, d.R)
+    ll += ll_param(p.Tc, d.Tc)
+    ll += ll_param(p.Tm, d.Tm)
+    ll += ll_param(p.cAl, d.cAl)
+    ll += ll_param(p.k, d.k)
+    ll += ll_param(p.rAlo, d.rAlo)
+    ll += ll_param(p.ta, d.ta)
+    ll += ll_param(p.tss, d.tss)
+    ll += ll_param(p.ρ, d.ρ)
+    return ll
+end
 
 """
 
