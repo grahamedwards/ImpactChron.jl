@@ -235,9 +235,11 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impac
         tᵢ = ifelse(isnan(dates[i]),taᵢ,tᵢ) # if isnan(dates[i])==true, set cooling date to accretion (e.g. chondrules reflect high-T event)
         tcoolₒ[i]= tᵢ # Save index for excavation/reheating loops below
         #tₓr[tᵢ,i] = Vfrxn[i] # Place fraction of body volume at primary cooling date. Implement this for full speed
-### FOR TROUBLESHOOTING:
-        tₓr[tᵢ,i] = one(eltype(tₓr)) #Place 1 at primary cooling date in timeXradius array. Implement this for easier troubleshooting.
 
+#########
+# FOR TROUBLESHOOTING:
+        tₓr[tᵢ,i] = one(eltype(tₓr)) #Place 1 at primary cooling date in timeXradius array. Implement this for easier troubleshooting.
+#########
     end
 
 # Calculate "number" of impacts at each timestep
