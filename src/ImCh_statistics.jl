@@ -167,7 +167,7 @@ function histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::
 # If domain extends before x, fill outer bins with 0.
     if d₁ < x₁
         first_x_in_d = searchsortedfirst(domain,x₁)-1
-        dist[1:first_x_in_d-1] .= [(-1,-1)]#zero(eltype(A))
+        dist[1:first_x_in_d] .= zero(eltype(A))
         first_d_in_x = 1 # first i where x[i]≥d₁
     else
         first_x_in_d = 1
@@ -176,7 +176,7 @@ function histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::
 # If domain extends after x, fill outer bins with 0.
     if dₓ >  xₓ
         last_x_in_d = searchsortedlast(domain,xₓ)+1
-        dist[last_x_in_d:end] .= [(-1,-1)] #zero(eltype(A))
+        dist[last_x_in_d-1:end] .= zero(eltype(A))
         last_d_in_x = length(x) # last i where x[i]<dₓ
     else
         last_x_in_d=length(domain)
@@ -186,11 +186,13 @@ function histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::
 
     if Δd == Δx # each index of x will fall within ∈ [ domain[i], domain[i+1] ]
         nₓ = length(x)
-        for i ∈ first_x_in_d:last_x_in_d
+        idist = first_x_in_d
+        for i ∈ first_d_in_x:last_d_in_x
 # Extract view of A that corresponds to timewindow, corrected for the descending nature of time across A.
             vA= view(A,nₓ-i+1,:)
 # Sum across date rows of vA
-            dist[i]=turbosum(vA)/(∑A*Δd)
+            dist[idist]= turbosum(vA)/(∑A*Δd)
+            idist+=1
         end
     elseif Δd > 2Δx # Always at least 2 x-steps within each domain step.
         domain_to_x = (length(x) - 1) / abs(last(x) - first(x))  # multiplicative factor to convert domain values to corresponding index in x
