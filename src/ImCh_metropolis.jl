@@ -40,10 +40,11 @@ function MetropolisAr(  time_domain::AbstractRange,
 # Time Management:
 # Calculate bincenters for time_domain
     bincenters = rangemidpoints(time_domain)
-# Declare solartime variable: the comprehensive timeseries of the model solar system history.
+# Declare age variable: the comprehensive timeseries of the model solar system history.
     # First ensure that age of CAIs (tₛₛ) is constant
     :tss ∉ pvars ? age = collect(p.tss:-Δt:p.tss-tmax) : error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
-    time = collect(0:Δt:tmax)
+    time_range = 0:Δt:tmax
+    time = collect(time_range)
 # Deal with statistical bounds of proposal variables
 # If no plims given, set infinite ranges to explore the studio space.
     plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
@@ -61,7 +62,7 @@ function MetropolisAr(  time_domain::AbstractRange,
     sigma_sorted = sigma[sI] # Sort uncertainty
 
 # These quantities will be used more than once
-    tₓr = Array{eltype(solartime)}(undef,length(age),nᵣ) # time x radial position array to be used in impact resetting scheme
+    tₓr = Array{eltype(age)}(undef,length(age),nᵣ) # time x radial position array to be used in impact resetting scheme
     impacts = Vector{Float64}(undef,length(age)) # tracker of # of impacts at each timestep
     tcoolₒ = Vector{Int64}(undef,nᵣ) # tracker of indices of primary cooling date in age and time columns of tₓr
 
