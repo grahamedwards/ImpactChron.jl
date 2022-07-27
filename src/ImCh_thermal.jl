@@ -129,7 +129,6 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     tₐ_ = ceil(tₐ/Δt) * Δt # Make the first timestep (after accretion) a multiple of Δt.
     tₐadj = tₐ_-tₐ
     time  = (tₐadj : Δt : tmax - tₐ_ ) * 1e6 * s_a # time in s (after accretion) adjusted for rounding in tₐ_
-    convert2Ma = tₛₛ - tₐ_
 # Initial ²⁶Al heat production
     Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
@@ -168,7 +167,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
                 Tₚₖ = T
 # compare T to Tc only if cooling (T < Tᵢ) & it got `HotEnough`
             elseif (T <= Tc) & HotEnough
-                ages[i] = convert2Ma - Δt*(j-1)  # log time only when T falls below Tc (calculated from Δt and timestep j)
+                ages[i] = tₐ_ + Δt*(j-1)  # log time only when T falls below Tc (calculated from Δt and timestep j)
                 peakT[i] = Tₚₖ
                 break               # kill loop
             end
