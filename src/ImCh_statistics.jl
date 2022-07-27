@@ -20,7 +20,7 @@ Faster than reduce for length(x)>≈200
 
 function turbosum(x::AbstractArray)
     ∑x = zero(eltype(x))
-    @turbo for i in 1:length(x)
+    @turbo for i in eachindex(x)
         ∑x += x[i]
     end
     return ∑x
@@ -35,7 +35,7 @@ Fast summing of x with the power of LoopVectorization.jl's @tturbo (multithreade
 """
 function tturbosum(x::AbstractArray)
     ∑x = zero(eltype(x))
-    @tturbo for i in 1:length(x)
+    @tturbo for i in eachindex(x)
         ∑x += x[i]
     end
     return ∑x
@@ -90,7 +90,7 @@ function histogramify(domain::AbstractRange, x::AbstractVector, y::AbstractVecto
 end
 
 function histogramify(domain::AbstractRange, timeseries::AbstractVector, A::AbstractMatrix)
-    dist = Vector{float(eltype(y))}(undef,length(domain)-1)
+    dist = Vector{float(eltype(A))}(undef,length(domain)-1)
     histogramify!(dist,domain,timeseries,A)
     return dist
 end
@@ -166,17 +166,21 @@ function histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::
 
 # If domain extends before x, fill outer bins with 0.
     if d₁ < x₁
-        first_x_in_d = searchsortedfirst(domain,x₁)
-        dist[1:first_x_in_d-1] .= zero(eltype(A))
+        first_x_in_d = searchsortedfirst(domain,x₁)-1
+        dist[1:first_x_in_d-1] .= [(-1,-1)]#zero(eltype(A))
+        first_d_in_x = 1 # first i where x[i]≥d₁
     else
-        first_x_in_d=1
+        first_x_in_d = 1
+        first_d_in_x=searchsortedfirst(x,d₁) # first i where x[i]≥d₁
     end
 # If domain extends after x, fill outer bins with 0.
     if dₓ >  xₓ
-        last_x_in_d = searchsortedlast(domain,xₓ)
-        dist[last_x_in_d:end] .= zero(eltype(A))
+        last_x_in_d = searchsortedlast(domain,xₓ)+1
+        dist[last_x_in_d:end] .= [(-1,-1)] #zero(eltype(A))
+        last_d_in_x = length(x) # last i where x[i]<dₓ
     else
         last_x_in_d=length(domain)
+        last_d_in_x = seachsortedfirst(x,dₓ) # last i where x[i]<dₓ
     end
 # d₁ > x₁ & dₓ <  xₓ don't matter, those x's are lost because outside of range of interest
 
@@ -189,18 +193,25 @@ function histogramify!(dist::AbstractVector, domain::AbstractRange, timeseries::
             dist[i]=turbosum(vA)/(∑A*Δd)
         end
     elseif Δd > 2Δx # Always at least 2 x-steps within each domain step.
-        nbtwns = length(x) - 1   # n of spaces between bin centers.
-        xspan = abs(last(x) - first(x)) # range of x
+        domain_to_x = (length(x) - 1) / abs(last(x) - first(x))  # multiplicative factor to convert domain values to corresponding index in x
         nₓ = length(x)
-        @batch for i ∈ first_x_in_d:last_x_in_d-1
-# Find indices of x, such that ix₋ ≤ domain[i] < ix₊
-            ix₋ = ceil(Int, (domain[i]-first(x)) / xspan * nbtwns + 1) # x[i₋] is equivalent to searchsortedfirst(x,d[i])
-            ix₊ = floor(Int, (domain[i+1]-first(x)) / xspan * nbtwns + 1) # x[i₋] is the last < domain[i], equivalent to an inequality only searchsortedlast(x,d[i])
-# Extract view of A that corresponds to timewindow, corrected for the descending nature of time across A.
-            vA = view(A,nₓ-(ix₊-1):nₓ-(ix₋-1),:)
+# Calculate the first non-zero value of dist outside of loop.
+    # because indices are adjusted to bound all x ∈ domain, interpolations in the loop below will exceed bounds for first and last index
+    # Note: since x=reverse(timeseries), +/- 1's to account for indexing are skipped since they cancel out.
+        ix₊ = floor(Int, (domain[2]-first(x)) * domain_to_x) # see notes below in loop
+        dist[first_x_in_d] = turbosum(view(A,(nₓ-ix₊ : 1+nₓ-first_d_in_x),:)) / (∑A*Δd)
+
+        @batch for i ∈ first_x_in_d+1 : last_x_in_d-2 # Exclude outermost indices
+# Find indices of x, such that (ix₋+1) < domain[i] < (ix₊+1), and no [ix₋,ix₊] overlap.
+            ix₋ = ix₊ +1 # The new lower bound is one x-index forward from the upperbound of the last step.
+            ix₊ = floor(Int, (domain[i+1]-first(x)) * domain_to_x) # ix₊+1 is the last x[iₓ] ≤ domain[i], equivalent to searchsortedlast(x,d[i])-1
+# Extract view of A that corresponds to timewindow, corrected for the descending timesteps across A.
+            vA = view(A,(nₓ-ix₊):(nₓ-ix₋),:)    # would subtract 1 from ix₋/₊, but this is accomplished by not adding 1 in index interpolation above.
 # Sum across date rows of vA
-            dist[i] = turbosum(vA)/(∑A*Δd)
+            dist[i] = turbosum(vA)/(∑A*Δd) # ((nₓ-ix₊),(nₓ-ix₋)) #
         end
+# Calculate the first non-zero value of dist outside of loop.
+        dist[last_x_in_d-1] = turbosum(view(A,(nₓ-floor(Int,1+(domain[last_x_in_d-1]-first(x))*domain_to_x) : nₓ-last_d_in_x+1),:)) / (∑A*Δd)
     else
         error("Either step(domain)<step(timeseries) or step(timeseries) < step(domain) ≤ 2*step(solartime)... \n histogramify will not work under these conditions")
     end
