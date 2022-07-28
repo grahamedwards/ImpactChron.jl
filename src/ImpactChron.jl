@@ -3,6 +3,7 @@ module ImpactChron
 # For speed:
 using LoopVectorization
 using Polyester
+using VectorizedStatistics
 
 # For data handling.
 using DelimitedFiles
@@ -15,7 +16,7 @@ using DelimitedFiles
 export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere
 include("ImCh_parameters.jl")
 
-export  rangemidpoints, turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist
+export  rangemidpoints, rangemidbounds,turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist
 include("ImCh_statistics.jl")
 
 export plntsml_Tz, PlntsmlAr, PlntsmlAr!, impact_reset_array!, area_at_depth

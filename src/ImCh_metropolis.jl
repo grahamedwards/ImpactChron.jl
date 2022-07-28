@@ -14,8 +14,7 @@ function MetropolisStatus(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,st
 end
 
 # The Metropolis algorithm applied to Ar-Ar measured thermal histories in meteorites
-function MetropolisAr(  time_domain::AbstractRange,
-                        p::NamedTuple,   # Parameter proposal
+function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                         pσ::NamedTuple, # proposed σ for pertrubations.
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
@@ -38,13 +37,16 @@ function MetropolisAr(  time_domain::AbstractRange,
     prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
 
 # Time Management:
-# Calculate bincenters for time_domain
-    bincenters = rangemidpoints(time_domain)
 # Declare age variable: the comprehensive timeseries of the model solar system history.
     # First ensure that age of CAIs (tₛₛ) is constant
-    :tss ∉ pvars ? age = collect(p.tss:-Δt:p.tss-tmax) : error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
+    :tss ∉ pvars || error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
+    age_range = p.tss : -Δt : p.tss-tmax
+    age = collect(age_range)
     time_range = 0:Δt:tmax
     time = collect(time_range)
+# Calculate bound values for age_range
+    time_bounds = rangemidbounds(age_range)
+    age_bounds = rangemidbounds(age_range)
 # Deal with statistical bounds of proposal variables
 # If no plims given, set infinite ranges to explore the studio space.
     plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
@@ -65,19 +67,19 @@ function MetropolisAr(  time_domain::AbstractRange,
     tₓr = Array{eltype(age)}(undef,length(age),nᵣ) # time x radial position array to be used in impact resetting scheme
     impacts = Vector{Float64}(undef,length(age)) # tracker of # of impacts at each timestep
     tcoolₒ = Vector{Int64}(undef,nᵣ) # tracker of indices of primary cooling date in age and time columns of tₓr
-
+    distₚ = Vector{eltype(age)}(undef,length(age))
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
     dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # Convert thermal code output into a binned histogram
     if iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
-        distₚ = histogramify(time_domain,dates,Vfrxn)
+        histogramify!(distₚ,time_bounds,dates,Vfrxn)
     else
-        impact_reset_array!(tₓr, age, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
-        distₚ = histogramify(time_domain,age,tₓr)
+        impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+        distₚ .= vsum(tₓr,dims=2)
     end
 # Log likelihood of initial proposal
-    ll = llₚ = ll_dist(bincenters, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
+    ll = llₚ = ll_dist(age, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
 
 # Start the clock
     start = time()
@@ -105,14 +107,14 @@ function MetropolisAr(  time_domain::AbstractRange,
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
-                histogramify!(distₚ,time_domain,dates,Vfrxn)
+                histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, age, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,age,tₓr)
+                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                distₚ .= vsum(tₓr,dims=2)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
-                llₚ = ll_dist(bincenters, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(age, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -166,14 +168,14 @@ function MetropolisAr(  time_domain::AbstractRange,
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
             elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
-                histogramify!(distₚ,time_domain,dates,Vfrxn)
+                histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, age, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
-                histogramify!(distₚ,time_domain,age,tₓr)
+                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                distₚ .= vsum(tₓr,dims=2)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0
-                llₚ = ll_dist(bincenters, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(age, distₚ, mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
