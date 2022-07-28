@@ -54,7 +54,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
 # Check that all proposed parameters do not violate uniform distribution bounds
     for i ∈ keys(plims)
-        isa(plims[i],Unf) && ( plims[i].a < p[i] < plims[i].b || error("Initial proposal for $i exceeds permissible bounds ($(plims[i].a),$(plims[i].b))") )
+        isa(plims[i],Unf) && ( plims[i].a <= p[i] <= plims[i].b || error("Initial proposal for $i exceeds permissible bounds ($(plims[i].a),$(plims[i].b))") )
     end
 
 # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
