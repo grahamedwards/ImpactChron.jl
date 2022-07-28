@@ -71,7 +71,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
     dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
-# Convert thermal code output into a binned histogram
+# Only calculate impact resetting if flux is positive and nonzero
     if (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
         histogramify!(distₚ,time_bounds,dates,Vfrxn)
     else
@@ -105,7 +105,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
             if isnan(dates[div(nᵣ,10)])
                 printstyled("meltdown rejected\n"; color=:light_magenta);flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
-# Only calculate Impact Resetting if flux is positive & nonzero
+# Only calculate impact resetting if flux is positive and nonzero
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
@@ -166,7 +166,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
             if isnan(dates[div(nᵣ,10)])
                 printstyled("meltdown rejected\n"; color=:light_magenta); flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
-# Only calculate Impact Resetting if flux is nonzero
+# Only calculate impact resetting if flux is positive and nonzero
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
