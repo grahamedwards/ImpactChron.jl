@@ -209,7 +209,7 @@ Impact flux follows an exponential decay described by parameters in `p`:
 function impact_reset_array!(tₓr::AbstractArray,time::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
                             p::NamedTuple,c::NamedTuple;
-                                nᵣ::Integer)
+                            nᵣ::Integer,Δt::Number)
 
 # Declare variables from input
     tₛₛ = p.tss
@@ -222,7 +222,7 @@ function impact_reset_array!(tₓr::AbstractArray,time::AbstractArray,impacts::A
     λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
 
 # Calculate timestep
-    Δt = abs(step(time))
+    #Δt = abs(step(time))
 # Set all cells in tₓr to zero
     @tturbo for i ∈ eachindex(tₓr) #faster than fill!(tₓr,0.)
         tₓr[i] = zero(eltype(tₓr))

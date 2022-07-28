@@ -47,7 +47,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     time_range = 0:Δt:tmax
     time = collect(time_range)
 # Calculate bound values for age_range
-    time_bounds = rangemidbounds(age_range)
+    time_bounds = rangemidbounds(time_range)
     age_bounds = rangemidbounds(age_range)
 # Deal with statistical bounds of proposal variables
 # If no plims given, set infinite ranges to explore the studio space.
@@ -77,7 +77,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     if (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
         histogramify!(distₚ,time_bounds,dates,Vfrxn)
     else
-        impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+        impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
         distₚ .= vsum(tₓr,dims=2)
     end
 # Log likelihood of initial proposal
@@ -111,7 +111,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
                 distₚ .= vsum(tₓr,dims=2)
             end
 # Ensure the returned distribution is nonzero
@@ -172,7 +172,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
+                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
                 distₚ .= vsum(tₓr,dims=2)
             end
 # Ensure the returned distribution is nonzero
@@ -203,7 +203,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 
         llDist[i] = ll
         iszero(i%updateN) && ImpactChron.MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
-        iszero(i%archiveN) && serialize("metropolis_archive_step_"*i*".js", (;acceptanceDist,llDist,pDist,prt) ))
+        iszero(i%archiveN) && serialize("metropolis_archive_step_"*i*".js", (;acceptanceDist,llDist,pDist,prt) )
     end
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)
