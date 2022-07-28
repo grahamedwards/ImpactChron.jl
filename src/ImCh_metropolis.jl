@@ -105,7 +105,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
             if isnan(dates[div(nᵣ,10)])
                 printstyled("meltdown rejected\n"; color=:light_magenta);flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
-# Only calculate Impact Resetting if flux is nonzero
+# Only calculate Impact Resetting if flux is positive & nonzero
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
