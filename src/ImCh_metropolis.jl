@@ -42,13 +42,12 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Declare age variable: the comprehensive timeseries of the model solar system history.
     # First ensure that age of CAIs (tₛₛ) is constant
     :tss ∉ pvars || error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
-    age_range = p.tss : -Δt : p.tss-tmax
-    age = collect(age_range)
-    time_range = 0:Δt:tmax
-    time = collect(time_range)
+    #age = p.tss : -Δt : p.tss-tmax
+    time_r = 0:Δt:tmax
+    time_v = collect(time_r)
 # Calculate bound values for age_range
-    time_bounds = rangemidbounds(time_range)
-    age_bounds = rangemidbounds(age_range)
+    time_bounds = rangemidbounds(time_r)
+    #age_bounds = rangemidbounds(age)
 # Deal with statistical bounds of proposal variables
 # If no plims given, set infinite ranges to explore the studio space.
     plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
@@ -62,14 +61,14 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 
 # Sort the dataset from youngest to oldest
     sI = sortperm(mu)
-    mu_sorted = mu[sI] # Sort means
+    mu_sorted = p.tss .- mu[sI] # Sort means as dates in Ma after CAIs
     sigma_sorted = sigma[sI] # Sort uncertainty
 
 # These quantities will be used more than once
-    tₓr = Array{eltype(age)}(undef,length(age),nᵣ) # time x radial position array to be used in impact resetting scheme
-    impacts = Vector{Float64}(undef,length(age)) # tracker of # of impacts at each timestep
+    tₓr = Array{eltype(mu_sorted)}(undef,length(time_v),nᵣ) # time x radial position array to be used in impact resetting scheme
+    impacts = Vector{Float64}(undef,length(time_v)) # tracker of # of impacts at each timestep
     tcoolₒ = Vector{Int64}(undef,nᵣ) # tracker of indices of primary cooling date in age and time columns of tₓr
-    distₚ = Vector{eltype(age)}(undef,length(age))
+    distₚ = Vector{eltype(tₓr)}(undef,length(time_v))
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
     dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
@@ -77,11 +76,11 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     if (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
         histogramify!(distₚ,time_bounds,dates,Vfrxn)
     else
-        impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
+        impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
         distₚ .= vsum(tₓr,dims=2)
     end
 # Log likelihood of initial proposal
-    ll = llₚ = ll_dist(age, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
+    ll = llₚ = ll_dist(time_r, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
 
 # Start the clock
     start = time()
@@ -111,12 +110,12 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
+                impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
                 distₚ .= vsum(tₓr,dims=2)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
-                llₚ = ll_dist(age, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(time_r, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -172,12 +171,12 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
-                impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
+                impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
                 distₚ .= vsum(tₓr,dims=2)
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0
-                llₚ = ll_dist(age, distₚ, mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(time_r, distₚ, mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
