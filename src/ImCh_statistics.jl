@@ -211,7 +211,7 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
     nₘ = length(mu)            # n of "Measured" data
     nₚ = length(x)     # n of bincenters
     nbtwns = nₚ - 1   # n of spaces between bin centers.
-    Δx = step(x)
+    Δx = abs(step(x))
     xᵣ = abs(last(x) - first(x)) # range of x
     #tkr = zeros(nₘ)
 
