@@ -72,7 +72,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
     dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # Convert thermal code output into a binned histogram
-    if iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
+    if (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
         histogramify!(distₚ,time_bounds,dates,Vfrxn)
     else
         impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
@@ -106,7 +106,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                 printstyled("meltdown rejected\n"; color=:light_magenta);flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
-            elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
+            elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
                 impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
@@ -167,7 +167,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                 printstyled("meltdown rejected\n"; color=:light_magenta); flush(stdout)
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate Impact Resetting if flux is nonzero
-            elseif iszero(pₚ.Fχα) & iszero(pₚ.Fχβ)
+            elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
                 impact_reset_array!(tₓr, time, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ)
