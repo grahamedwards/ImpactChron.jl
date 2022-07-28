@@ -206,7 +206,7 @@ Impact flux follows an exponential decay described by parameters in `p`:
 \np.Fχ ~ initial impact flux
 
 """
-function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impacts::AbstractArray,tcoolₒ::AbstractArray,
+function impact_reset_array!(tₓr::AbstractArray,time::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
                             p::NamedTuple,c::NamedTuple;
                                 nᵣ::Integer)
@@ -214,25 +214,26 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impac
 # Declare variables from input
     tₛₛ = p.tss
     R = p.R # m | asteroid radius
-    tᵅ = tₛₛ - p.tχα # Ma after CAIs
+    tᵅ = p.tχα # Ma after CAIs
     Fᵅ = p.Fχα #Initial impactor flux Ma⁻¹
     λᵅ = 1/p.τχα  # Ma⁻¹ | decay constant of impact flux
-    tᵝ = tₛₛ - p.tχβ # Ma after CAIs
+    tᵝ = p.tχβ # Ma after CAIs
     Fᵝ = p.Fχβ #Initial impactor flux Ma⁻¹
     λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
 
 # Calculate timestep
-    Δt = abs(step(solartime))
+    Δt = abs(step(time))
 # Set all cells in tₓr to zero
     @tturbo for i ∈ eachindex(tₓr) #faster than fill!(tₓr,0.)
         tₓr[i] = zero(eltype(tₓr))
     end
 # Populate each shell with primary cooling date.
-    taᵢ = searchsortedfirst(solartime,tₛₛ-p.ta,rev=true) # identify index of accretion.
+    taᵢ = searchsortedfirst(time,p.ta) # identify index of accretion.
     @inbounds for i in 1:nᵣ
-        tᵢ = searchsortedfirst(solartime,dates[i],rev=true)
+        tᵢ = searchsortedfirst(time,dates[i])
         tᵢ = ifelse(isnan(dates[i]),taᵢ,tᵢ) # if isnan(dates[i])==true, set cooling date to accretion (e.g. chondrules reflect high-T event)
         tcoolₒ[i]= tᵢ # Save index for excavation/reheating loops below
+
         #tₓr[tᵢ,i] = Vfrxn[i] # Place fraction of body volume at primary cooling date. Implement this for full speed
 
 #########
@@ -242,16 +243,16 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractRange,impac
     end
 
 # Calculate "number" of impacts at each timestep
-    @tturbo for i ∈ eachindex(solartime)
-        Iᵅ = ifelse(solartime[i] <= tᵅ, Fᵅ*exp(-λᵅ * (tᵅ-solartime[i]) ), zero(Fᵅ) )
-        Iᵝ = ifelse(solartime[i] <= tᵝ, Fᵝ*exp(-λᵝ * (tᵝ-solartime[i]) ), zero(Fᵝ) )
+    @tturbo for i ∈ eachindex(time)
+        Iᵅ = ifelse(time[i] >= tᵅ, Fᵅ*exp(-λᵅ * (time[i]-tᵅ) ), zero(Fᵅ) )
+        Iᵝ = ifelse(time[i] >= tᵝ, Fᵝ*exp(-λᵝ * (time[i]-tᵝ) ), zero(Fᵝ) )
         impacts[i] = Δt * (Iᵅ + Iᵝ)
     end
 
 # Time to reheat this planetesimal:
 # First identify some useful variables
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    ntimes = length(solartime) # full length of time columns in timeXdepth array
+    ntimes = length(time) # full length of time columns in timeXdepth array
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
 
