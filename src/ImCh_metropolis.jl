@@ -202,7 +202,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 
         llDist[i] = ll
         iszero(i%updateN) && ImpactChron.MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
-        iszero(i%archiveN) && serialize("metropolis_archive_step_"*i*".js", (;acceptanceDist,llDist,pDist,prt) )
+        iszero(i%archiveN) && Serialization.serialize("metropolis_archive_step_$i.js", (;acceptanceDist,llDist,pDist,prt) )
     end
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)

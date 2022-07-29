@@ -7,6 +7,7 @@ using VectorizedStatistics
 
 # For data handling.
 using DelimitedFiles
+using Serialization
 
 
 #These will be needed when re-implementing the monte carlo sampler
