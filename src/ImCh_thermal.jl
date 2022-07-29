@@ -4,8 +4,22 @@
     # ImpactResetAr
     # Impact shape functions: cone, pbla, hemi
 
+"""
+```julia
+function plntsml_temperature(time::AbstractArray, radii::AbstractArray; To::Float64, Ao::Float64, λ::Float64, K::Float64, κ::Float64 )
+```
 
-function plntsml_Tz(time::AbstractArray,radii::AbstractArray;
+Calculates the evolution of temperature at a range of depths defined
+for a conductively cooling sphere with thermal conductivity `K` and thermal diffusivity `κ`,
+given ambient temperature `To`, initial heat production `Ao`, and heat-producing-element decay constant 'λ'.
+
+Adapted from:
+Carlslaw & Jäger (1959)
+and
+[Hevey & Sanders (2006)](http://doi.wiley.com/10.1111/j.1945-5100.2006.tb00195.x)
+
+"""
+function plntsml_temperature(time::AbstractArray,radii::AbstractArray;
     To::Float64,
     Ao::Float64,
     λ::Float64,
@@ -81,6 +95,17 @@ function PlntsmlAr(p::NamedTuple;
     PlntsmlAr!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
     return ages,Vfrxn,radii,peakT
 end
+
+"""
+```julia
+function PlntsmlAr!(ages::AbstractArray, Vfrxn::AbstractArray,peakT::AbstractArray, p::NamedTuple;
+    nᵣ::Integer, Δt::Number, tmax::Number, Tmax::Number, Tmin::Number)
+```
+
+In-place `PlntsmlAr` that updates `ages`, `Vfrxn`, and `peakT`.
+
+see also `PlntsmlAr`
+"""
 
 function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
