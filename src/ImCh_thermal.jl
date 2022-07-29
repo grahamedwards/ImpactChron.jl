@@ -267,25 +267,27 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
 
 # Identify and perturb reheated depths
     r_baseₕ = searchsortedfirst(radii,R-c.reheat_shape.z) # deepest reheated radius index
-#TEST WHETHER THIS @batch is faster or if @tturbo below is faster
+
     @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
         x = ImpactChron.area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
         iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume *of layer* removed per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
-###!!! Test if faster to have branching condition OR to just do all the impacts and @turbo the whole thing.
+
         @inbounds for t ∈ (tₒ+1):ntimes # Model impact thermal history after primary cooling date
             if !iszero(impacts[t]) # see if there is an impact at time `t`
                 tₓr[t,r] = reheat = impacts[t] * iVfrxn # reheated fraction of layer
+
                 @turbo for i ∈ tₒ:(t-1) # for each preceding timestep
                     tₓr[i,r] *= (1-reheat)
                 end
             end
         end
     end
-# Finally, re-noramlize everything to the body volume
+# Finally, re-noramlize everything to the body volume.
     @tturbo for r ∈ 1:nᵣ
+        Vfᵣ = Vfrxn[r]
         for t ∈ 1:ntimes
-            tₓr[t,r] *= Vfrxn[r]
+            tₓr[t,r] *= Vfᵣ
         end
     end
 end
