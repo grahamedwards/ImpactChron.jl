@@ -24,12 +24,12 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int,  # Post burn-in iterations
                         Δt::Number= 1.,    # Time-step (Ma)
-                        tmax::Number=2000,  # Max model duration (Ma, starts at CAIs)
-                        Tmax::Number=1500,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
-                        Tmin::Number=0,     # minimum temperature (K)
+                        tmax::Number=2000.,  # Max model duration (Ma, starts at CAIs)
+                        Tmax::Number=1500.,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
+                        Tmin::Number=0.,     # minimum temperature (K)
                         nᵣ::Integer=100,    # Radial nodes
                         updateN::Integer=1_000, # Frequency of status updates (every `updateN` steps)
-                        archiveN=NaN) # Save archive of output data every `archiveN` steps
+                        archiveN::Integer=0) # Save archive of output data every `archiveN` steps. Off (=0) by default.
 
 # Prepare output Distributions
     acceptanceDist = falses(nsteps)
@@ -202,7 +202,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 
         llDist[i] = ll
         iszero(i%updateN) && ImpactChron.MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
-        iszero(i%archiveN) && Serialization.serialize("metropolis_archive_step_$i.js", (;acceptanceDist,llDist,pDist,prt) )
+        iszero(archiveN) || iszero(i%archiveN) && Serialization.serialize("metropolis_archive_step_$i.js", (;acceptanceDist,llDist,pDist,prt) )
     end
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
     for x ∈ keys(plims)
