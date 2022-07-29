@@ -1,10 +1,19 @@
 ## Test functions in ImCh_statistics.jl
+
+    # rangemidpoints / rangemidbounds
     # histogramify(!)
     # ll_param
     # ll_params
     # ll_dist
 
+## Test rangemidpoints and rangemidbounds
+
+testrange = LinRange(1., 10., 9)
+@test testrange1 == rangemidbounds(rangemidpoints(testrange1))
+
+
 ## Test histogramify and histogramify!
+
 # Vector-based histogramify(!)
 # Set up domain and synthetic vector data that include NaNs extend beyond the domain bounds
 hstdmn = 3:3:12.
@@ -20,17 +29,20 @@ histogramify!(dist2,hstdmn,xhst,yhst)
 @test dist1 == dist2 == hist_test_ans
 
 ## Test ll_param for Unf
+
 @test iszero(ll_param(5.,Unf(1.,3.)))
 @test iszero(ll_param(2.,Unf(1.,3.)))
 
 
 ## Test: ll_param for Nrm & lNrm
+
 @test iszero( ll_param(3.,Nrm(3.,1.)) )
 @test iszero( ll_param(3.,lNrm(3.,1.)) )
 @test ll_param(2.,Nrm(3.,1.)) === ll_param(2.,Nrm(3.,1.)) === -0.5
 
 
 ## Test ll_params
+
 # Define proposal values
 tss=rAlo=R=ta=cAl=Tm=Tc=ρ=Cp=k=tχα=τχα=Fχα=tχβ=τχβ=Fχβ=1.
 ϕ = (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ)
