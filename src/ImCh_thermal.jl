@@ -184,7 +184,7 @@ end
 impact_reset_array!(tₓr::AbstractArray, solartime::AbstractRange, impacts::AbstractArray, tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
                             p::NamedTuple,c::NamedTuple;
-                                nᵣ::Integer)
+                                nᵣ::Integer,Δt::Number)
 ```
 Simulates an impact history from -χ parameters in `p` (below), and resets Ar-Ar
 primary planetesimal cooling `dates` and fractional volumes (`Vfraxn`)
@@ -206,7 +206,7 @@ Impact flux follows an exponential decay described by parameters in `p`:
 \np.Fχ ~ initial impact flux
 
 """
-function impact_reset_array!(tₓr::AbstractArray,time::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray,
+function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray,
                             dates::AbstractArray,Vfrxn::AbstractArray,
                             p::NamedTuple,c::NamedTuple;
                             nᵣ::Integer,Δt::Number)
@@ -228,31 +228,25 @@ function impact_reset_array!(tₓr::AbstractArray,time::AbstractArray,impacts::A
         tₓr[i] = zero(eltype(tₓr))
     end
 # Populate each shell with primary cooling date.
-    taᵢ = searchsortedfirst(time,p.ta) # identify index of accretion.
+    taᵢ = searchsortedfirst(solartime,p.ta) # identify index of accretion.
     @inbounds for i in 1:nᵣ
-        tᵢ = searchsortedfirst(time,dates[i])
+        tᵢ = searchsortedfirst(solartime,dates[i])
         tᵢ = ifelse(isnan(dates[i]),taᵢ,tᵢ) # if isnan(dates[i])==true, set cooling date to accretion (e.g. chondrules reflect high-T event)
         tcoolₒ[i]= tᵢ # Save index for excavation/reheating loops below
-
-        #tₓr[tᵢ,i] = Vfrxn[i] # Place fraction of body volume at primary cooling date. Implement this for full speed
-
-#########
-# FOR TROUBLESHOOTING:
-        tₓr[tᵢ,i] = one(eltype(tₓr)) #Place 1 at primary cooling date in timeXradius array. Implement this for easier troubleshooting.
-#########
+        tₓr[tᵢ,i] = one(eltype(tₓr)) #Place 1 at primary cooling date in timeXradius array. This will be corrected for volume later.
     end
 
 # Calculate "number" of impacts at each timestep
-    @tturbo for i ∈ eachindex(time)
-        Iᵅ = ifelse(time[i] >= tᵅ, Fᵅ*exp(-λᵅ * (time[i]-tᵅ) ), zero(Fᵅ) )
-        Iᵝ = ifelse(time[i] >= tᵝ, Fᵝ*exp(-λᵝ * (time[i]-tᵝ) ), zero(Fᵝ) )
+    @tturbo for i ∈ eachindex(solartime)
+        Iᵅ = ifelse(solartime[i] >= tᵅ, Fᵅ*exp(-λᵅ * (solartime[i]-tᵅ) ), zero(Fᵅ) )
+        Iᵝ = ifelse(solartime[i] >= tᵝ, Fᵝ*exp(-λᵝ * (solartime[i]-tᵝ) ), zero(Fᵝ) )
         impacts[i] = Δt * (Iᵅ + Iᵝ)
     end
 
 # Time to reheat this planetesimal:
 # First identify some useful variables
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    ntimes = length(time) # full length of time columns in timeXdepth array
+    ntimes = length(solartime) # full length of time columns in timeXdepth array
     Δr = step(radii)
     Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
 
@@ -276,7 +270,7 @@ function impact_reset_array!(tₓr::AbstractArray,time::AbstractArray,impacts::A
 #TEST WHETHER THIS @batch is faster or if @tturbo below is faster
     @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
         x = ImpactChron.area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
-        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume removed per impact. note: π removed for cancelling out Vbody
+        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume *of layer* removed per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
 ###!!! Test if faster to have branching condition OR to just do all the impacts and @turbo the whole thing.
         @inbounds for t ∈ (tₒ+1):ntimes # Model impact thermal history after primary cooling date
@@ -286,6 +280,12 @@ function impact_reset_array!(tₓr::AbstractArray,time::AbstractArray,impacts::A
                     tₓr[i,r] *= (1-reheat)
                 end
             end
+        end
+    end
+# Finally, re-noramlize everything to the body volume
+    @tturbo for r ∈ 1:nᵣ
+        for t ∈ 1:ntimes
+            tₓr[t,r] *= Vfrxn[r]
         end
     end
 end
@@ -322,7 +322,7 @@ parabolic (`pbla`), or hemispheric (`hemi`) approximation.
 and radial nodes, as in `PlntsmlAr` function.
 
 Note that Vfrxn is overwritten.
-"""
+
 function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
 
@@ -409,7 +409,7 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
     end
     return vcat(dates,impacts),vcat(Vfrxn,iVfrxn)
 end
-
+"""
 
 ## Impact shape functions (struct support in ImCh_parameters.jl)
 
