@@ -59,7 +59,7 @@ function PlntsmlAr(;
             K::Number,            # Thermal Conductivity
             Cₚ::Number)           # Specific heat capacity
 
-    p = (; tss=tₛₛ,rAlo=rAlo,R=R,ta=tₐ,cAl=Al_conc,Tm=To,Tc=Tc,ρ=ρ,Cp=Cₚ,k=K,tχ=0.,τχ=0.,Fχ=0.)
+    p = (; tss=tₛₛ,rAlo=rAlo,R=R,ta=tₐ,cAl=Al_conc,Tm=To,Tc=Tc,ρ=ρ,Cp=Cₚ,k=K)
     ages=Array{float(typeof(tₛₛ))}(undef,nᵣ)
     Vfrxn=Array{float(typeof(R))}(undef,nᵣ)
     peakT=Array{float(typeof(To))}(undef,nᵣ)
@@ -201,7 +201,7 @@ where `nᵣ` describes the number of radial nodes, as in the `PlntsmlAr` functio
 the number of impacts at each time step and the index of the primary cooling date in `solartime`.
 
 Impact site geometries are codified by types (`Cone`,`Parabola`,`Hemisphere`)
-defined in `c` and calculated in the `area_at_depth`.
+defined in `c` and calculated in the `radius_at_depth`.
 
 Impact flux follows an exponential decay described by parameters in `p`:
 \np.tχ ~ instability start time
@@ -259,7 +259,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
 # At excavated depths, material is removed
 #    r_baseₑ = searchsortedfirst(radii,R-c.excavate_shape.z) # deepest excavated radius index
 #    @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
-#        x = ImpactChron.area_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
+#        x = ImpactChron.radius_at_depth(radii[r],R,c.excavate_shape) # Excavated radius at this depth
 #        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume of shell of each excavation. note: π removed for cancelling out Vbody
 #        tₒ = tcoolₒ[r] # Time index of primary cooling date
 # For each timestep after primary cooling...
@@ -274,7 +274,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
     r_baseₕ = searchsortedfirst(radii,R-c.reheat_shape.z) # deepest reheated radius index
 
     @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
-        x = ImpactChron.area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
+        x = ImpactChron.radius_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
         iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume *of layer* removed per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
 
@@ -296,6 +296,23 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
         end
     end
 end
+
+
+## Impact shape functions (struct support in ImCh_parameters.jl)
+
+"""
+```julia
+radius_at_depth(rᵢ::Number, R::Number, x::T) where T<:{Cone,Parabola,Hemisphere}
+```
+
+Calculates the radius of a circular area at a radial distance of rᵢ from the center of a body with radius `R`,
+where the volume of the region is approximated by a cone (x::Cone), paraboloid of rotation (x::Parabola),
+or hemisphere (x::Hemisphere). `x` includes a maximum depth (x.z) and surface radius (x.r).
+
+"""
+radius_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
+radius_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -R) / x.z ) # Parabolic approximation
+radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.z*x.z - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes r = z
 
 
 """
@@ -395,7 +412,7 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
     @inbounds for imp ∈ eachindex(impacts)
 # Crater excavation and volume removal
         @inbounds for r ∈ r_baseₑ:nᵣ
-            x = ImpactChron.area_at_depth(radii[r],R,c.excavate_shape) # calculate radius of excavation at this depth
+            x = ImpactChron.radius_at_depth(radii[r],R,c.excavate_shape) # calculate radius of excavation at this depth
             iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
 # Only remove material that's still there:
             lost = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
@@ -404,7 +421,7 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
         end
 # Sub-crater impact site reheating and Ar-Ar resetting.
         @inbounds for r ∈ r_baseₕ:(r_baseₑ-1)
-            x = ImpactChron.area_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
+            x = ImpactChron.radius_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
             iVfrxnᵣ = x * x * Δr / Vbody # note: π removed for cancelling out Vbody
 # Only reset material that reflects primary cooling.
             reheated = ifelse(Vfrxn[r] > iVfrxnᵣ, iVfrxnᵣ, Vfrxn[r])
@@ -417,19 +434,3 @@ function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTu
     return vcat(dates,impacts),vcat(Vfrxn,iVfrxn)
 end
 """
-
-## Impact shape functions (struct support in ImCh_parameters.jl)
-
-"""
-```julia
-area_at_depth(rᵢ::Number, R::Number, x::T) where T<:{Cone,Parabola,Hemisphere}
-```
-
-Calculates the circular area at body radial depth rᵢ (for a body with radius, R) of an impact-affected region,
-where the volume of the region is approximated by a cone (x::Cone), paraboloid of rotation (x::Parabola),
-or hemisphere (x::Hemisphere) with a given maximum depth (x.z) and surface radius (x.r).
-
-"""
-area_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
-area_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -R) / x.z ) # Parabolic approximation
-area_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.z*x.z - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes r = z

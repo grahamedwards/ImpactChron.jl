@@ -38,7 +38,7 @@ struct Unf
 end
 
 
-## Structure support for area_at_depth
+## Structure support for radius_at_depth
 
 struct Cone{T<:Number}
     z::T
