@@ -124,11 +124,14 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
         Vo=Vz
     end
 
-    fill!(ages,NaN) # Vector{Float64}(undef,length(radii))
 # Time Management
     tₐ_ = ceil(tₐ/Δt) * Δt # Make the first timestep (after accretion) a multiple of Δt.
     tₐadj = tₐ_-tₐ
     time  = (tₐadj : Δt : tmax - tₐ_ ) * 1e6 * s_a # time in s (after accretion) adjusted for rounding in tₐ_
+
+# All parts of the body are at least accretion-aged (chondrule formation was high temperature)
+    fill!(ages,tₐ_) # Vector{Float64}(undef,length(radii))
+
 # Initial ²⁶Al heat production
     Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
 
@@ -160,7 +163,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 # While the shell is warming...
             if T > Tᵢ
 # Ensure the shell remains chondritic (does not melt):
-                T > Tmax && break
+                T > Tmax && (ages[i]=NaN; break)
 # Check whether the shell gets `HotEnough` (hotter than Tmin)
                 HotEnough = ifelse(T > Tmin,true,false)
 # Record warmest temperature yet:
@@ -221,19 +224,26 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
     Fᵝ = p.Fχβ #Initial impactor flux Ma⁻¹
     λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
 
-# Calculate timestep
-    #Δt = abs(step(time))
+# Identify some useful variables that will be reused in reheating section.
+    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
+    ntimes = length(solartime) # full length of time columns in timeXdepth array
+    Δr = step(radii)
+    Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
+    Vwhole = zero(eltype(Vfrxn)) # Sum of included elements of Vfrxn, unity if no NaN elements in `dates`
+
 # Set all cells in tₓr to zero
     @tturbo for i ∈ eachindex(tₓr) #faster than fill!(tₓr,0.)
         tₓr[i] = zero(eltype(tₓr))
     end
-# Populate each shell with primary cooling date.
-    taᵢ = searchsortedfirst(solartime,p.ta) # identify index of accretion.
-    @inbounds for i in 1:nᵣ
-        tᵢ = searchsortedfirst(solartime,dates[i])
-        tᵢ = ifelse(isnan(dates[i]),taᵢ,tᵢ) # if isnan(dates[i])==true, set cooling date to accretion (e.g. chondrules reflect high-T event)
+
+# Populate each shell with primary cooling date, unless its a melted (NaN-date) layer, then fill no primary cooling date (0 instead of 1)
+    for i in 1:nᵣ
+        tᵢ = searchsortedfirst(solartime, dates[i]) # if dates[i] is NaN, tᵢ > length(solartime) and loops below won't run.
+        NaNdate = isnan(dates[i])
+        Vwhole += ifelse(NaNdate, zero(eltype(Vfrxn)), Vfrxn[i] )
+        tᵢ = ifelse(NaNdate,ntimes,tᵢ)
         tcoolₒ[i]= tᵢ # Save index for excavation/reheating loops below
-        tₓr[tᵢ,i] = one(eltype(tₓr)) #Place 1 at primary cooling date in timeXradius array. This will be corrected for volume later.
+        tₓr[tᵢ,i] = ifelse(NaNdate, zero(eltype(tₓr)), one(eltype(tₓr)) ) #Place 1 at primary cooling date in timeXradius array. This will be corrected for volume later. If NaNdate, then set to 0, excluded volume.
     end
 
 # Calculate "number" of impacts at each timestep
@@ -244,11 +254,6 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
     end
 
 # Time to reheat this planetesimal:
-# First identify some useful variables
-    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    ntimes = length(solartime) # full length of time columns in timeXdepth array
-    Δr = step(radii)
-    Vbody = (4/3) * R^3 #note: π cancels out in I_Vfraxnᵣ calculation
 
 ### Remove excavation for now.
 # At excavated depths, material is removed
@@ -285,7 +290,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
     end
 # Finally, re-noramlize everything to the body volume.
     @tturbo for r ∈ 1:nᵣ
-        Vfᵣ = Vfrxn[r]
+        Vfᵣ = Vfrxn[r]/Vwhole
         for t ∈ 1:ntimes
             tₓr[t,r] *= Vfᵣ
         end
