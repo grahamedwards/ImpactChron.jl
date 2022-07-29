@@ -9,7 +9,7 @@
 ## Test rangemidpoints and rangemidbounds
 
 testrange = LinRange(1., 10., 9)
-@test testrange1 == rangemidbounds(rangemidpoints(testrange1))
+@test testrange == rangemidbounds(rangemidpoints(testrange))
 
 
 ## Test histogramify and histogramify!
