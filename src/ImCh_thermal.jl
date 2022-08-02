@@ -315,7 +315,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
     end
 # Finally, re-noramlize everything to the body volume.
     @tturbo for r ∈ 1:nᵣ
-        Vfᵣ = Vfrxn[r]/Vwhole
+        Vfᵣ = Vfrxn[r]/(Vwhole * Δt)
         for t ∈ 1:ntimes
             tₓr[t,r] *= Vfᵣ
         end
