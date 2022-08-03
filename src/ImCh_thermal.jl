@@ -306,7 +306,8 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
 
         @inbounds for t ∈ (tₒ+1):ntimes # Model impact thermal history after primary cooling date
             if !iszero(impacts[t]) # see if there is an impact at time `t`
-                tₓr[t,r] = reheat = impacts[t] * iVfrxn # reheated fraction of layer
+                reheat = impacts[t] * iVfrxn # reheated fraction of layer
+                tₓr[t,r] = reheat = ifelse(reheat>1,one(reheat),reheat) # ensure the `reheat`ed fraction of layer does not exceed the volume of layer (may be an issue for large Δt)
 
                 @turbo for i ∈ tₒ:(t-1) # for each preceding timestep
                     tₓr[i,r] *= (1-reheat)
