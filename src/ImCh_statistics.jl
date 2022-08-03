@@ -220,7 +220,7 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
 # Find index of μ in the `dist` array
         iₓ = ceil(Int, (mu[j]-x[1]) / xᵣ * nbtwns + 1) # x[iₓ] ≥ mu[j], equivalent to searchsortedfirst(x,mu[j])
 # If possible, prevent aliasing problems by interpolation
-        if (iₓ>1) && (iₓ<=nₚ) && ( (2sigma[j]) < (x[iₓ]-mu[j]) ) && ( (2sigma[j])<(mu[j]-x[iₓ-1]) )
+        if (1 < iₓ<=nₚ) && ( (2sigma[j]) < (x[iₓ]-mu[j]) ) && ( (2sigma[j])<(mu[j]-x[iₓ-1]) )
             # && (sigma[j] < (x[iₓ]-x[iₓ-1]) ) # original threshold, see notes.
 # Interpolate corresponding distribution value, note: Δx cancels in second term
             likelihood = dist[iₓ] * Δx - (x[iₓ]-mu[j]) * (dist[iₓ]-dist[iₓ-1])
