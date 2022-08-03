@@ -24,6 +24,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int,  # Post burn-in iterations
                         Δt::Number= 1.,    # Time-step (Ma)
+                        downscale::Integer=0, # Downscale high-res timesteps to `downscale`-times fewer bins
                         tmax::Number=2000.,  # Max model duration (Ma, starts at CAIs)
                         Tmax::Number=1500.,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
                         Tmin::Number=0.,     # minimum temperature (K)
@@ -42,8 +43,18 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Declare age variable: the comprehensive timeseries of the model solar system history.
     # First ensure that age of CAIs (tₛₛ) is constant
     :tss ∉ pvars || error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
-    #age = p.tss : -Δt : p.tss-tmax
-    time_r = 0:Δt:tmax
+
+    if iszero(downscale) # If a downscale value is declared (≠0), make sure length of time_r and time_ll are divisible.
+        time_r = time_ll = 0:Δt:tmax
+    else
+        if (0 >= p.Fχα) & (0 >= p.Fχβ); error("Downscaling without the array framework is not supported") end
+        downscale_adj = length(0:Δt:tmax)%downscale
+        tmax_adj = tmax-downscale_adj*Δt
+        iszero(downscale_adj) || @warn "time range adjusted for downscale to 0:Δt(=$Δt):$tmax_adj"
+        time_r = 0:Δt:tmax_adj
+        time_ll = vmean(time_r[1:1+downscale]):Δt*downscale:tmax_adj
+    end
+
     time_v = collect(time_r)
 # Calculate bound values for age_range
     time_bounds = rangemidbounds(time_r)
@@ -77,10 +88,15 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
         histogramify!(distₚ,time_bounds,dates,Vfrxn)
     else
         impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
-        distₚ .= vsum(tₓr,dims=2)
+        if iszero(downscale)
+            distₚ .= vsum(tₓr,dims=2)
+        else
+            distₚ = Vector{eltype(tₓr)}(undef,length(time_ll))
+            ImpactChron.downscale!(distₚ,vsum(tₓr,dims=2))
+        end
     end
 # Log likelihood of initial proposal
-    ll = llₚ = ll_dist(time_r, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
+    ll = llₚ = ll_dist(time_ll, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
 
 # Start the clock
     start = time()
@@ -111,11 +127,15 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
                 impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
-                distₚ .= vsum(tₓr,dims=2)
+                if iszero(downscale)
+                    distₚ .= vsum(tₓr,dims=2)
+                else
+                    ImpactChron.downscale!(distₚ,vsum(tₓr,dims=2))
+                end
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
-                llₚ = ll_dist(time_r, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(time_ll, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end
@@ -172,11 +192,15 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
                 impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
-                distₚ .= vsum(tₓr,dims=2)
+                if iszero(downscale)
+                    distₚ .= vsum(tₓr,dims=2)
+                else
+                    ImpactChron.downscale!(distₚ,vsum(tₓr,dims=2))
+                end
             end
 # Ensure the returned distribution is nonzero
             if vreduce(+,distₚ) > 0
-                llₚ = ll_dist(time_r, distₚ, mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
+                llₚ = ll_dist(time_ll, distₚ, mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
             else
                 llₚ=-Inf
             end

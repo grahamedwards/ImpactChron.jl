@@ -1,6 +1,7 @@
 ## Functions used for statistical purposes & math support:
     # turbosum & tturbosum
     # rangemidpoints & rangemidbounds
+    # downscale!
     # histogramify ~ converts data into binned histogram
     # log-likelihood calculators
         # ll_param
@@ -57,6 +58,35 @@ rangebinbounds(x::AbstractRange)
 Calculate a `LinRange` of the linear bounds for each "midpoint" step in `x`.
 """
 rangemidbounds(x::AbstractRange) = LinRange(first(x) - 0.5step(x), last(x) + 0.5step(x), length(x)+1)
+
+
+"""
+
+```julia
+ImpactChron.downscale!(B::AbstractArray, A::AbstractArray)
+```
+
+Downscales elements of 1-D array `A` into smaller 1-D array `B` by summing.
+Scales the downscaled values in `B` by the ratio of length(A)÷length(B) to preserve any normalizations.
+
+Requires that length(A) % length(B) = 0.
+
+"""
+function downscale!(B::AbstractArray{T}, A) where T
+    ratio = length(A)÷length(B)
+    @assert ratio*length(B) == length(A)
+
+    iA₀, iB₀ = firstindex(A), firstindex(B)
+    @inbounds for i ∈ 0:length(B)-1
+        Bᵢ = zero(T)
+        for n = 0:ratio-1
+            Bᵢ += A[iA₀+i*ratio+n]
+        end
+        B[iB₀+i] = Bᵢ / ratio
+    end
+    B
+end
+
 
 """
 ```julia
