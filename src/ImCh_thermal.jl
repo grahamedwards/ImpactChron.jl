@@ -91,7 +91,8 @@ function PlntsmlAr(p::NamedTuple;
     ages=Array{float(typeof(p.tss))}(undef,nᵣ)
     Vfrxn=Array{float(typeof(p.R))}(undef,nᵣ)
     peakT=Array{float(typeof(p.Tm))}(undef,nᵣ)
-    radii = LinRange(0.5*p.R/nᵣ,p.R*(1-0.5/nᵣ),nᵣ)
+    R=exp(p.R)
+    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
     PlntsmlAr!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
     return ages,Vfrxn,radii,peakT
 end
@@ -119,11 +120,11 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 
     Tc = p.Tc            # closure temperature
     tₛₛ = p.tss           # age of CAIs
-    tₐ = p.ta            # accretion time
-    R = p.R              # body radius
     rAlo = p.rAlo        # initial solar ²⁶Al/²⁷Al
     Cₚ = p.Cp            # specific heat capacity
 
+    tₐ = exp(p.ta)       # accretion time
+    R = exp(p.R)         # body radius
     To = exp(p.Tm)       # disk temperature (K) (lognormally distributed)
     Al_conc = exp(p.cAl) # fractional abundance of Al (g/g) (lognormally distributed)
     ρ = exp(p.ρ)         # rock density (lognormally distributed)
@@ -241,7 +242,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
 
 # Declare variables from input
     tₛₛ = p.tss
-    R = p.R # m | asteroid radius
+    R = exp(p.R) # m | asteroid radius
     tᵅ = p.tχα # Ma after CAIs
     Fᵅ = p.Fχα #Initial impactor flux Ma⁻¹
     λᵅ = 1/p.τχα  # Ma⁻¹ | decay constant of impact flux
@@ -372,7 +373,7 @@ and radial nodes, as in `PlntsmlAr` function.
 
 Note that Vfrxn is overwritten.
 
-function ImpactResetQuench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
+function impact_reset_quench( dates::AbstractArray,Vfrxn::AbstractArray,p::NamedTuple,c::NamedTuple;
                         Δt::Number,tmax::Number,nᵣ::Integer)
 
 # Declare variables from input
