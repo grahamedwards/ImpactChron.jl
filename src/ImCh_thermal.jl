@@ -163,8 +163,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 
     n=1:300 # Σ is an infinite summation, but get good returns on n=300
 
-    # possibly: using Polyester: @batch
-    @inbounds for i = 1:nᵣ
+    @batch for i = 1:nᵣ
         Tᵢ = T = Tₚₖ = zero(To)
         HotEnough = false
         @inbounds for j = 1:length(time)
@@ -173,7 +172,7 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
             t = time[j]
             Σ = zero(Float64)
 
-            @tturbo for nᵢ ∈ n # tturbo -> turbo if use @batch above.
+            @turbo for nᵢ ∈ n # tturbo -> turbo if use @batch above.
                 α = ifelse(isodd(nᵢ), -1.0, 1.0)
                 β = nᵢ*((nᵢ^2)-( λ*(R^2)/(κ*π^2) ) )
                 γ = sin(nᵢ*π*r/R)
