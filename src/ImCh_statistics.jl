@@ -7,6 +7,7 @@
         # ll_param
         # ll_params
         # ll_dist
+        # weight_petro_types!
 
 """
 
@@ -268,4 +269,59 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
 # Normalize by total area under curve for intercomparability among proposals.
     end
     return ll
+end
+
+
+"""
+
+```julia
+weight_petro_types!(v::AbstractArray,T::AbstractArray,d::AbstractArray,petrotypes::NamedTuple)
+```
+
+Reweight volumetric fractions relative to the abundance of each petrologic type in the meteorite record.
+Takes `Vector`s of volumetric fraction (`v`), peak temperature (`T`), and cooling date (`d`), as output by `PlntsmlAr`.
+Accounts for melted layers (`r` where `isnan(d[i])` is `true`), by finding `NaN`s in `d`, filling these elements of `v` with zeros.
+Requires all petrologic types to occupy at least one radial node, otherwise returns all `NaN`s in in `d`, which rejects the posterior in `MetropolisAr`
+
+`petrotypes` is a `NamedTuple` of `NamedTuple`s, such that `petrotypes = (type#=(T<:Number,p<:Number), ...)` where `T` and `p` respectively represent maximum temperature and relative abundance in the meteorite record.
+
+
+"""
+function weight_petro_types!(v::AbstractArray,T::AbstractArray,d::AbstractArray,petrotypes::NamedTuple)
+# find melted indices (NaNs).
+   imelt = last(searchsorted(d,NaN,rev=true)) # Taking last(searchsorted()) is faster when the NaNs are in the first indices.
+
+   #@assert issorted(T,rev=true)
+# Find the indices where temperatures exceed each petrologic type (except type 6)
+   i3 = searchsortedfirst(T,petrotypes.type3.T,rev=true)
+   i4 = searchsortedfirst(T,petrotypes.type4.T,rev=true)
+   i5 = searchsortedfirst(T,petrotypes.type5.T,rev=true)
+
+# Require all petrologic types to occupy at least one layer
+   if lastindex(T) >= i3 > i4 > i5 > imelt+1
+   # Calculate and apply the conversion between fractional volume of body and fractional abundance in the meteorite record.
+      pv3 = petrotypes.type3.p / sum(@view v[i3:lastindex(T)])
+      pv4 = petrotypes.type4.p / sum(@view v[i4:i3-1])
+      pv5 = petrotypes.type5.p / sum(@view v[i5:i4-1])
+      pv6 = petrotypes.type6.p / sum(@view v[imelt+1:i5-1])
+
+      @inbounds for i = i3:lastindex(T)
+         v[i] *= pv3
+      end
+      @inbounds for i = i4:i3-1
+         v[i] *= pv4
+      end
+      @inbounds for i = i5:i4-1
+         v[i] *= pv5
+      end
+      @inbounds for i = firstindex(T):i5-1
+         v[i] *= pv6
+      end
+      # All deeply melted indices represent zero abundance in the OC record.
+      v[begin:imelt] .= zero(eltype(v))
+# If all petrologic types do not occupy ≥1 layer, reject all dates. This thing's weird.
+   else
+      fill!(d,NaN)
+   end
+   v
 end

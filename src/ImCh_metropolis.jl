@@ -24,13 +24,14 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int,  # Post burn-in iterations
                         Δt::Number= 1.,    # Time-step (Ma)
-                        downscale::Integer=0, # Downscale high-res timesteps to `downscale`-times fewer bins
                         tmax::Number=2000.,  # Max model duration (Ma, starts at CAIs)
                         Tmax::Number=1500.,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
                         Tmin::Number=0.,     # minimum temperature (K)
                         nᵣ::Integer=100,    # Radial nodes
                         updateN::Integer=1_000, # Frequency of status updates (every `updateN` steps)
-                        archiveN::Integer=0) # Save archive of output data every `archiveN` steps. Off (=0) by default.
+                        archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
+                        downscale::Integer=0, # Downscale high-res timesteps to `downscale`-times fewer bins
+                        petrotypes::NamedTuple=(x=1,)) # petrologic types, each with max Temp and rel. abundances in record
 
 # Prepare output Distributions
     acceptanceDist = falses(nsteps)
@@ -39,6 +40,9 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ) # Array to track proposal evolutions
     prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
 
+## Make sure proportions in petrotypes sums to unity.
+    @assert isone(sum(petrotypes[i].p for i ∈ eachindex(petrotypes)))
+    types = ifelse(length(petrotypes)>1, true, false)
 # Time Management:
 # Declare age variable: the comprehensive timeseries of the model solar system history.
     # First ensure that age of CAIs (tₛₛ) is constant
@@ -83,6 +87,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
     dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+    ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 # Only calculate impact resetting if flux is positive and nonzero
     if (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
         histogramify!(distₚ,time_bounds,dates,Vfrxn)
@@ -116,7 +121,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
-            #k == problem && println("problem"); flush(stdout)
+            ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 
 # If >10% of interior radius melts, reject proposal
             if isnan(dates[div(nᵣ,10)])
@@ -181,7 +186,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
             PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
-            #k == problem && println("problem"); flush(stdout)
+            ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 
 # If >10% of interior radius melts, reject proposal
             if isnan(dates[div(nᵣ,10)])
