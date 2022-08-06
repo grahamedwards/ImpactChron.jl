@@ -334,11 +334,12 @@ radius_at_depth(rᵢ::Number, R::Number, x::T) where T<:{Cone,Parabola,Hemispher
 Calculates the radius of a circular area at a radial distance of rᵢ from the center of a body with radius `R`,
 where the volume of the region is approximated by a cone (x::Cone), paraboloid of rotation (x::Parabola),
 or hemisphere (x::Hemisphere). `x` includes a maximum depth (x.z) and surface radius (x.r).
+When x::Hemisphere, only `r` is used.
 
 """
 radius_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
 radius_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -R) / x.z ) # Parabolic approximation
-radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.z*x.z - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes r = z
+radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.r*x.r - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes z=r
 
 
 """
