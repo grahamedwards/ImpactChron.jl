@@ -31,7 +31,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                         updateN::Integer=1_000, # Frequency of status updates (every `updateN` steps)
                         archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
                         downscale::Integer=0, # Downscale high-res timesteps to `downscale`-times fewer bins
-                        petrotypes::NamedTuple=(p=1,)) # petrologic types, each with max Temp and rel. abundances in record
+                        petrotypes::NamedTuple=(x=1,)) # petrologic types, each with max Temp and rel. abundances in record
 
 # Prepare output Distributions
     acceptanceDist = falses(nsteps)
@@ -40,9 +40,10 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ) # Array to track proposal evolutions
     prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
 
-## Make sure proportions in petrotypes sums to unity.
-    @assert isone(sum(petrotypes[i].p for i ∈ eachindex(petrotypes)))
+# Turn petrologic type weighting on (true) or off (false)
     weighttypes = ifelse(isa(petrotypes[1],NamedTuple), true, false)
+# Make sure proportions in petrotypes sums to unity.
+    weighttypes && @assert isone(sum(petrotypes[i].p for i ∈ eachindex(petrotypes)))
 # Time Management:
 # Declare age variable: the comprehensive timeseries of the model solar system history.
     # First ensure that age of CAIs (tₛₛ) is constant
