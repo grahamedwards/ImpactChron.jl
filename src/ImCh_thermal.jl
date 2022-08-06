@@ -121,8 +121,8 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Tc = p.Tc            # closure temperature
     tₛₛ = p.tss           # age of CAIs
     rAlo = p.rAlo        # initial solar ²⁶Al/²⁷Al
-    Cₚ = p.Cp            # specific heat capacity
 
+    Cₚ = exp(p.Cp)        # specific heat capacity
     tₐ = exp(p.ta)       # accretion time
     R = exp(p.R)         # body radius
     To = exp(p.Tm)       # disk temperature (K) (lognormally distributed)
