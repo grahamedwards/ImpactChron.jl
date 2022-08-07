@@ -216,7 +216,7 @@ Fast with `@turbo`
 
 """
 function nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
-    @inbounds for i = firstindex)d:lastindex(d)
+    @inbounds for i = eachindex(d)
         d[i] = ifelse( T[i]>Tmin, d[i], NaN)
     end
     d
