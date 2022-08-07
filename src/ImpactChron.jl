@@ -20,7 +20,7 @@ include("ImCh_parameters.jl")
 export  rangemidpoints, rangemidbounds,turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist
 include("ImCh_statistics.jl")
 
-export plntsml_Tz, PlntsmlAr, PlntsmlAr!, impact_reset_array!, area_at_depth
+export plntsml_Tz, PlntsmlAr, PlntsmlAr!, impact_reset_array!, nan_regolith!
 include("ImCh_thermal.jl")
 
 export MetropolisAr
