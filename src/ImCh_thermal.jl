@@ -205,6 +205,23 @@ function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
 end
 
 
+"""
+
+```julia
+nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
+```
+
+Replace all dates in `d` with NaN where corresponding peak temperatures in `T` are less than `Tmin`
+Fast with `@turbo`
+
+"""
+function nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
+    @turbo for i = eachindex(d)
+        d[i]=ifelse(T[i]>Tmin,d[i],NaN)
+    end
+end
+
+
 ## Impact (Re)Heater v2
 """
 

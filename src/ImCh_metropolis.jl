@@ -92,6 +92,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 # Only calculate impact resetting if flux is positive and nonzero
     if (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
+        nan_regolith!(dates,peakT,Tmin) # Replace insufficiently heated (unsintered/regolith) material with NaNs.
         histogramify!(distₚ,time_bounds,dates,Vfrxn)
     else
         impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
@@ -132,6 +133,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate impact resetting if flux is positive and nonzero
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
+                nan_regolith!(dates,peakT,Tmin) # Replace insufficiently heated (unsintered/regolith) material with NaNs.
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
                 impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
@@ -198,6 +200,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
                 fill!(distₚ,zero(eltype(distₚ)))
 # Only calculate impact resetting if flux is positive and nonzero
             elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
+                nan_regolith!(dates,peakT,Tmin) # Replace insufficiently heated (unsintered/regolith) material with NaNs.
                 histogramify!(distₚ,time_bounds,dates,Vfrxn)
             else
                 impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
