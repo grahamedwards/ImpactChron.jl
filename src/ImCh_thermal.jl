@@ -216,11 +216,11 @@ Fast with `@turbo`
 
 """
 function nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
-    @turbo for i = eachindex(d)
-        d[i]=ifelse(T[i]>Tmin,d[i],NaN)
+    @inbounds for i = firstindex)d:lastindex(d)
+        d[i] = ifelse( T[i]>Tmin, d[i], NaN)
     end
+    d
 end
-
 
 ## Impact (Re)Heater v2
 """

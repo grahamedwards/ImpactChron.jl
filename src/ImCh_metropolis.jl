@@ -87,7 +87,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     distₚ = Vector{eltype(tₓr)}(undef,length(time_v))
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
-    dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+    dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
 # If petrologic type temperatures and abundances are included, weight accordingly.
     weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 # Only calculate impact resetting if flux is positive and nonzero
@@ -123,7 +123,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
 # If petrologic type temperatures and abundances are included, weight accordingly.
             weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 
@@ -190,7 +190,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
 # If petrologic type temperatures and abundances are included, weight accordingly.
             weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 
