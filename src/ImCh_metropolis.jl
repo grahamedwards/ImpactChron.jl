@@ -54,10 +54,10 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     else
         if (0 >= p.Fχα) & (0 >= p.Fχβ); error("Downscaling without the array framework is not supported") end
         downscale_adj = length(0:Δt:tmax)%downscale
-        tmax_adj = tmax-downscale_adj*Δt
-        iszero(downscale_adj) || @warn "time range adjusted for downscale to 0:Δt(=$Δt):$tmax_adj"
-        time_r = 0:Δt:tmax_adj
-        time_ll = vmean(time_r[1:1+downscale]):Δt*downscale:tmax_adj
+        tmax = tmax-downscale_adj*Δt
+        iszero(downscale_adj) || @warn "time range adjusted for downscale to 0:Δt(=$Δt):$tmax"
+        time_r = 0:Δt:tmax
+        time_ll = vmean(time_r[1:1+downscale]):Δt*downscale:tmax
     end
 
     time_v = collect(time_r)
