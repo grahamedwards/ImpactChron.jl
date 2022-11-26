@@ -77,9 +77,9 @@ function planetesimal_cooling_dates(;
     ages=Array{float(typeof(tₛₛ))}(undef,nᵣ)
     Vfrxn=Array{float(typeof(R))}(undef,nᵣ)
     peakT=Array{float(typeof(To))}(undef,nᵣ)
-    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
+    radii = LinRange(0.5*exp(R)/nᵣ,exp(R)*(1-0.5/nᵣ),nᵣ)
     planetesimal_cooling_dates!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
-    return ages,Vfrxn,radii
+    return ages,Vfrxn,radii,peakT
 end
 
 function planetesimal_cooling_dates(p::NamedTuple;
@@ -187,20 +187,20 @@ function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector 
 
 # While the shell is warming...
             if T > Tᵢ
+# Record warmest temperature yet:
+                Tₚₖ = T
 # Ensure the shell remains chondritic (does not melt):
                 T > Tmax && (ages[i]=NaN; break)
 # Check whether the shell gets `HotEnough` (hotter than Tmin)
                 HotEnough = ifelse(T > Tmin,true,false)
-# Record warmest temperature yet:
-                Tₚₖ = T
 # compare T to Tc only if cooling (T < Tᵢ) & it got `HotEnough`
             elseif (T <= Tc) & HotEnough
                 ages[i] = tₐ_ + Δt*(j-1)  # log time only when T falls below Tc (calculated from Δt and timestep j)
-                peakT[i] = Tₚₖ
                 break               # kill loop
             end
             Tᵢ = T
         end # of j (time) loop
+        peakT[i] = Tₚₖ
     end     # of i (radius) loop
 end
 
