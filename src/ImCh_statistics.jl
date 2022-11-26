@@ -279,7 +279,7 @@ weight_petro_types!(v::AbstractArray,T::AbstractArray,d::AbstractArray,petrotype
 ```
 
 Reweight volumetric fractions relative to the abundance of each petrologic type in the meteorite record.
-Takes `Vector`s of volumetric fraction (`v`), peak temperature (`T`), and cooling date (`d`), as output by `PlntsmlAr`.
+Takes `Vector`s of volumetric fraction (`v`), peak temperature (`T`), and cooling date (`d`), as output by `planetesimal_cooling_dates`.
 Accounts for melted layers (`r` where `isnan(d[i])` is `true`), by finding `NaN`s in `d`, filling these elements of `v` with zeros.
 Requires all petrologic types to occupy at least one radial node, otherwise returns all `NaN`s in in `d`, which rejects the posterior in `MetropolisAr`
 

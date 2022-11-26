@@ -1,7 +1,7 @@
 ## Metropolis Function
 
 # Status function to keep user updated...
-function MetropolisStatus(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number;accpt::AbstractVector=[])
+function metropolis_status(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number;accpt::AbstractVector=[])
     println("---------------------------")
     stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
     println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
@@ -14,7 +14,7 @@ function MetropolisStatus(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,st
 end
 
 # The Metropolis algorithm applied to Ar-Ar measured thermal histories in meteorites
-function MetropolisAr(  p::NamedTuple,   # Parameter proposal
+function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         pσ::NamedTuple, # proposed σ for pertrubations.
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
@@ -87,7 +87,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
     distₚ = Vector{eltype(tₓr)}(undef,length(time_v))
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
-    dates,Vfrxn,radii,peakT = PlntsmlAr(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
+    dates,Vfrxn,radii,peakT = planetesimal_cooling_dates(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
 # If petrologic type temperatures and abundances are included, weight accordingly.
     weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 # Only calculate impact resetting if flux is positive and nonzero
@@ -123,7 +123,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
+            planetesimal_cooling_dates!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
 # If petrologic type temperatures and abundances are included, weight accordingly.
             weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 
@@ -163,13 +163,13 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Record new log likelihood
             ll = llₚ
         end
-        iszero(i%updateN) && ImpactChron.MetropolisStatus(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
+        iszero(i%updateN) && ImpactChron.metropolis_status(p,pvars,ll,i,burnin,"Burn In",start); flush(stdout)
     end
 
 # Hooray, we finished the burn-in, let's tell someone!
     println("===  BURN IN COMPLETE  ===\n\n")
     println("Post-Burn-In Status:")
-    ImpactChron.MetropolisStatus(p,pvars,ll,0,0,"",start)
+    ImpactChron.metropolis_status(p,pvars,ll,0,0,"",start)
     println("== == == == == == == == ==")
     println("Now beginning $nsteps Markov chain iterations...")
     flush(stdout)
@@ -190,7 +190,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
         if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            PlntsmlAr!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
+            planetesimal_cooling_dates!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
 # If petrologic type temperatures and abundances are included, weight accordingly.
             weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
 
@@ -237,7 +237,7 @@ function MetropolisAr(  p::NamedTuple,   # Parameter proposal
         end
 
         llDist[i] = ll
-        iszero(i%updateN) && ImpactChron.MetropolisStatus(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
+        iszero(i%updateN) && ImpactChron.metropolis_status(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
         iszero(archiveN) || iszero(i%archiveN) && Serialization.serialize("metropolis_archive_step_$i.js", (;acceptanceDist,llDist,pDist,prt) )
     end
     MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))

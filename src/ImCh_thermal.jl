@@ -1,6 +1,6 @@
 ## Thermal codes describing primary planetesimal cooling and impact reheating.
     # plntsml_Tz
-    # PlntsmlAr
+    # planetesimal_cooling_dates
     # ImpactResetAr
     # Impact shape functions: cone, pbla, hemi
 
@@ -56,7 +56,7 @@ end
 
 ## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
 
-function PlntsmlAr(;
+function planetesimal_cooling_dates(;
             nᵣ::Integer,          # Number of simulated radial distances
             Δt::Number = 0.01,    # absolute timestep, default 10 ka
             tmax::Number = 2000.,  # maximum time allowed to model
@@ -78,11 +78,11 @@ function PlntsmlAr(;
     Vfrxn=Array{float(typeof(R))}(undef,nᵣ)
     peakT=Array{float(typeof(To))}(undef,nᵣ)
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    PlntsmlAr!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+    planetesimal_cooling_dates!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
     return ages,Vfrxn,radii
 end
 
-function PlntsmlAr(p::NamedTuple;
+function planetesimal_cooling_dates(p::NamedTuple;
             nᵣ::Integer,          # Number of simulated radial distances
             Δt::Number = 0.01,    # absolute timestep, default 10 ka
             tmax::Number = 2000.,  # maximum time allowed to model
@@ -93,22 +93,22 @@ function PlntsmlAr(p::NamedTuple;
     peakT=Array{float(typeof(p.Tm))}(undef,nᵣ)
     R=exp(p.R)
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
-    PlntsmlAr!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
+    planetesimal_cooling_dates!(ages,Vfrxn,peakT,p,Tmax=Tmax,Tmin=Tmin,Δt=Δt,tmax=tmax,nᵣ=nᵣ)
     return ages,Vfrxn,radii,peakT
 end
 
 """
 ```julia
-function PlntsmlAr!(ages::AbstractArray, Vfrxn::AbstractArray,peakT::AbstractArray, p::NamedTuple;
+function planetesimal_cooling_dates!(ages::AbstractArray, Vfrxn::AbstractArray,peakT::AbstractArray, p::NamedTuple;
     nᵣ::Integer, Δt::Number, tmax::Number, Tmax::Number, Tmin::Number)
 ```
 
-In-place `PlntsmlAr` that updates `ages`, `Vfrxn`, and `peakT`.
+In-place `planetesimal_cooling_dates` that updates `ages`, `Vfrxn`, and `peakT`.
 
-see also `PlntsmlAr`
+see also `planetesimal_cooling_dates`
 """
 
-function PlntsmlAr!(ages::AbstractArray, #pre-allocated vector for cooling dates
+function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
     peakT::AbstractArray, # pre-allocated vector for each date's peak temperature
     p::NamedTuple;
@@ -237,7 +237,7 @@ based on impact/crater properties described in `c`.
 
 Depth-cooling age (relative) abundances are tracked in array `tₓr` (time x radial depth),
 with dimensions (time,radius) = (length(solartime),nᵣ),
-where `nᵣ` describes the number of radial nodes, as in the `PlntsmlAr` function.
+where `nᵣ` describes the number of radial nodes, as in the `planetesimal_cooling_dates` function.
 
 `impacts` and `tcoolₒ` are pre-allocated vectors that respectively record
 the number of impacts at each time step and the index of the primary cooling date in `solartime`.
@@ -387,7 +387,7 @@ Impact site morphologies may be described by a conical (`cone`),
 parabolic (`pbla`), or hemispheric (`hemi`) approximation.
 
 `Δt`, `tmax`, and `nᵣ` respectively define the timestep, model duration,
-and radial nodes, as in `PlntsmlAr` function.
+and radial nodes, as in `planetesimal_cooling_dates` function.
 
 Note that Vfrxn is overwritten.
 
