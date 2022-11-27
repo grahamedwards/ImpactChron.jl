@@ -205,6 +205,110 @@ function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector 
 end
 
 
+
+
+function planetesimal_cooling_timestep!(solartime::AbstractRange,
+    time_i::AbstractVector,
+    Vfrxn::AbstractVector,
+    peakT::AbstractVector,
+    p::NamedTuple;
+    nᵣ::Integer,          # Number of simulated radial distances
+    Tmax::Number,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
+    Tmin::Number=0.)       # minimum temperature (K)
+
+
+# Parameters
+    Tc = p.Tc            # closure temperature
+    tₛₛ = p.tss           # age of CAIs
+    rAlo = p.rAlo        # initial solar ²⁶Al/²⁷Al
+
+    Cₚ = exp(p.Cp)        # specific heat capacity
+    tₐ = exp(p.ta)       # accretion time
+    R = exp(p.R)         # body radius
+    To = exp(p.Tm)       # disk temperature (K) (lognormally distributed)
+    Al_conc = exp(p.cAl) # fractional abundance of Al (g/g) (lognormally distributed)
+    ρ = exp(p.ρ)         # rock density (lognormally distributed)
+    K = exp(p.k)         # thermal conductivity (lognormally distributed)
+
+    κ = K / (ρ*Cₚ)
+    s_a  = 3.155692608e7 # seconds per annum, for Physics™!
+
+# Assume ²⁶Al is primary heat producer
+    λ = 3.0634557591238076e-14 # = log(2) / 7.17e5 / s_a   # ²⁶Al decay constant in s⁻¹
+    H = 0.355     # Specific power production of ²⁶Al (W/kg; Castillo-Rogez+2009)
+
+# Time Management
+    tₐ_i = searchsortedfirst(solartime,tₐ)
+    tₐ_ = solartime[tₐ_i]  # The first timestep (after accretion) that is a multiple of Δt.
+    tₐadj = tₐ_-tₐ
+    planetesimal_time  = (tₐadj : step(solartime) : last(solartime) - tₐ_ ) * 1e6 * s_a # time in s (after accretion) adjusted for rounding in tₐ_
+
+# All parts of the body are at least accretion-aged (chondrule formation was high temperature)
+    fill!(time_i,tₐ_i)
+
+# Divide up the body into concentric `shells` with radial midpoints `radiii`
+    shells= LinRange(zero(R),R,nᵣ+1)
+    radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
+
+# Calculate proportional volumes of shells around each radial node
+    Vbody = R^3
+    Vo = 0.
+    @inbounds for z ∈ 1:nᵣ
+        Vz = shells[z+1]^3
+        Vfrxn[z] = ( Vz - Vo ) / Vbody
+        Vo=Vz
+    end
+
+
+# Initial ²⁶Al heat production
+    Aₒ = ρ * Al_conc * rAlo * H * exp(-λ * tₐ * 1e6 * s_a )
+
+    n=1:300 # Σ is an infinite summation, but get good returns on n=300
+
+    @batch for i = 1:nᵣ
+        Tᵢ = T = Tₚₖ = zero(To)
+        HotEnough = false
+        @inbounds for j = eachindex(planetesimal_time)
+
+            r = radii[i]
+            t = planetesimal_time[j]
+            Σ = zero(Float64)
+
+            @turbo for nᵢ ∈ n # tturbo -> turbo if use @batch above.
+                α = ifelse(isodd(nᵢ), -1.0, 1.0)
+                β = nᵢ*((nᵢ^2)-( λ*(R^2)/(κ*π^2) ) )
+                γ = sin(nᵢ*π*r/R)
+                δ = exp(-κ*(nᵢ^2)*(π^2)*t/(R^2))
+                Σ += (α / β ) * γ * δ
+            end
+
+            T = To +
+            (κ*Aₒ/(K*λ)) * exp(-λ*t) *
+            ( ( R*sin(r*(λ/κ)^0.5) / (r*sin(R*(λ/κ)^0.5)) ) - 1. ) +
+            (2.0*(R^3)*Aₒ/(r*K*π^3)) * Σ
+
+# While the shell is warming...
+            if T > Tᵢ
+# Record warmest temperature yet:
+                Tₚₖ = T
+# Check whether the shell gets `HotEnough` (hotter than Tmin)
+                HotEnough = ifelse(T > Tmin,true,false)
+# compare T to Tc only if cooling (T < Tᵢ) & it got `HotEnough`
+            elseif (T <= Tc) & HotEnough
+                time_i[i] = j + tₐ_i - 1 # Adjust index to solartime
+                break               # kill loop
+            end
+            Tᵢ = T
+        end # of j (time) loop
+# Record peak temperature.
+        peakT[i] = Tₚₖ
+# If the shell melted, exclude the achondritic volume from the body.
+        Vfrxn[i] = ifelse(Tₚₖ > Tmax,zero(eltype(Vfrxn)),Vfrxn[i])
+    end     # of i (radius) loop
+# Renormalize volume
+    chond_vol = vsum(Vfrxn)
+    Vfrxn ./= chond_vol
+end
 """
 
 ```julia
@@ -331,6 +435,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
             end
         end
     end
+#HOPEFULLY REMOVE THIS WITH CHANGES TO plntesimal_cooling_timestep!
 # Finally, re-noramlize everything to the body volume.
     @tturbo for r ∈ 1:nᵣ
         Vfᵣ = Vfrxn[r]/(Vwhole * Δt)
