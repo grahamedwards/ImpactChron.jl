@@ -355,8 +355,8 @@ Impact flux follows an exponential decay described by parameters in `p`:
 \np.Fχ ~ initial impact flux
 
 """
-function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impacts::AbstractArray,tcoolₒ::AbstractArray,
-                            dates::AbstractArray,Vfrxn::AbstractArray,
+function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcoolₒ::AbstractArray,Vfrxn::AbstractArray,
+                            impacts::AbstractArray,
                             p::NamedTuple,c::NamedTuple;
                             nᵣ::Integer,Δt::Number)
 
@@ -384,12 +384,8 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
 
 # Populate each shell with primary cooling date, unless its a melted (NaN-date) layer, then fill no primary cooling date (0 instead of 1)
     for i in 1:nᵣ
-        tᵢ = searchsortedfirst(solartime, dates[i]) # if dates[i] is NaN, tᵢ > length(solartime) and loops below won't run.
-        NaNdate = isnan(dates[i])
-        Vwhole += ifelse(NaNdate, zero(eltype(Vfrxn)), Vfrxn[i] )
-        tᵢ = ifelse(NaNdate,ntimes,tᵢ)
-        tcoolₒ[i]= tᵢ # Save index for excavation/reheating loops below
-        tₓr[tᵢ,i] = ifelse(NaNdate, zero(eltype(tₓr)), one(eltype(tₓr)) ) #Place 1 at primary cooling date in timeXradius array. This will be corrected for volume later. If NaNdate, then set to 0, excluded volume.
+        #Vwhole += Vfrxn[i]
+        tₓr[tcoolₒ[i],i] = Vfrxn[i] # one(eltype(tₓr))  #Place 1 at primary cooling date in timeXradius array. This will be corrected for volume later.
     end
 
 # Calculate "number" of impacts at each timestep
@@ -436,13 +432,13 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,impac
         end
     end
 #HOPEFULLY REMOVE THIS WITH CHANGES TO plntesimal_cooling_timestep!
-# Finally, re-noramlize everything to the body volume.
-    @tturbo for r ∈ 1:nᵣ
-        Vfᵣ = Vfrxn[r]/(Vwhole * Δt)
-        for t ∈ 1:ntimes
-            tₓr[t,r] *= Vfᵣ
-        end
-    end
+# Finally, re-normalize everything to the body volume.
+#    @tturbo for r ∈ 1:nᵣ
+#        Vfᵣ = Vfrxn[r]/(Vwhole * Δt)
+#        for t ∈ 1:ntimes
+#            tₓr[t,r] *= Vfᵣ
+#        end
+#    end
 end
 
 
