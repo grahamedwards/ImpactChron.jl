@@ -67,3 +67,16 @@ aliasing = ll_dist(ˡˡx,ˡˡy,μₐ,σₐ)
 @test no_aliasing ≈ -4.877525612777772
 @test aliasing ≈ -6.184401753353056
 @test (aliasing + no_aliasing) ≈ ll_dist(ˡˡx,ˡˡy,vcat(μₙₐ,μₐ),vcat(σₙₐ,σₐ))
+
+
+## Test weight_petro_types!
+
+types_wpt = (type3=(T=800., p=1/8), type4=(T=900,p=1/8), type5=(T=1000.,p=1/4), type6=(T=1200,p=1/2))
+V_wpt = [0., 0., 0.1,0.12,0.13,0.14,0.15,0.16,0.2]
+T_wpt = [1600.,1520, 1150, 1100, 980, 860, 840, 790, 745]
+
+ImpactChron.weight_petro_types!(V_wpt,T_wpt,types_wpt)
+
+# correct answer:
+wpt_6 = [0.1,0.12] .* (1/2)/.22; wpt_5 = .13 * (1/4)/.13; wpt_4 = [.14,.15] .* (1/8)/.29; wpt_3 = [.16,.2] .* (1/8)/.36
+@test V_wpt ≈ vcat([0.,0.], wpt_6,wpt_5,wpt_4,wpt_3)
