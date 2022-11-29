@@ -319,7 +319,7 @@ function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::Named
 # If all petrologic types do not occupy ≥1 layer, reject all dates. This thing's weird.
    else
       fill!(v,zero(eltype(v)))
-      printstyled("missing petrologic types\n"; color=:light_magenta);flush(stdout)
+      printstyled("missing petrologic types: "; color=:light_magenta);flush(stdout)
    end
    v
 end
