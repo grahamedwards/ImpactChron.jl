@@ -385,7 +385,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcool
 # Populate each shell with primary cooling date, unless its a melted (NaN-date) layer, then fill no primary cooling date (0 instead of 1)
     for i in 1:nᵣ
         #Vwhole += Vfrxn[i]
-        tₓr[tcoolₒ[i],i] = Vfrxn[i] # one(eltype(tₓr))  #Place 1 at primary cooling date in timeXradius array. This will be corrected for volume later.
+        tₓr[tcoolₒ[i],i] = Vfrxn[i]
     end
 
 # Calculate "number" of impacts at each timestep
@@ -417,21 +417,22 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcool
 
     @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
         x = ImpactChron.radius_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
-        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume *of layer* removed per impact. note: π removed for cancelling out Vbody
+        iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume *of layer* reset per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
 
         @inbounds for t ∈ (tₒ+1):ntimes # Model impact thermal history after primary cooling date
             if !iszero(impacts[t]) # see if there is an impact at time `t`
                 reheat = impacts[t] * iVfrxn # reheated fraction of layer
-                tₓr[t,r] = reheat = ifelse(reheat>1,one(reheat),reheat) # ensure the `reheat`ed fraction of layer does not exceed the volume of layer (may be an issue for large Δt)
+                reheat = ifelse(reheat>1,one(reheat),reheat) # ensure the `reheat`ed fraction of layer does not exceed the volume of layer
+                tₓr[t,r] =  reheat*Vfrxn[r] # scale reheated proportion of layer to proportion of body.
 
                 @turbo for i ∈ tₒ:(t-1) # for each preceding timestep
-                    tₓr[i,r] *= (1-reheat)
+                    tₓr[i,r] *= (1-reheat) # subtract the proportion `reheat`ed
                 end
             end
         end
     end
-#HOPEFULLY REMOVE THIS WITH CHANGES TO plntesimal_cooling_timestep!
+# NOT NEEDED AS LONG AS ϵ ERRORS STAY SMALL, OR IF EXCAVATION IS INCORPORATED
 # Finally, re-normalize everything to the body volume.
 #    @tturbo for r ∈ 1:nᵣ
 #        Vfᵣ = Vfrxn[r]/(Vwhole * Δt)
