@@ -11,6 +11,12 @@
 testrange = LinRange(1., 10., 9)
 @test testrange == rangemidbounds(rangemidpoints(testrange))
 
+## Test downscale!
+
+downscale_big = collect(1:90)
+downscale_small = zeros(Int,10)
+ImpactChron.downscale!(downscale_small,downscale_big)
+@test downscale_small == [5, 14, 23, 32, 41, 50, 59, 68, 77, 86]
 
 ## Test histogramify and histogramify!
 

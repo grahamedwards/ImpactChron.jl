@@ -78,7 +78,7 @@ function downscale!(B::AbstractArray{T}, A) where T
     @assert ratio*length(B) == length(A)
 
     iA₀, iB₀ = firstindex(A), firstindex(B)
-    @inbounds for i ∈ 0:length(B)-1
+    @inbounds for i ∈ eachindex(B).-1
         Bᵢ = zero(T)
         for n = 0:ratio-1
             Bᵢ += A[iA₀+i*ratio+n]
