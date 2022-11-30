@@ -1,12 +1,21 @@
-## Thermal codes describing primary planetesimal cooling and impact reheating.
-    # plntsml_Tz
-    # planetesimal_cooling_dates
-    # ImpactResetAr
-    # Impact shape functions: cone, pbla, hemi
+# # # # # # # # # # # # # # # # # # # # # # # # #
+#            ImCh_thermal.jl                    #
+#                                               #
+# Thermal codes describing primary planetesimal #   
+# cooling and impact reheating.                 #
+#                                               #   
+#   planetesimal_temperature                    #   
+#   planetesimal_cooling_dates                  #    
+#   planetesimal_cooling_timestep               #   
+#   impact_reset_array                          #
+#   radius_at_depth                             #
+# # # # # # # # # # # # # # # # # # # # # # # # #
+
 
 """
+
 ```julia
-function plntsml_temperature(time::AbstractArray, radii::AbstractArray; To::Float64, Ao::Float64, λ::Float64, K::Float64, κ::Float64 )
+function planetesimal_temperature(time::AbstractArray, radii::AbstractArray; To::Float64, Ao::Float64, λ::Float64, K::Float64, κ::Float64 )
 ```
 
 Calculates the evolution of temperature at a range of depths defined
@@ -19,7 +28,7 @@ and
 [Hevey & Sanders (2006)](http://doi.wiley.com/10.1111/j.1945-5100.2006.tb00195.x)
 
 """
-function plntsml_temperature(time::AbstractArray,radii::AbstractArray;
+function planetesimal_temperature(time::AbstractArray,radii::AbstractArray;
     To::Float64,
     Ao::Float64,
     λ::Float64,
@@ -30,8 +39,8 @@ function plntsml_temperature(time::AbstractArray,radii::AbstractArray;
     R = last(radii)
     n=1:300
 
-    @inbounds for i = 1:length(radii)
-        @inbounds for j = 1:length(time)
+    @inbounds for i = eachindex(radii)
+        @inbounds for j = eachindex(time)
             r = radii[i]
             t = time[j]
 
@@ -54,11 +63,41 @@ function plntsml_temperature(time::AbstractArray,radii::AbstractArray;
     return T
 end
 
-## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
 
+
+## Simulate the Ar-Ar cooling dates and their abundances for a planetesimal
+"""
+
+```julia
+planetesimal_cooling_dates(p::NamedTuple; nᵣ, Δt, tmax, Tmax, Tmin)
+```
+
+Returns an `NTuple{4,Vector}` containing (in this order) the thermochronologic cooling dates (Ma after CAIs) and corresponding volume fractions, radial depths (km from center), and peak temperatures (K) of `nᵣ` evenly spaced nodes in a spherical body. 
+
+Physical and environmental parameters are described in `p`. Alternatively, these parameters may be individually listed in lieu of ϕ. These parameters are outlined in the table below. **Note** that several of these parameters need to be entered as the natural logarithm of the value for easy compatibility with the inversion function.
+
+`Δt` gives the timestep (in Ma), `tmax`` describes the duration of the model (Ma after CAIs), and `Tmax` and `Tmin` define the maximum and minimum temperatures (K) allowed for chondritic material in the body. Default values are only given for `tmax` (2000 Ma), `Tmax` (1500 K), and `Tmin` (0 K).
+
+
+    | Parameter                 | log?  | `NmTpl` | `func`  |
+    | ------------------------- | ----  | ------ | -------- |
+    | closure temperature (K)   | no    | `Tc`   | `Tc`     |
+    | solar system age (Ma)     | no    | `tss`  | `tₛₛ`    |
+    | initial ²⁶Al/²⁷Al         | no    | `rAlo` | `rAlo`   |
+    | body radius (m)           | yes   | `R`    | `R`      |
+    | accretion date (Ma)       | yes   | `ta`   | `tₐ`     |
+    | disk temperature (K)      | yes   | `Tm`   | `To`     |
+    | [Al] (g/g)                | yes   | `cAl`  | `Al_conc`|
+    | density (kg/m³)           | yes   | `k`    | `K`      |
+    | thermal diffusivity       | yes   | `ρ`    | `ρ`      |
+    | spec. heat capacity       | yes   | `Cp`   | `Cₚ`     |
+    | ------------------------- | ----  | ------ | -------- |
+
+see also: `planetesimal_cooling_dates!`
+"""
 function planetesimal_cooling_dates(;
             nᵣ::Integer,          # Number of simulated radial distances
-            Δt::Number = 0.01,    # absolute timestep, default 10 ka
+            Δt::Number,    # absolute timestep in Ma
             tmax::Number = 2000.,  # maximum time allowed to model
             Tmax::Number = 1500.,  # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
             Tmin::Number=0.,
@@ -83,11 +122,11 @@ function planetesimal_cooling_dates(;
 end
 
 function planetesimal_cooling_dates(p::NamedTuple;
-            nᵣ::Integer,          # Number of simulated radial distances
-            Δt::Number = 0.01,    # absolute timestep, default 10 ka
-            tmax::Number = 2000.,  # maximum time allowed to model
-            Tmax::Number = 1500.,  # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
-            Tmin::Number = 0.)       # minimum temperature (K)
+            nᵣ::Integer,            # Number of simulated radial distances
+            Δt::Number,             # absolute timestep, default 10 ka
+            tmax::Number = 2000.,   # maximum time allowed to model
+            Tmax::Number = 1500.,   # maximum temperature (solidus after 1200C max solidus in Johnson+2016)
+            Tmin::Number = 0.)      # minimum temperature (K)
     ages=Array{float(typeof(p.tss))}(undef,nᵣ)
     Vfrxn=Array{float(typeof(p.R))}(undef,nᵣ)
     peakT=Array{float(typeof(p.Tm))}(undef,nᵣ)
@@ -97,7 +136,10 @@ function planetesimal_cooling_dates(p::NamedTuple;
     return ages,Vfrxn,radii,peakT
 end
 
+
+
 """
+
 ```julia
 function planetesimal_cooling_dates!(ages::AbstractArray, Vfrxn::AbstractArray,peakT::AbstractArray, p::NamedTuple;
     nᵣ::Integer, Δt::Number, tmax::Number, Tmax::Number, Tmin::Number)
@@ -107,16 +149,15 @@ In-place `planetesimal_cooling_dates` that updates `ages`, `Vfrxn`, and `peakT`.
 
 see also `planetesimal_cooling_dates`
 """
-
 function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
     peakT::AbstractArray, # pre-allocated vector for each date's peak temperature
     p::NamedTuple;
     nᵣ::Integer,          # Number of simulated radial distances
-    Δt::Number = 0.1,    # absolute timestep, default 10 ka
-    tmax::Number = 2000.,  # maximum time allowed to model
-    Tmax::Number = 1500.,  # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
-    Tmin::Number=0.)       # minimum temperature (K)
+    Δt::Number,           # absolute timestep in Ma
+    tmax::Number = 2000., # maximum time allowed to model
+    Tmax::Number = 1500., # maximum temperature (K, solidus after 1200C max solidus in Johnson+2016)
+    Tmin::Number=0.)      # minimum temperature (K)
 
     Tc = p.Tc            # closure temperature
     tₛₛ = p.tss           # age of CAIs
@@ -166,7 +207,7 @@ function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector 
     @batch for i = 1:nᵣ
         Tᵢ = T = Tₚₖ = zero(To)
         HotEnough = false
-        @inbounds for j = 1:length(time)
+        @inbounds for j = eachindex(time)
 
             r = radii[i]
             t = time[j]
@@ -202,11 +243,19 @@ function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector 
         end # of j (time) loop
         peakT[i] = Tₚₖ
     end     # of i (radius) loop
+    ages
 end
 
+"""
 
+```julia
+function planetesimal_cooling_timestep!(solartime::AbstractRange, time_i::Vector, Vfrxn::Vector, peakT::Vector, p::NamedTuple; nᵣ, Tmax, Tmin)
+```
 
+Returns thermochronologic cooling dates in `time_i` as indices of `solartime`, along with corresponding volumetric fractions (`Vfrxn`) and peak temperatures in K (`peakT`) for `nᵣ` nodes in a body with planetesimal and environmental parameters given in `p`. `Tmax` and `Tmin` respectively describe the maximum and minimum temperatures allowed in the chondritic planetesimal. Failing to exceed `Tmin` gives the date of accretion, and exceeding `Tmax` sets the volumetric fraction to zero (achondritic).
 
+see also: `planetesimal_cooling_dates`, `planetesimal_cooling_dates!`
+"""
 function planetesimal_cooling_timestep!(solartime::AbstractRange,
     time_i::AbstractVector,
     Vfrxn::AbstractVector,
@@ -330,17 +379,17 @@ end
 """
 
 ```julia
-impact_reset_array!(tₓr::AbstractArray, solartime::AbstractRange, impacts::AbstractArray, tcoolₒ::AbstractArray,
-                            dates::AbstractArray,Vfrxn::AbstractArray,
-                            p::NamedTuple,c::NamedTuple;
+function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcoolₒ::AbstractArray,Vfrxn::AbstractArray,
+                                impacts::AbstractArray,
+                                p::NamedTuple,c::NamedTuple;
                                 nᵣ::Integer,Δt::Number)
 ```
-Simulates an impact history from -χ parameters in `p` (below), and resets Ar-Ar
-primary planetesimal cooling `dates` and fractional volumes (`Vfraxn`)
+Simulates an impact history from -χ parameters in `p` (below), and resets
+primary planetesimal cooling dates (indices of dates in `solartime` in `tcoolₒ`) and fractional volumes (`Vfraxn`)
 based on impact/crater properties described in `c`.
 
 Depth-cooling age (relative) abundances are tracked in array `tₓr` (time x radial depth),
-with dimensions (time,radius) = (length(solartime),nᵣ),
+with dimensions `(time,radius) = (length(solartime),nᵣ)`,
 where `nᵣ` describes the number of radial nodes, as in the `planetesimal_cooling_dates` function.
 
 `impacts` and `tcoolₒ` are pre-allocated vectors that respectively record
