@@ -14,9 +14,12 @@ testrange = LinRange(1., 10., 9)
 ## Test downscale!
 
 downscale_big = collect(1:90)
+no_downscale = similar(downscale_big)
 downscale_small = zeros(Int,10)
 ImpactChron.downscale!(downscale_small,downscale_big)
+ImpactChron.downscale!(no_downscale,downscale_big)
 @test downscale_small == [5, 14, 23, 32, 41, 50, 59, 68, 77, 86]
+@test downscale_big == no_downscale
 
 ## Test histogramify and histogramify!
 

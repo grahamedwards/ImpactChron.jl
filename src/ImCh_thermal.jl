@@ -510,6 +510,32 @@ radius_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -
 radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.r*x.r - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes z=r
 
 
+
+function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::NamedTuple, crater::NamedTuple; nᵣ::Number, Tmax::Number, Tmin::Number, melt_reject::Number=0.1)
+# Calculate cooling history 
+    planetesimal_cooling_timestep!(a.t, a.cooltime,a.Vfrxn, a.peakT, p, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
+# If petrologic type temperatures and abundances are included, weight accordingly.
+    petrotypes.weight && ImpactChron.weight_petro_types!(a.Vfrxn,a.peakT,petrotypes)
+    
+# If ≥10% of interior radius melts, reject proposal
+    if iszero(a.Vfrxn[ceil(Int,nᵣ*melt_reject)])
+        printstyled("(meltdown) rejected\n"; color=:light_magenta);flush(stdout)
+        a.agedist .= zero(eltype(a.agedist))
+# Only calculate impact resetting if flux is positive and nonzero
+    elseif (0 < p.Fχα) | (0 < p.Fχβ)
+        impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, crater, nᵣ=nᵣ,Δt=step(a.t))
+        a.agedist .= vec(vsum(a.txr,dims=2))
+    else
+        a.agedist .= zero(eltype(a.agedist))
+        @tturbo for j = eachindex(a.cooltime)
+            a.agedist[a.cooltime[j]] = a.Vfrxn[j]
+        end
+    end
+# Downscale age distribution
+    ImpactChron.downscale!(a.agedist_downscaled, a.agedist)
+end
+
+
 """
 This is the old ImpactRestAr. Needs to be largely rewritten to a framework similar to ImpactResetArray.
 Most importantly, replace probabilistic maths with number of hits at each timestep maths.

@@ -14,13 +14,13 @@ using Serialization
 #using Random; #rng = MersenneTwister()
 #using Distributions
 
-export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere
+export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere, AsteroidHistory
 include("ImCh_parameters.jl")
 
-export  rangemidpoints, rangemidbounds,turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist
+export  rangemidpoints, rangemidbounds,turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist, ll_dist_params
 include("ImCh_statistics.jl")
 
-export plntsml_Tz, planetesimal_cooling_dates, planetesimal_cooling_dates!, impact_reset_array!, nan_regolith!
+export plntsml_Tz, planetesimal_cooling_dates, planetesimal_cooling_dates!, impact_reset_array!, asteroid_agedist!
 include("ImCh_thermal.jl")
 
 export thermochron_metropolis

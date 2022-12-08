@@ -1,6 +1,6 @@
 ## Test functions in ImCh_thermal.jl
     # radius_at_depth
-    # Plntsml_Tz
+    #
 
 """
     radius_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
@@ -9,6 +9,7 @@
     nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
 """
 
+using ImpactChron # safetestset
 
 tss=4567.3
 rAlo=5.23e-5
@@ -52,8 +53,8 @@ ImpactChron.planetesimal_cooling_timestep!(t☼,tcool,vₜₛ,Tₜₛ,ϕ, nᵣ=n
 
 ## Test impact reheating
 
-# Use a new timestep for a straightforward `downscale!`-ing.
-t☼_ = 0:timestep:(time_max-timestep)
+# Use a new timestep. 
+t☼_ = 0:20:400
 
 # Add impact parameters to proposal.
 ϕᵢ = (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k, tχα=60., τχα=50., Fχα=3., tχβ=0., τχβ=63., Fχβ=9.)
@@ -66,12 +67,35 @@ impact_log = similar(t☼_)
 dᵢ = 15_000.; dᵪ = dᵢ *5 ; zᵪ = dᵪ * 2/3; reheat_shape = ImpactChron.Parabola(zᵪ,dᵪ/2)
 crater=(; reheat_shape)
 
+# Overwrite primary cooling with new timesteps
+ImpactChron.planetesimal_cooling_timestep!(t☼_,tcool,vₜₛ,Tₜₛ,ϕ, nᵣ=nodes,Tmax=temp_max,Tmin=temp_min)
 
-impact_reset_array!(A, t☼_, tcool, vₜₛ, impact_log, ϕᵢ, crater, nᵣ=nodes, Δt=timestep)
-# Downscale for a manageable answer to compare to.
-downscale_factor=50
-downscaled_dist = similar(A,length(t☼_)÷downscale_factor)
-downscaled_t = ImpactChron.vmean(t☼[1:1+downscale_factor]):timestep*downscale_factor:last(t☼_)
-ImpactChron.downscale!(downscaled_dist,ImpactChron.vsum(A,dims=2))
+impact_reset_array!(A, t☼_, tcool, vₜₛ, impact_log, ϕᵢ, crater, nᵣ=nodes, Δt=step(t☼_))
 
-@test downscaled_dist ≈ [4.1677162453204115e-5, 0.004255482308962428, 0.007958292069041006, 0.00354887738698084, 0.0021886930241194562, 0.0011000550601722842, 0.0005076995088130945, 0.00022672524693345312, 0.00010016291460124349, 4.417349286112023e-5, 1.9515337408869523e-5, 8.646487653005138e-6]
+@test isapprox(vec(ImpactChron.vsum(A,dims=2)), [0.0, 0.0, 0.0, 0.0, 0.03904, 0.18619, 0.23539, 0.14912, 0.09822, 0.07544, 0.06407, 0.04467, 0.03404, 0.02867, 0.0147, 0.01508, 0.00764, 0.00773, 0.0, 0.0, 0.0], atol = 2e-5)
+
+
+# Combining everything into `asteroid_agedist!`
+AH = AsteroidHistory(ϕᵢ.R, nnodes=nodes, Δt=timestep,tmax=600, downscale_factor=50)
+
+# Melted Condition
+asteroid_agedist!(AH,ϕᵢ,(; weight=false),crater; nᵣ=nodes, Tmax=temp_max, Tmin=temp_min, melt_reject=0.1)
+
+@test AH.agedist_downscaled == zero(AH.agedist_downscaled)
+
+# Impact Reset
+asteroid_agedist!(AH,ϕᵢ,(; weight=false),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+
+@test isapprox(AH.agedist_downscaled, [4.1411e-5, 0.0042482, 0.0079689, 0.0035466, 0.0021881, 0.0010999, 0.00050767, 0.00022672, 0.00010016, 4.4173e-5, 1.9515e-5, 8.6465e-6], rtol=1e-4)
+
+# One Impact Flux
+ϕ₁ = perturb(ϕᵢ,:Fχα,0.)
+asteroid_agedist!(AH,ϕ₁,(; weight=false),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+
+@test isapprox(AH.agedist_downscaled, [0.00030836, 0.0057676, 0.0079282, 0.002803, 0.0016347, 0.00083097, 0.00039634, 0.00018361, 8.3942e-5, 3.8147e-5, 1.7288e-5, 7.8255e-6], rtol=1e-4) 
+
+# No Impacts
+ϕ₂ = perturb(ϕ₁,:Fχβ,0.)
+asteroid_agedist!(AH,ϕ₂,(; weight=false),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+
+@test isapprox(AH.agedist_downscaled, [0.00976, 0.00592, 0.00432, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], rtol=1e-4)
