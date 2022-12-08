@@ -272,6 +272,33 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
 end
 
 
+
+"""
+
+```julia
+function ll_dist_params(a::AsteroidHistory, p, plims, mu,sig)
+```
+
+Calculate the combined log-likelihood that 
+
+1. Observations with mean `mu` and corresponding 1σ uncertainties `sig` (both `::Array`) are drawn from the downscaled age distribution and timesteps contained in `a` (`::AsteroidHistory`)
+
+2. The proposal parameters `p` used to calculate this history are drawn from the prior distributions `plims` (both `::NamedTuple`)
+
+If the age distribution is all zero, quickly returns a log-liklihood of `-∞`
+
+"""
+function ll_dist_params(a::AsteroidHistory, p::NamedTuple, plims::NamedTuple, mu::AbstractArray,sig::AbstractArray)
+# Calculate log-likelihood, skipping if already `-Inf`
+    if iszero(a.agedist_downscaled)
+        ll =-Inf
+    else
+        ll = ll_dist(a.t_downscaled, a.agedist_downscaled, mu, sig) + ll_params(p,plims)
+    end
+    ll
+end
+
+
 """
 
 ```julia

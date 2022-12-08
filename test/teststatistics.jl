@@ -77,6 +77,17 @@ aliasing = ll_dist(ˡˡx,ˡˡy,μₐ,σₐ)
 @test aliasing ≈ -6.184401753353056
 @test (aliasing + no_aliasing) ≈ ll_dist(ˡˡx,ˡˡy,vcat(μₙₐ,μₐ),vcat(σₙₐ,σₐ))
 
+## Test ll_dist_params
+
+ah_lldp = AsteroidHistory(ϕ.R,nnodes=3, Δt=.2,tmax=10.,downscale_factor=1)
+
+# Ensure zeroed agedist returns -Inf
+ah_lldp.agedist_downscaled .= zero(eltype(ˡˡy))
+@test ll_dist_params(ah_lldp, ϕ,ϕdist, μₙₐ,σₙₐ) === -Inf
+
+# test summing of two ll_ functions.
+ah_lldp.agedist_downscaled .= ˡˡy
+@test ll_dist_params(ah_lldp, ϕ,ϕdist, μₙₐ,σₙₐ) === ll_dist(ˡˡx,ˡˡy,μₙₐ,σₙₐ) + ll_params(ϕ,ϕdist)
 
 ## Test weight_petro_types!
 
