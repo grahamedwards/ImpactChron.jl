@@ -13,6 +13,9 @@ function metropolis_status(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,s
     println("---------------------------")
 end
 
+
+
+
 # The Metropolis algorithm applied to Ar-Ar measured thermal histories in meteorites
 function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         pσ::NamedTuple, # proposed σ for pertrubations.
@@ -20,7 +23,7 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray, # Observed 1σ's
                         crater::NamedTuple; # crater/impact parameters
-                        plims::NamedTuple=(g=(),), # Paramter distributions.
+                        plims::NamedTuple=(;), # Paramter distributions.
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int,  # Post burn-in iterations
                         Δt::Number= 1.,    # Time-step (Ma)
@@ -30,90 +33,60 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         nᵣ::Integer=100,    # Radial nodes
                         updateN::Integer=1_000, # Frequency of status updates (every `updateN` steps)
                         archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
-                        downscale::Integer=0, # Downscale high-res timesteps to `downscale`-times fewer bins
-                        petrotypes::NamedTuple=(x=1,)) # petrologic types, each with max Temp and rel. abundances in record
+                        downscale::Integer=1, # Downscale high-res timesteps to `downscale`-times fewer bins
+                        petrotypes::NamedTuple=(weight=false,)) # petrologic types, each with max Temp and rel. abundances in record
 
-# Prepare output Distributions
+# PREPARE OUTPUT DISTRIBUTIONS
     acceptanceDist = falses(nsteps)
     nᵥ = length(pvars)
     llDist = Array{float(eltype(mu))}(undef,nsteps) # Vector to track loglikelihood
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ) # Array to track proposal evolutions
     prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
 
-# Turn petrologic type weighting on (true) or off (false)
-    weighttypes = ifelse(isa(petrotypes[1],NamedTuple), true, false)
-# Make sure proportions in petrotypes sums to unity.
-    weighttypes && @assert isone(sum(petrotypes[i].p for i ∈ eachindex(petrotypes)))
-# Time Management:
-# Declare age variable: the comprehensive timeseries of the model solar system history.
-    # First ensure that age of CAIs (tₛₛ) is constant
-    :tss ∉ pvars || error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
+# Prepare AsteroidHistory 
 
-    if iszero(downscale) # If a downscale value is declared (≠0), make sure length of time_r and time_ll are divisible.
-        time_r = time_ll = 0:Δt:tmax
-    else
-        if (0 >= p.Fχα) & (0 >= p.Fχβ); error("Downscaling without the array framework is not supported") end
-        downscale_adj = length(0:Δt:tmax)%downscale
-        tmax = tmax-downscale_adj*Δt
-        iszero(downscale_adj) || @warn "time range adjusted for downscale to 0:Δt(=$Δt):$tmax"
-        time_r = 0:Δt:tmax
-        time_ll = vmean(time_r[1:1+downscale]):Δt*downscale:tmax
-    end
+ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=downscale)
 
-    time_v = collect(time_r)
-# Calculate bound values for age_range
-    time_bounds = rangemidbounds(time_r)
-    #age_bounds = rangemidbounds(age)
-# Deal with statistical bounds of proposal variables
-# If no plims given, set infinite ranges to explore the studio space.
-    plims[1] == () && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
-# Check that all proposed parameters do not violate uniform distribution bounds
+# PETROLOGIC TYPE WEIGHTING
+    # Make sure proportions in petrotypes sums to unity.
+    petrotypes.weight && @assert isone(sum(petrotypes[i].p for i ∈ [:type3,:type4,:type5,:type6]))
+
+# TIME MANAGEMENT
+    # Ensure that age of CAIs (tₛₛ) is constant
+    :tss ∈ pvars && error("tₛₛ must be a constant (:tss ∉ pvars) for time array framework to function properly")
+
+# CHECK BOUNDS OF PROPOSAL VARIABLES
+    # If no plims given, set infinite ranges to explore the studio space.
+    isempty(plims) && ( plims = (;zip(pvars,fill(Unf(-Inf,Inf),length(pvars)))...) )
+    # Check that uniformly distributed proposals do not violate their bounds.
     for i ∈ keys(plims)
         isa(plims[i],Unf) && ( plims[i].a <= p[i] <= plims[i].b || error("Initial proposal for $i exceeds permissible bounds ($(plims[i].a),$(plims[i].b))") )
     end
 
-# standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
-    stepfactor = 2.9
 
-# Sort the dataset from youngest to oldest
+    stepfactor = 2.9 # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
+
+# SORT OBSERVED COOLING AGE DATASET (for ll_dist function)
     sI = sortperm(mu)
     mu_sorted = p.tss .- mu[sI] # Sort means as dates in Ma after CAIs
     sigma_sorted = sigma[sI] # Sort uncertainty
 
-# These quantities will be used more than once
-    tₓr = Array{eltype(mu_sorted)}(undef,length(time_v),nᵣ) # time x radial position array to be used in impact resetting scheme
-    impacts = Vector{Float64}(undef,length(time_v)) # tracker of # of impacts at each timestep
-    tcoolₒ = Vector{Int64}(undef,nᵣ) # tracker of indices of primary cooling date in age and time columns of tₓr
-    distₚ = Vector{eltype(tₓr)}(undef,length(time_v))
 # Calculate initial proposal distribution
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
-    dates,Vfrxn,radii,peakT = planetesimal_cooling_dates(pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
-# If petrologic type temperatures and abundances are included, weight accordingly.
-    weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
-# Only calculate impact resetting if flux is positive and nonzero
-    if (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
-        nan_regolith!(dates,peakT,Tmin) # Replace insufficiently heated (unsintered/regolith) material with NaNs.
-        histogramify!(distₚ,time_bounds,dates,Vfrxn)
-    else
-        impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
-        if iszero(downscale)
-            distₚ .= vsum(tₓr,dims=2)
-        else
-            distₚ = Vector{eltype(tₓr)}(undef,length(time_ll))
-            ImpactChron.downscale!(distₚ,vsum(tₓr,dims=2))
-        end
-    end
-# Log likelihood of initial proposal
-    ll = llₚ = ll_dist(time_ll, distₚ, mu_sorted, sigma_sorted) + ll_params(p,plims)
 
+# Calculate asteroid thermochronologic history
+    asteroid_agedist!(ah, pₚ, petrotypes, crater,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
+# Log likelihood of initial proposal
+    ll = llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
+    
 # Start the clock
     start = time()
 
-    # Burnin
-    #@inbounds
-    for i = 1:burnin
-# Start with fresh slate of parameters
-        #copyto!(pₚ, p)
+# ~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~
+
+## Burnin
+    @inbounds for i = 1:burnin
 
 # Adjust one parameter
         k = rand(pvars)
@@ -121,37 +94,14 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
         pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
-# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            planetesimal_cooling_dates!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
-# If petrologic type temperatures and abundances are included, weight accordingly.
-            weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
-
-# If >10% of interior radius melts, reject proposal
-            if isnan(dates[div(nᵣ,10)])
-                printstyled("meltdown rejected\n"; color=:light_magenta);flush(stdout)
-                fill!(distₚ,zero(eltype(distₚ)))
-# Only calculate impact resetting if flux is positive and nonzero
-            elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
-                nan_regolith!(dates,peakT,Tmin) # Replace insufficiently heated (unsintered/regolith) material with NaNs.
-                histogramify!(distₚ,time_bounds,dates,Vfrxn)
-            else
-                impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
-                if iszero(downscale)
-                    distₚ .= vsum(tₓr,dims=2)
-                else
-                    ImpactChron.downscale!(distₚ,vsum(tₓr,dims=2))
-                end
-            end
-# Ensure the returned distribution is nonzero
-            if vreduce(+,distₚ) > 0 # actually faster than iszero() when there's lots of zeros
-                llₚ = ll_dist(time_ll, distₚ , mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
-            else
-                llₚ=-Inf
-            end
-# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
-        else
+        if isa(plims[k], Unf) && !(plims[k].a < pₚ[k] < plims[k].b)
+# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k].a , plims[k].b )
             llₚ = -Inf
+        else
+# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
+            asteroid_agedist!(ah, pₚ, petrotypes, crater,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
+# Log likelihood of initial proposal
+            llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
         end
 
 # Decide to accept or reject the proposal
@@ -174,9 +124,11 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
     println("Now beginning $nsteps Markov chain iterations...")
     flush(stdout)
 
-    # Step through each of the N steps in the Markov chain
-    #@inbounds
-    for i=1:nsteps
+# ~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~
+
+# Step through each of the nsteps in the Markov chain
+    @inbounds for i=1:nsteps
 
         # Start with fresh slate of parameters
         #copyto!(pₚ, p)
@@ -188,51 +140,28 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
         pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if !isa(plims[k], Unf) || plims[k].a < getproperty(pₚ,k) < plims[k].b
-# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            planetesimal_cooling_dates!(dates, Vfrxn, peakT, pₚ, Δt=Δt, tmax=tmax, nᵣ=nᵣ, Tmax=Tmax, Tmin=0.)
-# If petrologic type temperatures and abundances are included, weight accordingly.
-            weighttypes && ImpactChron.weight_petro_types!(Vfrxn,peakT,dates,petrotypes)
-
-# If >10% of interior radius melts, reject proposal
-            if isnan(dates[div(nᵣ,10)])
-                printstyled("meltdown rejected\n"; color=:light_magenta); flush(stdout)
-                fill!(distₚ,zero(eltype(distₚ)))
-# Only calculate impact resetting if flux is positive and nonzero
-            elseif (0 >= pₚ.Fχα) & (0 >= pₚ.Fχβ)
-                nan_regolith!(dates,peakT,Tmin) # Replace insufficiently heated (unsintered/regolith) material with NaNs.
-                histogramify!(distₚ,time_bounds,dates,Vfrxn)
-            else
-                impact_reset_array!(tₓr, time_v, impacts, tcoolₒ, dates, Vfrxn, pₚ, crater, nᵣ=nᵣ,Δt=Δt)
-                if iszero(downscale)
-                    distₚ .= vsum(tₓr,dims=2)
-                else
-                    ImpactChron.downscale!(distₚ,vsum(tₓr,dims=2))
-                end
-            end
-# Ensure the returned distribution is nonzero
-            if vreduce(+,distₚ) > 0
-                llₚ = ll_dist(time_ll, distₚ, mu_sorted, sigma_sorted) + ll_params(pₚ,plims)
-            else
-                llₚ=-Inf
-            end
-# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k][1] , plims[k][2] )
-        else
+        if isa(plims[k], Unf) && !(plims[k].a < pₚ[k] < plims[k].b)
+# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k].a , plims[k].b )
             llₚ = -Inf
+        else
+# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
+            asteroid_agedist!(ah, pₚ, petrotypes, crater,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
+# Log likelihood of initial proposal
+            llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
         end
 
 # Decide to accept or reject the proposal
         if log(rand()) < (llₚ-ll)
 # Record new step sigma
-            pσ = perturb(pσ,k,abs(δpₖ)*stepfactor) #setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
+            pσ = perturb(pσ,k,abs(δpₖ)*stepfactor) 
 # Record new parameters
-            p = pₚ  #copyto!(p, pₚ)
+            p = pₚ  
 # Record new log likelihood
             ll = llₚ
             acceptanceDist[i]=true
         end
 
-        for j = 1:nᵥ
+        @inbounds for j = 1:nᵥ
             pDist[i,j] = p[pvars[j]] #getproperty(p,pvars[j])
         end
 
@@ -240,7 +169,7 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
         iszero(i%updateN) && ImpactChron.metropolis_status(p,pvars,ll,i,nsteps,"Main Chain",start,accpt=acceptanceDist); flush(stdout)
         iszero(archiveN) || iszero(i%archiveN) && Serialization.serialize("metropolis_archive_step_$i.js", (;acceptanceDist,llDist,pDist,prt) )
     end
-    MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ 1:length(pvars))
+    MetOut = Dict{Symbol,Any}((pvars[i],pDist[:,i]) for i ∈ eachindex(pvars))
     for x ∈ keys(plims)
 # Record proposal values of unvaried parameters
         in(x,pvars) || (MetOut[x]= p[x])
