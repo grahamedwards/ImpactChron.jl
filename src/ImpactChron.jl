@@ -15,18 +15,18 @@ using Serialization
 #using Distributions
 
 export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere, AsteroidHistory
-include("ImCh_parameters.jl")
+include("parameters.jl")
 
 export  rangemidpoints, rangemidbounds,turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist, ll_dist_params
-include("ImCh_statistics.jl")
+include("statistics.jl")
 
 export plntsml_Tz, planetesimal_cooling_dates, planetesimal_cooling_dates!, impact_reset_array!, asteroid_agedist!
-include("ImCh_thermal.jl")
+include("thermal.jl")
 
 export thermochron_metropolis
-include("ImCh_metropolis.jl")
+include("metropolis.jl")
 
 export nt2csv, dict2csv, data2csv, csv2nt, csv2dict
-include("ImCh_data_save_load.jl")
+include("datasaveload.jl")
 
 end
