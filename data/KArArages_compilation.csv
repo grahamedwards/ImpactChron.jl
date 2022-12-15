@@ -1,0 +1,201 @@
+name,group,type,ageMa,sigma,lambda,source,srclocation,notes
+Charsonville,H,6,270,30,H74,Boga1976,p. 5669,Ar-Ar low-temperature plateau age
+Kimble County,H,6,610,50,H74,Boga1976,pg. 5670,"Ar-Ar plateau age (46% 39Ar release, 800-1200C)"
+Sutton,H,5,4600,20,H74,Boga1976,pg. 5667,Ar-Ar plateau age (61% of 39Ar release)
+Sweetwater,H,5,290,90,H74,Boga1976,p. 5669,Ar-Ar low-temperature plateau age
+Ucera,H,5,50,20,H74,Boga1976,p. 5669,"Ar-Ar plateau age (61% of 39Ar release), chosen over an inferred 40±30 Ma date"
+Wellington,H,5,4520,30,H74,Boga1976,pg. 5667,Ar-Ar age (71% of 39Ar release)
+Channing,H,5,4300,215,H74,Boga1976,"Table 2, pg. 5670","K-Ar age, for Ar-Ar spectra with broad plateau,  assume 10% 2sigma "
+Wellman,H,5,4298.36,13.45,SJ77,Boga1980,recalculated,"Recalculated in this study: mean for 500≤T≤1350C, Boga1980, pg. 1671"
+Monahans,H,5,4533,6,SJ77,Boga2001,pg. 110,Monahans light. Selected over halite and dark phases that reflect regolith and may have diffusively lost 40Ar
+Portales Valley,H,6,4467.5,9.7,SJ77,Boga2009,recalculated,Recalculated in this study: mean of PV#1 and PV#2 dates reported in abstract (which just overlap at 1sigma)
+DaG 896,H,im,3704,17.7,SJ77,Folc2004,pg. 2379,"Ar-Ar age of last 2 steps of heating (weighted mean, 13% of 39Ar). Interpreted as melt crystallization age."
+Orvinio,H,6,4246.4,47.8,SJ77,Grie2004,recalculated,"Recalculated in this study: mean and uncertainty of plateau of melt sample OMA5 (1100-1350C fractions): Grie2004, Table A4, pg. 1491"
+Yamato 74640,H,"5,6",4407,71,SJ77,Kane1979,"Table 2, pg. 200",Plateau age of 1000-1350C fraction (61% released 39Ar)
+Plainview,H,5,3630,70,SJ77,Keil1980,pg. 243,"Lithic fragment, mean of 5 extractions (21-87%), no reliable age for host rock"
+Dhofar 323,H,5,4508,9,SJ77,Koro2008,p. A491,Ar-Ar age of melt clast. Indistinguishable from host material dated in a separate abstract
+Yanzhuang,H,6,4090,40,SJ77,Kunz1997,"Table 3, pg. 650","Plateau age of melt fragment (49% of 39Ar, 1400-1530 C) "
+Rose City,H,5,3620,10,SJ77,Kunz1997,"Table 3, pg. 650",Plateau age of melt fraction (58% of 39Ar)
+Travis County,H,5,830,30,SJ77,Kunz1997,"Table 3, pg. 650","Higher-temperature (1230 C, 50% of 39Ar) plateau age of whole rock"
+Jilin,H,5,3943.3,59.3,SJ77,Mull1985,recalculated,"Mean of Ar-Ar plateau ages for samples 1-2, 1-4, VI-42-04 (Table 3, p. 279) which very nearly overlap at 1sigma."
+Didwana-Rajod,H,5,4530,226.5,SJ77,Pali2001,"Table 5, pg. 1253","K-Ar age, assume 10% 2sigma"
+Achilles,H,5,4650,232.5,T69,Rowe1965,pg. 1201,"K-Ar age, assume 10% 2sigma"
+Weston,H,4,4300,215,T69,Schu1972,"Table 3, pg. 406","Mean K-Ar age of 3 fractions, assume 10% 2sigma (2sigma originally 400 Ma)"
+St Mesmin (H clast),H,im,1360,68,T69,Schu1977,"Table 2, pg. 759","K-Ar age, assume 10% 2sigma (2sigma originally 100 Ma)"
+Seres,H,4,1600,80,T69,Srin1977,"Table 4, pg. 979","K-Ar age, assume 10% 2sigma"
+Malotas,H,5,4100,205,T69,Srin1977,"Table 4, pg. 979","K-Ar age, assume 10% 2sigma"
+Yamato 75100,H,6,4490,70,SJ77,Swin2009,"Table 2, pg. 759","Precise Ar-Ar age of melt veins, first estimate reported by Swin2008"
+Ourique,H,4,4478,26,SJ77,Swin2009,pg. 755,"Ar-Ar age of summed extractions in recoil dominated age spectrum (Ourique G, melt sample). Author's preferred age of impact."
+LAP 031125,H,im,3942,23,SJ77,Swin2009,pg. 754,Mean of Ar-Ar plateau ages (n=3)
+LAP 02240,H,im,3939,62,SJ77,Swin2009,pg. 753,"Average of high-temp plateaus (3 samples), overlaps each individual age at 1sigma"
+NWA 2058,H,im,509,105,SJ77,Swin2009,pg. 755,Ar-Ar low-temperature plateau age aggregated from n=2 fractions
+Gao-Guenie,H,5,303,56,SJ77,Swin2009,pg. 751,"Ar-Ar low-temperature plateau age aggregated from n=3 fractions, evidence of partial degassing across all high-temperature steps."
+LAP 03922,H,im,399,27,SJ77,Swin2009,pg. 753,"Ar-Ar low-temperature plateau age aggregated from n=2 fractions, evidence of partial degassing at all high-temperature steps"
+LAP 031308,H,im,752,47,SJ77,Swin2009,pg. 754,"Ar-Ar low-temperature plateau age aggregated from n=2 fractions, evidence of partial degassing at all high-temperature steps"
+Nio,H,"3,4",4820,241,SJ77,Taka1989,"Table 7, pg. 939","K-Ar age, assume 10% 2sigma (2sigma originally 480 Ma)"
+Kesen,H,4,4080,230,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Numakai,H,4,4240,240,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Tomiya,H,"4,5",4760,250,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Sone,H,5,3410,220,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Takenouchi,H,5,3530,220,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Kamiomi,H,5,3140,260,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Okabe,H,5,4050,250,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Ogi,H,6,4240,230,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Higashi-Koen,H,5,4250,270,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Tulia,H,"3,4",457,24,SJ77,Trie1994,"para. 2, pg. 542 abstract",Ar-Ar low-temperature partial plateau age
+Ste Marguerite,H,4,4532,16,SJ77,Trie2003,"Table 1, pg. 504",Whole rock Ar-Ar plateau age (93% of 39Ar)
+Allegan,H,5,4511,11,SJ77,Trie2003,"Table 1, pg. 504",Whole rock Ar-Ar summed age (100% of 39Ar)
+Richardton,H,5,4495,11,SJ77,Trie2003,"Table 1, pg. 504",Whole rock Ar-Ar summed age (100% of 39Ar)
+Nadiabondi,H,5,4505,10,SJ77,Trie2003,"Table 1, pg. 504",Whole rock Ar-Ar summed age (100% of 39Ar)
+Guarena,H,6,4454,6,SJ77,Trie2003,"Table 1, pg. 504","Mean of plateau ages in whole rock, feldspar and pyroxene separates"
+Kernouve,H,6,4469,6,SJ77,Trie2003,"Table 1, pg. 504","Mean of plateau ages in whole rock, feldspar and pyroxene separates"
+Estacado,H,6,4435,5,SJ77,Trie2003,"Table 1, pg. 504","Mean of plateau ages in whole rock, feldspar and pyroxene separates"
+Forest Vale,H,4,4522,8,SJ77,Trie2003,"Table 1, pg. 504",Whole rock Ar-Ar plateau age (40% of 39Ar)
+Mount Browne,H,6,4430,30,SJ77,Turn1978,pg. 1010,Ar-Ar reduced plateau age. Overlaps plateau age at 3sigma (4500 ± 30 Ma)
+Queen's Mercy,H,6,4420,30,SJ77,Turn1978,pg. 1009,Reduced plateau age. Just overlaps plateau age at 2sigma (4490 ± 30 Ma)
+Menow,H,4,4480,30,SJ77,Turn1978,pg. 1006,Ar-Ar high-temperature plateau age
+Ochansk,H,4,4450,40,SJ77,Turn1978,pg. 1006,Ar-Ar reduced plateau age. Overlaps plateau age at 1sigma (4480 ± 30 Ma)
+Butsura,H,6,4480,30,SJ77,Turn1978,pg. 1008,"Ar-Ar age: identical summed extraction, plateau, and reduced plateau ages"
+Tieschitz,"H,L",3,4450,50,SJ77,Turn1978,"Fig 2, pg. 1005",Ar-Ar total/summed age; age spectrum indicates dominance of recoil in variability.
+Zag,H,"3,4,5,6",4270,42,SJ77,Whit2000,recalculated,Recalculated in this study: mean of overlapping light phases and gray matrix Ar-Ar plateau ages.
+ALH A77226,H,4,4190,10,SJ77,Step1988,"Table 1, pg. 374",Reduced plateau age
+RKP A78002,H,4,4390,10,SJ77,Step1988,"Table 1, pg. 374","Reduced plateau age, consistent with constituent chondrule ages"
+PAT 91501,L,im,4466,1.2,SJ77,Bene2008,pg. 2422,Isochron
+Malakal,L,5,50,20,H74,Boga1976,p.5668,Ar-Ar reheating plateau (41% of 39Ar at 700-800C)
+Wethersfield,L,6,510,20,H74,Boga1976,p.5668,Ar-Ar reheating low-temperature plateau age (64% of 39Ar)
+Louisville,L,6,500,25,SJ77,Boga1980,pg. 1671,"Low-temperature plateau, no uncertainty given, assume 10% 2sigma"
+Wickenburg,L,5,520,26,SJ77,Boga1980,pg. 1673,"Isochron age of extractions under 1250C, no uncertainty given, assume 10% 2sigma"
+Leedey,L,6,3950,197.5,SJ77,Boga1987,pg. 2040,"Average age of reference (not experimentally shocked) sample, no uncertainty given, assume 10% 2sigma"
+Point of Rocks,L,6,590,29.5,SJ77,Boga1990,pg. 103,"Total Ar age of melt sample, assume 10% 2sigma"
+Farmington,L,5,510,40,SJ77,Boga1995,"Table 2, pg. 259",Age reported by Boga1980 with uncertainty
+Kendleton,L,4,3480,60,SJ77,Boga1995abs,p. 141,Quasi-plateau age (50-100% of 39Ar release)
+Chico,L,6,563.3,19.1,SJ77,Boga1995chico,recalculated,"Recalculated in this study: mean of n=3 isochron-derived dates of melt samples (overlapping at 1sigma), fig. 8 pg 1393. Chondritic host is significantly older."
+Guangnan,L,6,142,14,SJ77,Eugs1988,"Table 4, pg. 27",K-Ar age
+Yamato 74190,L,6,357.4,32.4,SJ77,Kane1979,"Table 2, pg. 200","Plateau age (600-880 C, 46% 39Ar released)"
+ALHA77015,L,3,4514,48,SJ77,Kane1980,"Table 2, pg. 185","Plateau age (900-1200C, 27%), although there is another age from ALH A77015, this is from a different study and potential shock heterogeneity may account for different dates in different samples."
+Yamato 74191,L,3,4500,225,SJ77,Kane1981,"Fig. 1, p. 256","Apparent isochron age, assume 10% 2sigma"
+Yamato 75097,L,6,497.3,2,SJ77,Kane1988,recalculated,"Mean age  800-900C fractions, majority of released Ar, Kane1988, pg. 208, Table 1"
+Bluff,L,5,491,31,SJ77,Koro2007,"Table 2, pg. 119",Plateau age corrected for trapped Ar
+Mbale,L,"5,6",479,7,SJ77,Koro2007,"Table 2, pg. 119",Plateau age corrected for trapped Ar
+Paranaiba,L,6,467,6,SJ77,Koro2007,"Table 2, pg. 119",Plateau age corrected for trapped Ar
+Taiban,L,6,502,14,SJ77,Koro2007,"Table 2, pg. 119",Combined age of two partial plateaus corrected for trapped Ar
+Ghubara,L,5,465,6,SJ77,Koro2007,"Table 2, pg. 119",Plateau age of melt corrected for trapped Ar. Overlaps at 1sigma with xenolith plateau age.
+Cat Mountain,L,5,879,42,SJ77,Krin1996,pg. 29362,"Low-temperature plateau, (7 extractions from 600-1000 C)"
+Alfianello,L,6,1050,60,SJ77,Kunz1997,"Table 3, pg. 650",Low-temperature plateau age (12% of 39Ar)
+McKinney,L,4,520,20,SJ77,Kunz1997,pg. 653,"Low-temperature plateau age (55% of 39Ar, 480-700 C)"
+Walters,L,6,3150,10,SJ77,Kunz1997,"Table 3, pg. 650","Plateau age of host rock (35% of 39Ar, 800-930 C)"
+Peace River,L,6,450,30,SJ77,Mcco1988,"pg. 2487, abstract",Mean low-temperature plateau age of n=3 matrix samples.
+NWA 869,L,4,4402,7,SJ77,Metz2011,Fig. 14,plateau age of type 4 chondrite clast  M-05-38-2-b
+Yamato 793241,L,6,4270,213.5,SJ77,Naka1994,pg. 130,"K-Ar age, assume 10% 2sigma (reported 2sigma is 340 Ma)"
+Bjurbole,"L,LL",4,4479.8,7.7,SJ77,Park2016,Fig. 1,Well-defined plateau age of chondrule c1 (c2 had poorly defined plateau)
+La Lande,L,5,900,45,SJ77,Rowe1965,pg. 1201,"K-Ar age, assume 10% 2sigma"
+Bovedy,L,3,940,47,SJ77,Rubi1981,"Fig. 7, pg. 2220","isochron age of lithic fragment, assume 10% 2sigma"
+Park,L,6,4492.6,4.75,uSJ77,Ruzi2015,p. 230,"preliminary date from pers comm, chosen over a concurrent date in abstract that appears to just add 30 Ma"
+Pierceville,L,6,3600,180,T69,Srin1977,"Table 4, pg. 979","K-Ar age, assume 10% 2sigma"
+Ladder Creek,L,6,3900,195,T69,Srin1977,"Table 4, pg. 979","K-Ar age, assume 10% 2sigma"
+"ALH A77015, 77167, 77249, 77260",L,3,3747.5,11.5,SJ77,Step1988,recalculated,"Recalculated in this study: Mean of reduced plateau ages for a group of paired L3 meteorites: ALH A77015, 77167, 77249, 77260 . Step1988, Table 1, pg. 374. Dates also reported in Boga1995."
+ALH 78003,L,6,396,10,SJ77,Swin2011,"Table 1, abstract",Plateau age of host + melt
+Yamato 74445,L,6,715,9,SJ77,Swin2011,"Table 1, abstract",Plateau age of melt + host
+Fukutomi,L,5,3490,220,SJ77,Taka1989,"Table 7, pg. 939","K-Ar age (melted rather than step-heated,  consistent with other samples measured in this study)"
+Tane,L,5,4250,230,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Nogata,L,6,4750,240,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Kyushu,L,6,730,90,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Nagai,L,6,2860,270,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Duwun,L,6,1050,110,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Shibayama,L,6,2160,180,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Aomori,L,6,2560,190,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Kokubunji,L,6,4190,230,SJ77,Taka1989,"Table 7, pg. 939",K-Ar age
+Barratta,L,4,470,50,T69,Turn1969,"Table 1, pg. 414",K-Ar age
+Marion (Iowa),L,6,4380,11.5,T69,Turn1969,recalculated,"Recalculated in this study: mean of all Ar-Ar extractions >500 C, Turn1969, Table 2, pg. 416"
+Barwell,L,5,4430,30,SJ77,Turn1978,"Table 5, pg. 1015",Reduced plateau age
+Shaw,L,7,4410,21.2,SJ77,Turn1978,recalculated,"Recalculated in this study: Mean of reduced plateau ages of samples #1 and #2. Turn1978, Table 5, pg. 1015. Chosen over imprecise date in Boga1980 with poor monitor data quality."
+Saratov,L,4,4440,30,SJ77,Turn1978,"Table 5, pg. 1015",Whole-rock Ar-Ar age (no plateau age)
+Tsarev,L,5,650,50,SJ77,Minh1984,para. 5,"Apparent age plateau of 4 extractions (45% of 39Ar, 700-1000 C)"
+MIL 05029,L,im,4517.3,10.7,SJ77,Weir2010,"Table 5, pg. 1879",Weighted average of 3 samples' raw plateau ages
+NWA 091,L,6,475.4,5.9,uSJ77,Weir2012,"Table 1, pg. 1330",Final plateau
+Gold Basin,L,4,400,100,SJ77,Welt2003,pg. 169,K-Ar age
+LAP 031047,L,im,100,55,SJ77,Witt2011,pg. 6152,Summed Ar-Ar ages of n=3 extractions with no definitive plateau.
+Oberlin,LL,5,420,30,H74,Boga1976,"Table 2, 5670","Ar-Ar low-temperature plateau age (45% 39Ar, 625-725C)"
+MIL 99301,LL,6,4230,30,SJ77,Dixo2004,"Table 2, pg. 3784",Lower temperature pseudoplateau (15-78%)
+QUE 97028,LL,5,4340,20,SJ77,Dixo2004,"Table 2, pg. 3784",Pseudoplateau age for 10 extractions (9-79%); likely time of last major degassing
+Savtschenskoje,LL,4,4050,80,SJ77,Dixo2004,"Table 2, pg. 3784",Pseudoplateau age at high temps (70-85%)
+"DOM 85505, 23",LL,5,3910,70,SJ77,Dixo2004,"Table 2, pg. 3784",Pseudoplateau age of 5 extractions (52-82%)
+Morokweng Fossil,LL,6,625,163,SJ77,Jour2010,pg. 1740,Inverse isochron age of all extractions except first and last
+ALHA 77304,LL,3,4503,52,SJ77,Kane1980,"Table 2, pg. 185","Plateau age (1100-1650C, 46%)"
+Yamato 75258,LL,6,4337,14,SJ77,Kane1981,"Table 2, pg. 260",Plateau age of 900-1300C fractions (61.1% released 39Ar)
+"Yamato 790397, 790723, 790519,  790064, 790143, 790345",LL,im,1248.333333,62.41666667,SJ77,Okan1990,Table 5,"mean of K-Ar ages (1320, 1310, 1310, 1260, 1030, 1260, Ma), assume 10% 2sigma"
+Yamato 74442,LL,4,3970,198.5,SJ77,Okan1990,Table 5,"K-Ar gas retention age, assume 10% 2sigma"
+Chainpur,LL,3,4600,230,T69,Podo1971,pg. 172,"Approximate isochron age of chondrules, plus 10% 2sigma uncertainty"
+Ragland,LL,3,2800,140,SJ77,Recc1986,pg. 225,"Approximate K-Ar age. No uncertainty given, assume 10% 2sigma"
+LAP 04581,LL,5,4175,20,SJ77,Rubi2011,pg. 591,unweighted plateau age
+Acfer 066,LL,"3,4,5,6",4000,200,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 091,LL,"5,6",4000,200,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 112,LL,"4,5,6",3900,195,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 124,LL,"5,6",3700,185,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 160,LL,"3,4,5,6",4000,200,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 175,LL,"5,6",4200,210,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 193,LL,"4,5,6",4000,200,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 251,LL,"5,6",3900,195,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Acfer 268,LL,"4,5,6",4100,205,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 052,LL,"5,6",3100,155,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 056,LL,6,800,40,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 057,LL,"5,6",2900,145,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 060,LL,6,4500,225,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 062,LL,"4,5,6",4300,215,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 085,LL,6,4200,210,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 093,LL,3,4500,225,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+HaH 096,LL,3,2100,105,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+DaG 061,LL,"5,6",4600,230,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+DaG 062,LL,"5,6",4800,240,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Adrar 003,"LL,L",3,4300,215,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+Tanezrouft 010,"LL,L",3,4100,205,SJ77,Sche1998,"Table 2, pg. 261","K-Ar gas retention age, assume 10% 2sigma"
+St Mesmin,LL,6,4400,260,T69,Schu1977,"pg. 363, abstract",K-Ar age of all clasts
+NWA 1701,LL,im,970,80,SJ77,Swin2014,"Table 3, p. 342","Plateau age of melt, no plateau age of clasts. Impact melt was more degassed than clasts. See Swin2006"
+Yamato 790964,LL,im,1260.3,15.1,SJ77,Taki1987,recalculated,"Recalculated in this study: mean of plateau ages, Taki1987, pg. 135"
+Yamato 790448,LL,3,4492,20,SJ77,Taki1987,pg. 139,Plateau age of sample 75 (interior portion of rock) 600-900C fraction (74.5%)
+St Severin,LL,6,4345,14,SJ77,Trie1989,recalculated,Recalculated in this study: mean of light and dark plateau ages
+Uden,LL,7,4130,10,SJ77,Trie1989,"para. 3, abstract",Reduced plateau age
+Bhola,LL,"3,4,5,6",4231,16,SJ77,Trie1994,"para. 2, pg. 541 abstract",Well-defined age  plateau; possible total resetting
+Trebbin,LL,6,4370,18,SJ77,Trie2007,recalculated,"Recalculated in this study: mean of upper and lower bound ages, subtracted 30 Ma to remove bias correction. Trie2007, para. 2"
+ALH 78109,LL,5,4390,20,SJ77,Trie2007,recalculated,"Recalculated in this study: subtracted 30 Ma to remove bias correction. Trie2007, para. 2"
+ALH 84027,LL,7,4350,20,SJ77,Trie2007,recalculated,"Recalculated in this study: subtracted 30 Ma to remove bias correction. Trie2007, para. 2"
+Appley Bridge,LL,6,3900,195,SJ77,Turn1973,pg. 447,"Ar-Ar major outgassing, no uncertainty reported, assume 10% 2sigma"
+Olivenza,LL,5,4440,40,SJ77,Turn1978,"Table 5, pg. 1015",Reduced plateau age to account for high temperature age decrease
+LAR 06298,LL,im,1240,170,SJ77,Weir2009,"results, abstract",3 high precision steps of plateau
+Abee,EH,4,4502,9,SJ77,Boga1983,recalculated,"Recalculated in this study: mean and uncertainty of 600-1000C fractions (plateau) in sample 2,2: Boga1993, Table 1, pg. 134-135"
+Khairpur,EL,6,4530,226.5,SJ77,Boga2010,pg. 727,Authors state that uncertainty (1sigma=20 Ma) is not rigorous. Assume 10% 2sigma.
+Hvittis Clast,EL,6,4544,18,SJ77,Boga2010,"Table 2, pg. 728",Plateau age of 9 extractions (10-51% of 39Ar)
+Pillistfer,EL,6,4541,41,SJ77,Boga2010,"Table 2, pg. 728",Plateau age of 7 extractions (10-39% of 39Ar)
+Parsa Clast,EH,3,4527,17,SJ77,Boga2010,pg. 729,Ar-Ar plateau age (44-94% of 39Ar)
+Blithfield,EL,6,4514,20,SJ77,Boga2010,pg. 728,"Ar-Ar plateau age (18-94% of 39Ar), overlaps with isochron date"
+Zaklodzie,E,im,4503,9,SJ77,Boga2010,pg. 732,"Ar-Ar plateau age for steps with similar K/Ca (minimal recoil effects, 30-65% of 39Ar)"
+Daniel's Kuil,EL,6,4490,20,SJ77,Boga2010,"Table 1, pg. 725",Ar-Ar age reported by Kenn1981 (PhD thesis)
+Forrest,EL,6,4350,13,SJ77,Boga2010,"p. 731, appendix","Quasi-plateau age, reheating event. Initial closure agge (4460 Ma) may be artifact."
+Indarch,EH,4,4249,13,SJ77,Boga2010,pg. 732,Plateau age (29–83% of 39Ar). Chosen over Hopp+ 2014 dates from isochrons with negative/forced intercepts.
+QUE 97348,E,im,4444,17,SJ77,Boga2010,pg. 732,"Average age of 13 extractions (17-80%), likely paired with QUE 97289 which is excluded and is not reported with a discrete date."
+St Marks,EH,5,3800,300,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age from noble gas data of Zähringer 1962
+Adhi Kot,EH,4,4400,300,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age from noble gas data from Zähringer 1968
+Bethune,EH,"4,5",600,100,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age
+South Oman,EH,"4,5",4200,300,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age
+Yamato 69001,EH,"4,5",1600,200,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age from noble gas data from Shima et al. 1973
+Atlanta,EL,6,4300,215,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age (assume 10% 2sigma)
+Jajh deh Kot Lalu,EL,6,4100,300,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age
+North West Forrest,EL,6,4400,220,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age (assume 10% 2sigma)
+Yilmia ,EL,6,4800,300,SJ77,Crab1981,"Table 5, pg. 2447",K-Ar age
+St. Sauveur,EH,5,3620,181,SJ77,Crab1981,"Table 5, pg. 2447",Ar-Ar age from noble gas data from Crab1981 and Kenn1981. Assume 10% 2sigma
+LAP 02225,EH,im,4532,9,SJ77,Hopp2014,"Table 1, pg. 362",Isochron age of 12 extractions (840-1280C)
+LON 94100,EL,6,4499,15,SJ77,Hopp2014,"Table 1, pg. 362",Isochron age of 11 extractions (600-1000C)
+TIL 91714,EL,5,4483,9,SJ77,Hopp2014,"Table 1, pg. 362",Isochron age of 13 extractions (960-1280C)
+ALH A81021,EL,6,4493,9,SJ77,Hopp2014,"Table 1, pg. 362",Isochron age of 9 extractions (1110-1300C)
+Neuschwanstein,EL,6,4480,14,SJ77,Hopp2014,"Table 1, pg. 362",Isochron age of 12 extractions (1090-1320C)
+MAC 88136,EL,3,4454,9,SJ77,Hopp2014,"Table 1, pg. 362","Isochron age of 9 extractions (920-1290C), negative intercept forced to pass through origin. 4454 in text, 4452 in table. Assuming text more recently updated."
+EET 96135,EH,"4,5",4491,65,SJ77,Hopp2014,"Table 1, pg. 362",Isochron age of 5 extractions (600-700C). Best fitting regression.
+Sahara 97096,EH,3,2288,69,SJ77,Hopp2014,"Table 1, pg. 362","Isochron age defined by 3 extractions (1090-1170C); lots of degassing, severely lowered ages"
+Happy Canyon,EL,im,4530,20,SJ77,Mcco1995,pg. 171,"High-temperature phase plateau age of 5 extractions (40% of Ar). Represents last major degassing event, presumably the impact melting event"
+Ilafegh 009,EL,im,4390,219.5,SJ77,Mcco1995,pg. 171,Authors conclude age lies between 4340-4440 Ma. We take average and add 10% 2sigma
+NWA 4799,EH,im,4220.7,8.8,uSJ77,Udry2019,pg. 12,Isochron age
+NWA 7214,EH,im,4484.7,3.5,uSJ77,Udry2019,pg. 12,Isochron age
+NWA 7809,EH,im,4463,10,uSJ77,Udry2019,pg. 12,Isochron age
+NWA 11071,EH,im,4499.4,5,uSJ77,Udry2019,pg. 12,Isochron age
+Rumuruti,R,"3,4,5,6",4460,11.2,SJ77,Dixo2003,recalculated,"Recalculated in this study: Mean of the two overlapping, preferred Ar-Ar dates, Dixo2003, Table 3, pg. 345"
+Acfer 217,R,"3,4,5",4300,70,SJ77,Dixo2003,"Table 3, pg. 345",Plateau age of 9 extractions (50-80%)

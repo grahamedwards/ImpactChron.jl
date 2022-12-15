@@ -29,4 +29,7 @@ include("metropolis.jl")
 export nt2csv, dict2csv, data2csv, csv2nt, csv2dict
 include("datasaveload.jl")
 
+export agerecal,mcmean
+include("agerecal.jl")
+
 end
