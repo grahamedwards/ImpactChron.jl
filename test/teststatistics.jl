@@ -91,7 +91,9 @@ ah_lldp.agedist_downscaled .= ˡˡy
 
 ## Test weight_petro_types!
 
-types_wpt = (type3=(T=800., p=1/8), type4=(T=900,p=1/8), type5=(T=1000.,p=1/4), type6=(T=1200,p=1/2))
+type_temps = (T3=800.,T4=900.,T5=1000.,T6=1200)
+types_wpt = PetroTypes(type_temps, ["3,4","5","5,6","6","6","6" ]) 
+
 V_wpt = [0., 0., 0.1,0.12,0.13,0.14,0.15,0.16,0.2]
 T_wpt = [1600.,1520, 1150, 1100, 980, 860, 840, 790, 745]
 

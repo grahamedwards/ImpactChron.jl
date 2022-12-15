@@ -14,7 +14,7 @@ using Serialization
 #using Random; #rng = MersenneTwister()
 #using Distributions
 
-export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere, AsteroidHistory
+export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere, AsteroidHistory, PetroTypes
 include("parameters.jl")
 
 export  rangemidpoints, rangemidbounds,turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist, ll_dist_params

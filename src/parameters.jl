@@ -65,6 +65,58 @@ struct Hemisphere{T<:Number}
 end
 
 
+## Petrologic Type Temperatures and Proportions
+
+struct TempProp{T<:AbstractFloat}
+    T::T
+    p::T
+end
+
+
+"""
+
+```julia
+PetroTypes(temps::NamedTuple,samples::Vector{String})
+```
+
+`struct` containing fields of `type3`-`type6`, reflecting petrologic types, each with subfilds `T` (maximum temperature in K) and `p` (proportion among the chondrite record). Note that `p`s sum to unity.
+
+Constructor takes a `NamedTuple` containing maximum temperatures as fields `T3`-`T6` and a `Vector{String}` containing the petrologic types corresponding to chondrites used as a prior.
+
+If no argument given --  `PetroTypes()` -- returns zeroed `type_` fields and `weight=false`, which short-circuits weighting by petrologic type. 
+
+"""
+struct PetroTypes
+    type3::TempProp
+    type4::TempProp
+    type5::TempProp
+    type6::TempProp
+    weight::Bool
+end
+
+function PetroTypes(temps::NamedTuple,samples::Vector{String})
+    n3 = count(contains.(samples,"3"))
+    n4 = count(contains.(samples,"4"))
+    n5 = count(contains.(samples,"5"))
+    n6 = count(contains.(samples,"6"))
+
+    n = n3+n4+n5+n6
+
+    t3 = ImpactChron.TempProp(float(temps.T3),n3/n)
+    t4 = ImpactChron.TempProp(float(temps.T4),n4/n)
+    t5 = ImpactChron.TempProp(float(temps.T5),n5/n)
+    t6 = ImpactChron.TempProp(float(temps.T6),n6/n)
+
+    @assert isone(t3.p+t4.p+t5.p+t6.p)
+
+    return PetroTypes(t3,t4,t5,t6,true)
+end
+
+function PetroTypes()
+    x = ImpactChron.TempProp(0.,0.)
+    PetroTypes(x,x,x,x,false)
+end
+
 """
 
 ```julia

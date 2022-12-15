@@ -79,23 +79,23 @@ impact_reset_array!(A, t☼_, tcool, vₜₛ, impact_log, ϕᵢ, crater, nᵣ=no
 AH = AsteroidHistory(ϕᵢ.R, nnodes=nodes, Δt=timestep,tmax=600, downscale_factor=50)
 
 # Melted Condition
-asteroid_agedist!(AH,ϕᵢ,(; weight=false),crater; nᵣ=nodes, Tmax=temp_max, Tmin=temp_min, melt_reject=0.1)
+asteroid_agedist!(AH,ϕᵢ,PetroTypes(),crater; nᵣ=nodes, Tmax=temp_max, Tmin=temp_min, melt_reject=0.1)
 
 @test AH.agedist_downscaled == zero(AH.agedist_downscaled)
 
 # Impact Reset
-asteroid_agedist!(AH,ϕᵢ,(; weight=false),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+asteroid_agedist!(AH,ϕᵢ,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
 
 @test isapprox(AH.agedist_downscaled, [4.1411e-5, 0.0042482, 0.0079689, 0.0035466, 0.0021881, 0.0010999, 0.00050767, 0.00022672, 0.00010016, 4.4173e-5, 1.9515e-5, 8.6465e-6], rtol=1e-4)
 
 # One Impact Flux
 ϕ₁ = perturb(ϕᵢ,:Fχα,0.)
-asteroid_agedist!(AH,ϕ₁,(; weight=false),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+asteroid_agedist!(AH,ϕ₁,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
 
 @test isapprox(AH.agedist_downscaled, [0.00030836, 0.0057676, 0.0079282, 0.002803, 0.0016347, 0.00083097, 0.00039634, 0.00018361, 8.3942e-5, 3.8147e-5, 1.7288e-5, 7.8255e-6], rtol=1e-4) 
 
 # No Impacts
 ϕ₂ = perturb(ϕ₁,:Fχβ,0.)
-asteroid_agedist!(AH,ϕ₂,(; weight=false),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+asteroid_agedist!(AH,ϕ₂,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
 
 @test isapprox(AH.agedist_downscaled, [0.00976, 0.00592, 0.00432, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], rtol=1e-4)

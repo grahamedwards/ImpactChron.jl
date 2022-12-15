@@ -511,7 +511,7 @@ radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.r*x.r - (rᵢ-
 
 
 
-function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::NamedTuple, crater::NamedTuple; nᵣ::Number, Tmax::Number, Tmin::Number, melt_reject::Number=0.1)
+function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroTypes, crater::NamedTuple; nᵣ::Number, Tmax::Number, Tmin::Number, melt_reject::Number=0.1)
 # Calculate cooling history 
     planetesimal_cooling_timestep!(a.t, a.cooltime,a.Vfrxn, a.peakT, p, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # If petrologic type temperatures and abundances are included, weight accordingly.

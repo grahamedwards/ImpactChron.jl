@@ -34,7 +34,7 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         updateN::Integer=1_000, # Frequency of status updates (every `updateN` steps)
                         archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
                         downscale::Integer=1, # Downscale high-res timesteps to `downscale`-times fewer bins
-                        petrotypes::NamedTuple=(weight=false,)) # petrologic types, each with max Temp and rel. abundances in record
+                        petrotypes::PetroTypes=PetroTypes()) # petrologic types, each with max Temp and rel. abundances in record
 
 # PREPARE OUTPUT DISTRIBUTIONS
     acceptanceDist = falses(nsteps)
@@ -46,10 +46,6 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
 # Prepare AsteroidHistory 
 
 ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=downscale)
-
-# PETROLOGIC TYPE WEIGHTING
-    # Make sure proportions in petrotypes sums to unity.
-    petrotypes.weight && @assert isone(sum(petrotypes[i].p for i ∈ [:type3,:type4,:type5,:type6]))
 
 # TIME MANAGEMENT
     # Ensure that age of CAIs (tₛₛ) is constant

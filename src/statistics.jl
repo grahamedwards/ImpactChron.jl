@@ -314,7 +314,7 @@ Requires all petrologic types to occupy at least one radial node, otherwise retu
 
 
 """
-function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::NamedTuple)
+function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::PetroTypes)
 # Find first non-melted index (volume fraction > 0)
    imelt = findfirst(!iszero,v) 
 
