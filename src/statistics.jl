@@ -318,13 +318,13 @@ function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::Petro
 # Find first non-melted index (volume fraction > 0)
    imelt = findfirst(!iszero,v) 
 
-# Find the indices where temperatures exceed each petrologic type (except type 6)
+# Find the indices where temperatures are < max temp of petrologic type (except type 6)
    i3 = findfirst(x -> x<=petrotypes.type3.T, T)
    i4 = findfirst(x -> x<=petrotypes.type4.T, T)
    i5 = findfirst(x -> x<=petrotypes.type5.T, T)
 
-# Require all petrologic types to occupy at least one layer
-   if !isnothing(imelt) && lastindex(T) >= i3 > i4 > i5 > imelt
+# Require all petrologic types to occur and occupy at least one layer. 
+   if !isnothing(i3) && lastindex(T) >= i3 > i4 > i5 > imelt
    # Calculate and apply the conversion between fractional volume of body and fractional abundance in the meteorite record.
       pv3 = petrotypes.type3.p / sum(@view v[i3:lastindex(T)])
       pv4 = petrotypes.type4.p / sum(@view v[i4:i3-1])
