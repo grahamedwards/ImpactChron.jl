@@ -64,7 +64,7 @@ rangemidbounds(x::AbstractRange) = LinRange(first(x) - 0.5step(x), last(x) + 0.5
 """
 
 ```julia
-ImpactChron.downscale!(B::AbstractArray, A::AbstractArray)
+downscale!(B::AbstractArray, A::AbstractArray)
 ```
 
 Downscales elements of 1-D array `A` into smaller 1-D array `B` by summing.
@@ -247,7 +247,7 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
     #tkr = zeros(nₘ)
 
 # Cycle through each datum in (mu,sigma)
-    @inbounds for j ∈ 1:nₘ #might batch speed this up?
+    @batch for j ∈ 1:nₘ 
 # Find index of μ in the `dist` array
         iₓ = ceil(Int, (mu[j]-x[1]) / xᵣ * nbtwns + 1) # x[iₓ] ≥ mu[j], equivalent to searchsortedfirst(x,mu[j])
 # If possible, prevent aliasing problems by interpolation
@@ -258,7 +258,7 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
 # Otherwise, sum contributions from Gaussians at each point in distribution
         else
             likelihood = zero(float(eltype(dist)))
-            @turbo for i ∈ 1:nₚ     # @turbo faster than @tturbo
+            @turbo for i ∈ 1:nₚ  
 # Likelihood curve follows a Gaussian PDF about mu[j]
                 likelihood += ( dist[i] / (sigma[j] * sqrt(2*π)) ) *
                         exp( - (x[i]-mu[j])*(x[i]-mu[j]) / (2*sigma[j]*sigma[j]) )
