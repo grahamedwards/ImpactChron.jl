@@ -126,5 +126,27 @@ function csv2dict(filename::String;symbol::Bool=true)
     return Dict(k => dnt[k] for k ∈ keys(dnt))
 end
 
+"""
+```julia
 
+js_arx2dict(file::String, vars::Tuple; n, ll=true, accept=true, perturbation=false)
+
+```
+
+Load a serialized archive file from `thermochron_metropolis` into a `Dict`` for "post-run" analysis, only incorporating the variables in `vars` and covering `n` steps (all steps by default). Provide a `Bool` to incorporate `ll`, `accept`, or `perturbation`
+
+"""
+function js_arx2dict(file::String,vars::Tuple;n::Integer=0,ll::Bool=true,accept::Bool=true,perturbation::Bool=false)
+
+    data = deserialize(file)
+    iszero(n) && (n=length(data.llDist))
+
+
+    out = Dict{Symbol,Any}((vars[i],data.pDist[1:n,i]) for i ∈ 1:length(vars))
+
+    ll && (out[:ll] = data.llDist[1:n])
+    accept && (out[:accept] = data.acceptanceDist[1:n])
+    perturbation && (out[:prt] = data.prt[1:n])
+    return out
+end
 ## Add NetCDF capability some day...
