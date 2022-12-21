@@ -72,8 +72,13 @@ end
 
 """
 ```julia
-distmeans
-`
+distmeans(d::Dict;stdev=false)
+```
+
+Calculate means of each array in a `Dict` of `Array{<:Number}`.
+
+Returns a `NamedTuple` of each key and its mean (default) or a `Tuple` of `(μ,σ)` if `stdev=true`
+
 """
 function distmeans(d::Dict;stdev::Bool=false)
     if stdev
@@ -95,7 +100,18 @@ function distmeans(d::Dict;stdev::Bool=false)
 end
 
 
+"""
+
+```julia
+distmedians(d::Dict;ci)
+```
+Calculate medians of each array in a `Dict` of `Array{<:Number}`.
+
+Returns a `NamedTuple` of each key and its median (default) or a `Tuple` of `(median,lower,upper)` where `lower` and `upper` are the lower and upper bounds of the credible interval provied for `ci ∈ [0,1]`.
+
+"""
 function distmedians(d::Dict;ci::Number=0.)
+    @assert 0 <= ci <= 1
     if ci>0
         α=1-ci
         dₒᵤₜ = Dict{Symbol,Tuple}()
@@ -122,17 +138,36 @@ function distmedians(d::Dict;ci::Number=0.)
     return (; dₒᵤₜ...)
 end
 
+"""
+
+```julia
+cleanhist(x; nbins=50, scooch_nbins=4)
+```
+Calculates a histogram with extra (0 count) bins to buffer the edges and make it look nice and clean. 🧼
+
+Optionally specify the number of total histogram `bins` (default: 50 bins) and the number of buffering bins `scooch_nbins`.
+
+Returns a `NamedTuple` with `x` and `y` values of histogram.
+"""
 
 function cleanhist(x::AbstractArray; nbins::Int=50, scooch_nbins::Int=4)
     x_scooch = (maximum(x)-minimum(x))/ (nbins-scooch_nbins)
     binedges = LinRange(minimum(x)-2*x_scooch,maximum(x)+2*x_scooch,nbins+1)
-    bincenters = LinRange( first(binedges)+step(binedges)/2, last(binedges)-step(binedges)/2,nbins)
+    #bincenters = LinRange( first(binedges)+step(binedges)/2, last(binedges)-step(binedges)/2,nbins)
     y=histcounts(x,binedges)
     return (x=binweave(binedges), y=interleave(y),)
 end
 
 
 """
+
+```julia
+summedpdfhist(x,d,ds; bins=50)
+```
+
+Create a histogram of the summed probability density functions (PDFs) of data with means `d` and standard deviations `ds`, respectively, calculated over domain `x`. Optionally specify the number of histogram `bins` (default: 50 bins).
+
+Returns a `NamedTuple` with `x` and `y` values of histogram.
 
 """
 function summedpdfhist(x::AbstractRange,d::AbstractVector,ds::AbstractVector; bins::Int=50)
@@ -152,7 +187,7 @@ function summedpdfhist(x::AbstractRange,d::AbstractVector,ds::AbstractVector; bi
     binnedpdf = Vector{eltype(d)}(undef,length(bincenters))
     downscale!(binnedpdf,summedpdf)
 
-    return (binweave(rangemidbounds(bincenters)),interleave(binnedpdf))
+    return (x=binweave(rangemidbounds(bincenters)),y=interleave(binnedpdf))
 end
 
 """

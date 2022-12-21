@@ -29,20 +29,20 @@ function proposal_histograms(data_in::Dict,plims::NamedTuple,v::Tuple;
     names = Dict(   
         :tss => "Age of CAIs (Ma)", 
         :rAlo=>"Initial ²⁶Al/²⁷Al",
-        :Tm=>"Midplane temperature (K, 2.5 AU)",
+        :Tm=> "Midplane temperature (K, 2.5 AU)",
         :R => "Radius (km)",
         :ta=> "Accretion time (Ma after CAIs)", 
-        :cAl=>"Al abundance (wt%)",
-        :ρ=>"Bulk density (kg/m³)",
-        :Cp=>"Specific heat Capacity (J/kg•K)",
+        :cAl=> "Al abundance (wt%)",
+        :ρ=> "Bulk density (kg/m³)",
+        :Cp=> "Specific heat Capacity (J/kg•K)",
         :k => "Thermal conductivity (W/m•K)",
-        :Tc=>"Ar closure temperature (K)",
-        :tχα=> "Impactor flux onset (Ma after CAIs)",
-        :τχα=>"Impactor flux ℯ-folding time (Ma)",
-        :Fχα=>"Initial impactor flux (Ma⁻¹)",
-        :tχβ=> "Primordial impactor flux onset (Ma after CAIs)",
-        :τχβ=>"Primordial impactor flux ℯ-folding time (Ma)",
-        :Fχβ=>"Initial primordial impactor flux (Ma⁻¹)"             )
+        :Tc=> "Ar closure temperature (K)",
+        :tχα=> "Post-accretion bombardment onset (Ma after CAIs)",
+        :τχα=> "Post-accretion bombardment ℯ-folding time (Ma)",
+        :Fχα=> "Post-accretion initial impactor flux (Ma⁻¹)",
+        :tχβ=> "Primordial bombardment onset (Ma after CAIs)",
+        :τχβ=> "Primordial bombardment ℯ-folding time (Ma)",
+        :Fχβ=> "Primordial initial impactor flux (Ma⁻¹)"             )
 
     d=deepcopy(data_in)
 # Convert
@@ -60,12 +60,10 @@ function proposal_histograms(data_in::Dict,plims::NamedTuple,v::Tuple;
         k = v[i]
         x = d[k]
 
-        isa(plims[k],lNrm) && map!(q->exp(q),x,x)
-
+        isa(plims[k],lNrm) && map!(exp,x,x)
 
         x_scooch = (maximum(x)-minimum(x))/ (nbins-4)
         binedges = LinRange(minimum(x)-2*x_scooch,maximum(x)+2*x_scooch,nbins+1)
-        bincenters = LinRange( first(binedges)+step(binedges)/2, last(binedges)-step(binedges)/2,nbins)
         y=histcounts(x,binedges)
         panels[i] = plot(binweave(binedges),interleave(y),yaxis=false,yticks=[],grid=false,label="", xlabel=names[k],
             linewidth=2,linecolor=:black,fillcolor=:black,fillrange=0,fillalpha=0.1)
