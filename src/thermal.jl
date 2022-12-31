@@ -522,14 +522,14 @@ function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroT
         printstyled("(meltdown) rejected\n"; color=:light_magenta);flush(stdout)
         a.agedist .= zero(eltype(a.agedist))
 # Only calculate impact resetting if flux is positive and nonzero
-    elseif (0 < p.Fχα) | (0 < p.Fχβ)
+    else#if (0 < p.Fχα) | (0 < p.Fχβ)
         impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, crater, nᵣ=nᵣ,Δt=step(a.t))
         a.agedist .= vec(vsum(a.txr,dims=2))
-    else
-        a.agedist .= zero(eltype(a.agedist))
-        @tturbo for j = eachindex(a.cooltime)
-            a.agedist[a.cooltime[j]] = a.Vfrxn[j]
-        end
+    #else
+    #    a.agedist .= zero(eltype(a.agedist))
+    #    @tturbo for j = eachindex(a.cooltime)
+    #        a.agedist[a.cooltime[j]] = a.Vfrxn[j]
+    #    end
     end
 # Downscale age distribution
     ImpactChron.downscale!(a.agedist_downscaled, a.agedist)
