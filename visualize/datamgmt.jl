@@ -214,14 +214,17 @@ Sum pdfs of values in `x` with 1σ uncertainties `δx` over a domain defined by 
 """
 function sumpdfs(z,x,δx)
 	densities=Array{eltype(x)}(undef,length(z),length(x));
-	
-	@tturbo for j in eachindex(x)
-		xj = x[j]
-		δxj = δx[j]
-		for i in eachindex(z)
-			densities[i,j] = normdens(z[i],xj,δxj)
-		end
-	end
+	if isempty(x)
+        densities .= 0
+    else
+        @tturbo for j in eachindex(x)
+            xj = x[j]
+            δxj = δx[j]
+            for i in eachindex(z)
+                densities[i,j] = normdens(z[i],xj,δxj)
+            end
+        end
+    end
 # Calculate the stepsize of z for normalization
 	isa(z,AbstractRange) ? Δz = step(z) : Δz = z[2]-z[1]
 # flatten and normalize z
