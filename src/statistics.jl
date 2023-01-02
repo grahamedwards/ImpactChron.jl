@@ -247,7 +247,7 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
     #tkr = zeros(nₘ)
 
 # Cycle through each datum in (mu,sigma)
-    @batch for j ∈ 1:nₘ 
+    @inbounds for j ∈ 1:nₘ 
 # Find index of μ in the `dist` array
         iₓ = ceil(Int, (mu[j]-x[1]) / xᵣ * nbtwns + 1) # x[iₓ] ≥ mu[j], equivalent to searchsortedfirst(x,mu[j])
 # If possible, prevent aliasing problems by interpolation
@@ -265,7 +265,7 @@ function ll_dist(   x::AbstractRange, dist::AbstractVector,
             end
             likelihood*=Δx
         end
-        ll += log(likelihood)
+        ll += log(ifelse(iszero(likelihood),eps(),likelihood))
 # Normalize by total area under curve for intercomparability among proposals.
     end
     return ll
