@@ -432,7 +432,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcool
     end
 
 # Populate each shell with primary cooling date, unless its a melted (NaN-date) layer, then fill no primary cooling date (0 instead of 1)
-    for i in 1:nᵣ
+    @inbounds for i in 1:nᵣ
         #Vwhole += Vfrxn[i]
         tₓr[tcoolₒ[i],i] = Vfrxn[i]
     end
@@ -521,15 +521,9 @@ function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroT
     if iszero(a.Vfrxn[ceil(Int,nᵣ*melt_reject)])
         printstyled("(meltdown) rejected\n"; color=:light_magenta);flush(stdout)
         a.agedist .= zero(eltype(a.agedist))
-# Only calculate impact resetting if flux is positive and nonzero
-    else#if (0 < p.Fχα) | (0 < p.Fχβ)
+    else
         impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, crater, nᵣ=nᵣ,Δt=step(a.t))
         a.agedist .= vec(vsum(a.txr,dims=2))
-    #else
-    #    a.agedist .= zero(eltype(a.agedist))
-    #    @tturbo for j = eachindex(a.cooltime)
-    #        a.agedist[a.cooltime[j]] = a.Vfrxn[j]
-    #    end
     end
 # Downscale age distribution
     ImpactChron.downscale!(a.agedist_downscaled, a.agedist)
