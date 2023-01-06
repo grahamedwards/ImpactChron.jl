@@ -30,7 +30,6 @@ Parameter `plims` tracks whether log-normal distributions need to be converted b
 Set to a transparent background color scheme by setting `darkmode=true`
 
 """
-
 function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
     cols::Integer=1, nbins::Integer=20,figsize=(800,600),darkmode::Bool=false)
 
@@ -42,7 +41,7 @@ function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
         :ta=> "Accretion time (Ma after CAIs)", 
         :cAl=> "Al abundance (wt%)",
         :ρ=> "Bulk density (kg/m³)",
-        :Cp=> "Specific heat Capacity (J/kg•K)",
+        :Cp=> "Specific heat capacity (J/kg•K)",
         :k => "Thermal conductivity (W/m•K)",
         :Tc=> "Ar closure temperature (K)",
         :tχα=> "Post-accretion bombardment onset (Ma after CAIs)",
@@ -79,7 +78,7 @@ function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
         binedges = LinRange(minimum(x)-2*x_scooch,maximum(x)+2*x_scooch,nbins+1)
         y = histcounts(x,binedges) ./ (length(x)*step(binedges))
         panels[i] = Plots.plot(binweave(binedges),interleave(y),yaxis=false,yticks=[],grid=false,label="", xlabel=names[k],
-            linewidth=2,linecolor=pltclr, background=bkgrnd,fillcolor=pltclr,fillrange=0,fillalpha=0.1)
+            xlabelfontsize=16,xtickfontsize=12,linewidth=2,linecolor=pltclr, background=bkgrnd,fillcolor=pltclr,fillrange=0,fillalpha=0.1)
 
 # Plot prior distributions
         B = plims[Symbol(k)]
@@ -87,7 +86,7 @@ function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
         isequal(k,:R) && (B = lNrm(B.μ +log(1e-3),B.σ))
 
         if isa(B,Unf)
-            prdst = Distributions.Uniform(B.a,B.b)
+            prdst = Distributions.Uniform(B.a,ifelse(isinf(B.b),maximum(x),B.b))
 
         elseif isa(B,Nrm)
             prdst = Distributions.Normal(B.μ,B.σ)
@@ -106,7 +105,7 @@ function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
         [ push!(panels,blnkplt) for j ∈ 1:Δplts]
     end
 
-    Plots.plot(panels...,layout=Plots.grid(rows,cols),labels="",size=figsize)
+    Plots.plot(panels...,layout=Plots.grid(rows,cols),labels="",size=figsize,bottom_margin=10Plots.mm)
 end
 
 """
@@ -185,7 +184,7 @@ function proposal_histograms(data_in::Dict,plims::NamedTuple,v::Tuple;
             if isa(B,Unf)
                 linestylin= :solid
                 bound_lo = fill(B.a,2)
-                bound_hi = fill(B.b,2)
+                bound_hi = fill(ifelse(isinf(B.b),maximum(x),B.b),2)
             elseif isa(B,Nrm)
                 linestylin= :dash
                 bound_lo = fill(B.μ-B.σ,2)
@@ -289,7 +288,7 @@ function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),ll
         [ push!(panels,blnkplt) for j ∈ 1:Δplts]
     end
 
-    Plots.plot(panels...,layout=Plots.grid(rows,cols),labels="",size=figsize)
+    Plots.plot(panels...,layout=Plots.grid(rows,cols),labels="",size=figsize,left_margin=10Plots.mm)
 end
 
 "~Plotting Functions Loaded Successfully~"
