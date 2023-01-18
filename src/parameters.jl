@@ -68,7 +68,7 @@ end
 
 struct ImpactSite
     heat::ImpactSiteShape
-    #eject::ImpactSiteShape
+    #eject::ImpactSiteShape # an ejecta volume may be added some day.
     C::Number
 end
 
@@ -92,13 +92,14 @@ Providing an `impactor_diameter` (<:`Number`) calculates impact parameters based
 ImpactSite(shape ; r, C)
 ```
 
-If values of `r` and `C` are provided,  prepares an `ImpactSite` that extends to the center of an asteroid with radius `r` and has a surface diameter `C` times the asteroid circumference (`C=0.01` by default). Note that `C ∈ [0,1]`.
-If no `r` is provided this seeds an `ImpactSite` with zeroed `ImpactSite Shape` and a `C` value. 
+If values of `r` and `C` are provided,  prepares an `ImpactSite` that extends to the center of an asteroid with radius `r` (km) and has a surface diameter `C` times the asteroid circumference (`C=0.01` by default). Note that `C ∈ [0,1]`.
+If no `r` is provided this seeds an `ImpactSite` with zeroed `ImpactSiteShape` and a `C` value. 
 
 """
 function ImpactSite(shape::Type, impactor_diameter::Number) 
 
-    #ejection_diameter=10 * impactor_diameter
+# Proportions of ejection site.
+    #ejection_diameter=10 * impactor_diameter 
     #ejection_depth = 2 * impactor_diameter
 
     heated_diameter = 5 * impactor_diameter

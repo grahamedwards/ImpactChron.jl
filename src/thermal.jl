@@ -522,7 +522,7 @@ function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroT
         printstyled("(meltdown) rejected\n"; color=:light_magenta);flush(stdout)
         a.agedist .= zero(eltype(a.agedist))
     else
-        impactsite = ifelse( iszero(impactsite.C), impactsite, ImpactSite(typeof(impactsite.heat),r=p.R,C=impactsite.C))
+        impactsite = ifelse( iszero(impactsite.C), impactsite, ImpactSite(typeof(impactsite.heat),r=exp(p.R),C=impactsite.C))
         impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, impactsite, nᵣ=nᵣ,Δt=step(a.t))
         a.agedist .= vec(vsum(a.txr,dims=2))
     end
