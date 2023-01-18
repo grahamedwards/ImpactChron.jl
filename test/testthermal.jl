@@ -65,7 +65,7 @@ impact_log = similar(t☼_)
 
 # Crater parameters:
 dᵢ = 15_000.; dᵪ = dᵢ *5 ; zᵪ = dᵪ * 2/3; reheat_shape = ImpactChron.Parabola(zᵪ,dᵪ/2)
-crater=(; reheat_shape)
+crater= ImpactSite(Parabola,dᵢ) #(; reheat_shape)
 
 # Overwrite primary cooling with new timesteps
 ImpactChron.planetesimal_cooling_timestep!(t☼_,tcool,vₜₛ,Tₜₛ,ϕ, nᵣ=nodes,Tmax=temp_max,Tmin=temp_min)

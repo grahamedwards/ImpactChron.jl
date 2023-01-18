@@ -31,7 +31,7 @@ paramdist = (
 dᵢ = 15_000.
 dₑ = 10*dᵢ ; zₑ = 2*dᵢ ; ejection_shape = ImpactChron.Parabola(zₑ,dₑ/2)
 dₕ = dᵢ *5 ; zₕ = dₕ * 2/3; reheat_shape = ImpactChron.Parabola(zₕ,dₕ/2)
-crater=(; reheat_shape)
+crater= ImpactSite(Parabola,dᵢ) # (; reheat_shape)
 vars = (:R,:ta,:cAl,:Tm,:Tc,:ρ,:Cp,:k,:tχα,:τχα,:Fχα,:τχβ,:Fχβ)
 
 

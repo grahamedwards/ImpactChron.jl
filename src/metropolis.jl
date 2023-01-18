@@ -22,7 +22,7 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         pvars::Tuple, # Variable parameters in proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray, # Observed 1σ's
-                        crater::NamedTuple; # crater/impact parameters
+                        impactsite::ImpactSite; # crater/impact parameters
                         plims::NamedTuple=(;), # Paramter distributions.
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int,  # Post burn-in iterations
@@ -71,7 +71,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
     pₚ = p # Use the "perturbed" version of `p`, pₚ, for consistancy.
 
 # Calculate asteroid thermochronologic history
-    asteroid_agedist!(ah, pₚ, petrotypes, crater,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
+    asteroid_agedist!(ah, pₚ, petrotypes, impactsite,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
 # Log likelihood of initial proposal
     ll = llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
     
@@ -95,7 +95,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
             llₚ = -Inf
         else
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            asteroid_agedist!(ah, pₚ, petrotypes, crater,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
+            asteroid_agedist!(ah, pₚ, petrotypes, impactsite,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
 # Log likelihood of initial proposal
             llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
         end
@@ -141,7 +141,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
             llₚ = -Inf
         else
 # Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
-            asteroid_agedist!(ah, pₚ, petrotypes, crater,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
+            asteroid_agedist!(ah, pₚ, petrotypes, impactsite,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
 # Log likelihood of initial proposal
             llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
         end

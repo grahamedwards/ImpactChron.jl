@@ -49,20 +49,69 @@ end
 
 ## Structure support for radius_at_depth
 
-struct Cone{T<:Number}
+abstract type ImpactSiteShape end
+
+struct Cone{T<:Number} <: ImpactSiteShape
     z::T
     r::T
 end
 
-struct Parabola{T<:Number}
+struct Parabola{T<:Number} <: ImpactSiteShape
     z::T
     r::T
 end
 
-struct Hemisphere{T<:Number}
+struct Hemisphere{T<:Number} <: ImpactSiteShape
     z::T
     r::T
 end
+
+struct ImpactSite
+    heat::ImpactSiteShape
+    #eject::ImpactSiteShape
+    C::Number
+end
+
+
+"""
+
+```julia
+ImpactSite(heat<:ImpactSiteShape,C<:Number)
+```
+
+`struct` describing the shape of the simulated impact site and zone of reheating.
+
+CONSTRUCTOR FUNCTION
+====================
+```julia
+ImpactSite(shape,impactor_diameter)
+```
+Providing an `impactor_diameter` (<:`Number`) calculates impact parameters based on approximate heat distribution modeled in Davison+ 2012 (GCA, http://dx.doi.org/10.1016/j.gca.2012.08.001).
+
+```julia
+ImpactSite(shape ; r, C)
+```
+
+If values of `r` and `C` are provided,  prepares an `ImpactSite` that extends to the center of an asteroid with radius `r` and has a surface diameter `C` times the asteroid circumference (`C=0.01` by default). Note that `C ∈ [0,1]`.
+If no `r` is provided this seeds an `ImpactSite` with zeroed `ImpactSite Shape` and a `C` value. 
+
+"""
+function ImpactSite(shape::Type, impactor_diameter::Number) 
+
+    #ejection_diameter=10 * impactor_diameter
+    #ejection_depth = 2 * impactor_diameter
+
+    heated_diameter = 5 * impactor_diameter
+    heated_depth = (2/3) * heated_diameter
+
+    ImpactSite(shape(heated_depth,heated_diameter/2),zero(impactor_diameter))
+end
+
+function ImpactSite(shape::Type; r::Number=0., C::T=0.01 ) where T<: Number
+    @assert 0 ≤ C ≤ 1
+    ImpactSite(shape(r, 2π * r * C),C)
+end
+
 
 
 ## Petrologic Type Temperatures and Proportions
@@ -178,7 +227,6 @@ function AsteroidHistory(typeseed::T; nnodes::Int, Δt::Number, tmax::Number, do
 
     return AsteroidHistory(Vfrxn, peakT, cooltime, impacts, txr, agedist, agedist_downscaled, timerange, time_downscaled)
 end
-
 
 
 

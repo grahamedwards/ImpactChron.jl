@@ -406,7 +406,7 @@ Impact flux follows an exponential decay described by parameters in `p`:
 """
 function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcoolₒ::AbstractArray,Vfrxn::AbstractArray,
                             impacts::AbstractArray,
-                            p::NamedTuple,c::NamedTuple;
+                            p::NamedTuple,c::ImpactSite;
                             nᵣ::Integer,Δt::Number)
 
 # Declare variables from input
@@ -462,10 +462,10 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcool
 #    end
 
 # Identify and perturb reheated depths
-    r_baseₕ = searchsortedfirst(radii,R-c.reheat_shape.z) # deepest reheated radius index
+    r_baseₕ = searchsortedfirst(radii,R-c.heat.z) # deepest reheated radius index
 
     @batch for r ∈ r_baseₕ:nᵣ # radial node ||| upper limit = (r_baseₑ-1) if excavation enabled.
-        x = ImpactChron.radius_at_depth(radii[r],R,c.reheat_shape) # calculate radius of reheating at this depth
+        x = ImpactChron.radius_at_depth(radii[r],R,c.heat) # calculate radius of reheating at this depth
         iVfrxn = x * x * Δr / (Vbody*Vfrxn[r]) # Fractional volume *of layer* reset per impact. note: π removed for cancelling out Vbody
         tₒ = tcoolₒ[r] # Time index of primary cooling date
 
@@ -511,7 +511,7 @@ radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.r*x.r - (rᵢ-
 
 
 
-function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroTypes, crater::NamedTuple; nᵣ::Number, Tmax::Number, Tmin::Number, melt_reject::Number=0.1)
+function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroTypes, impactsite::ImpactSite; nᵣ::Number, Tmax::Number, Tmin::Number, melt_reject::Number=0.1)
 # Calculate cooling history 
     planetesimal_cooling_timestep!(a.t, a.cooltime,a.Vfrxn, a.peakT, p, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # If petrologic type temperatures and abundances are included, weight accordingly.
@@ -522,7 +522,8 @@ function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroT
         printstyled("(meltdown) rejected\n"; color=:light_magenta);flush(stdout)
         a.agedist .= zero(eltype(a.agedist))
     else
-        impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, crater, nᵣ=nᵣ,Δt=step(a.t))
+        impactsite = ifelse( iszero(impactsite.C), impactsite, ImpactSite(typeof(impactsite.heat),r=p.R,C=impactsite.C))
+        impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, impactsite, nᵣ=nᵣ,Δt=step(a.t))
         a.agedist .= vec(vsum(a.txr,dims=2))
     end
 # Downscale age distribution
