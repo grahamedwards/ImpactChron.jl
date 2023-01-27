@@ -66,10 +66,10 @@ struct Hemisphere{T<:Number} <: ImpactSiteShape
     r::T
 end
 
-struct ImpactSite
-    heat::ImpactSiteShape
+struct ImpactSite{T<:ImpactSiteShape, N<:Number}
+    heat::T
     #eject::ImpactSiteShape # an ejecta volume may be added some day.
-    C::Number
+    C::N
 end
 
 
@@ -96,7 +96,7 @@ If values of `r` and `C` are provided,  prepares an `ImpactSite` that extends to
 If no `r` is provided this seeds an `ImpactSite` with zeroed `ImpactSiteShape` and a `C` value. 
 
 """
-function ImpactSite(shape::Type, impactor_diameter::Number) 
+function ImpactSite(::Type{T}, impactor_diameter::Number) where {T}
 
 # Proportions of ejection site.
     #ejection_diameter=10 * impactor_diameter 
@@ -105,12 +105,12 @@ function ImpactSite(shape::Type, impactor_diameter::Number)
     heated_diameter = 5 * impactor_diameter
     heated_depth = (2/3) * heated_diameter
 
-    ImpactSite(shape(heated_depth,heated_diameter/2),zero(impactor_diameter))
+    ImpactSite(T(heated_depth,heated_diameter/2),zero(impactor_diameter))
 end
 
-function ImpactSite(shape::Type; r::Number=0., C::T=0.01 ) where T<: Number
+function ImpactSite(::Type{T}; r::N=0., C::N=0.01 ) where {T, N<: Number}
     @assert 0 ≤ C ≤ 1
-    ImpactSite(shape(r, 2π * r * C),C)
+    ImpactSite(T(r, 2π * r * C),C)
 end
 
 

@@ -511,7 +511,7 @@ radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.r*x.r - (rᵢ-
 
 
 
-function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroTypes, impactsite::ImpactSite; nᵣ::Number, Tmax::Number, Tmin::Number, melt_reject::Number=0.1)
+function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroTypes, impactsite::ImpactSite{T,N}; nᵣ::Integer, Tmax::Number, Tmin::Number, melt_reject::Number=0.1) where {T,N}
 # Calculate cooling history 
     planetesimal_cooling_timestep!(a.t, a.cooltime,a.Vfrxn, a.peakT, p, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)
 # If petrologic type temperatures and abundances are included, weight accordingly.
@@ -522,7 +522,7 @@ function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroT
         printstyled("(meltdown) rejected\n"; color=:light_magenta);flush(stdout)
         a.agedist .= zero(eltype(a.agedist))
     else
-        impactsite = ifelse( iszero(impactsite.C), impactsite, ImpactSite(typeof(impactsite.heat),r=exp(p.R),C=impactsite.C))
+        impactsite = ifelse( iszero(impactsite.C), impactsite, ImpactSite(T,r=exp(p.R),C=impactsite.C))
         impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, impactsite, nᵣ=nᵣ,Δt=step(a.t))
         a.agedist .= vec(vsum(a.txr,dims=2))
     end
