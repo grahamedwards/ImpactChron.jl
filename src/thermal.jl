@@ -524,7 +524,7 @@ function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroT
     else
         impactsite = ifelse( iszero(impactsite.C), impactsite, ImpactSite(T,r=exp(p.R),C=impactsite.C))
         impact_reset_array!(a.txr, a.t, a.cooltime, a.Vfrxn, a.impacts, p, impactsite, nᵣ=nᵣ,Δt=step(a.t))
-        a.agedist .= vec(vsum(a.txr,dims=2))
+        a.agedist .= vsum(a.txr,dims=2)
     end
 # Downscale age distribution
     ImpactChron.downscale!(a.agedist_downscaled, a.agedist)

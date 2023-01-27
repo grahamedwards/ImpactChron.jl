@@ -19,7 +19,6 @@ Since `vreduce` does not accept `view`s, we `turbosum`!
 
 Faster than reduce for length(x)>≈200
 """
-
 function turbosum(x::AbstractArray)
     ∑x = zero(eltype(x))
     @turbo for i in eachindex(x)
@@ -27,6 +26,7 @@ function turbosum(x::AbstractArray)
     end
     return ∑x
 end
+
 
 """
 
@@ -319,9 +319,12 @@ function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::Petro
    imelt = findfirst(!iszero,v) 
 
 # Find the indices where temperatures are < max temp of petrologic type (except type 6)
-   i3 = findfirst(x -> x<=petrotypes.type3.T, T)
-   i4 = findfirst(x -> x<=petrotypes.type4.T, T)
-   i5 = findfirst(x -> x<=petrotypes.type5.T, T)
+    T3 = petrotypes.type3.T # Compiler gets confused if use full struct?
+    i3 = findfirst(x -> x<=T3, T)
+    T4 = petrotypes.type4.T
+    i4 = findfirst(x -> x<= T4, T)
+    T5 = petrotypes.type5.T
+    i5 = findfirst(x -> x<=T5, T)
 
 # Require all petrologic types to occur and occupy at least one layer. 
    if !isnothing(i3) && lastindex(T) >= i3 > i4 > i5 > imelt
