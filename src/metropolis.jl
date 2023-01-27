@@ -34,7 +34,8 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         updateN::Integer=1_000, # Frequency of status updates (every `updateN` steps)
                         archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
                         downscale::Integer=1, # Downscale high-res timesteps to `downscale`-times fewer bins
-                        petrotypes::PetroTypes=PetroTypes()) # petrologic types, each with max Temp and rel. abundances in record
+                        petrotypes::PetroTypes=PetroTypes(), # petrologic types, each with max Temp and rel. abundances in record
+                        rng = Random.Xoshiro(45687)) # Seed a specific random number generator
 
 # PREPARE OUTPUT DISTRIBUTIONS
     acceptanceDist = falses(nsteps)
@@ -85,8 +86,8 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
     @inbounds for i = 1:burnin
 
 # Adjust one parameter
-        k = rand(pvars)
-        δpₖ = pσ[k] * randn() #getproperty(step_σ,k)*randn()
+        k = rand(rng,pvars)
+        δpₖ = pσ[k] * randn(rng) #getproperty(step_σ,k)*randn(rng)
         pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
@@ -101,7 +102,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
         end
 
 # Decide to accept or reject the proposal
-        if log(rand()) < (llₚ-ll)
+        if log(rand(rng)) < (llₚ-ll)
 # Record new step sigma
             pσ = perturb(pσ,k,abs(δpₖ)*stepfactor) #setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
 # Record new parameters
@@ -130,9 +131,9 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
         #copyto!(pₚ, p)
 
         # Adjust one parameter
-        k = rand(pvars)
+        k = rand(rng,pvars)
         prt[i]=k
-        δpₖ = pσ[k] * randn() #getproperty(step_σ,k)*randn()
+        δpₖ = pσ[k] * randn(rng) #getproperty(step_σ,k)*randn(rng)
         pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
 
 # Calculate log likelihood for new proposal, ensuring bounds are not exceeded
@@ -147,7 +148,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
         end
 
 # Decide to accept or reject the proposal
-        if log(rand()) < (llₚ-ll)
+        if log(rand(rng)) < (llₚ-ll)
 # Record new step sigma
             pσ = perturb(pσ,k,abs(δpₖ)*stepfactor) 
 # Record new parameters

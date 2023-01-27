@@ -9,10 +9,8 @@ using VectorizedStatistics
 using DelimitedFiles
 using Serialization
 
-
-#These will be needed when re-implementing the monte carlo sampler
-#using Random; #rng = MersenneTwister()
-#using Distributions
+# For reproducibility
+using Random
 
 export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere, ImpactSite, AsteroidHistory, PetroTypes
 include("parameters.jl")
