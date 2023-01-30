@@ -319,19 +319,16 @@ function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::Petro
    imelt = findfirst(!iszero,v) 
 
 # Find the indices where temperatures are < max temp of petrologic type (except type 6)
-    T3 = petrotypes.type3.T # Compiler gets confused if use full struct?
-    i3 = findfirst(x -> x<=T3, T)
-    T4 = petrotypes.type4.T
-    i4 = findfirst(x -> x<= T4, T)
-    T5 = petrotypes.type5.T
-    i5 = findfirst(x -> x<=T5, T)
+    i3 = findfirst(x -> x<=petrotypes.type3.T, T)
+    i4 = findfirst(x -> x<= petrotypes.type4.T, T)
+    i5 = findfirst(x -> x<=petrotypes.type5.T, T)
 
 # Require all petrologic types to occur and occupy at least one layer. 
-   if !isnothing(i3) && lastindex(T) >= i3 > i4 > i5 > imelt
-   # Calculate and apply the conversion between fractional volume of body and fractional abundance in the meteorite record.
-      pv3 = petrotypes.type3.p / sum(@view v[i3:lastindex(T)])
-      pv4 = petrotypes.type4.p / sum(@view v[i4:i3-1])
-      pv5 = petrotypes.type5.p / sum(@view v[i5:i4-1])
+    if isnothing(i3) || lastindex(T) >= i3 > i4 > i5 > imelt
+# Calculate and apply the conversion between fractional volume of body and fractional abundance in the meteorite record.
+      pv3 = petrotypes.type3.p / vsum(@view v[i3:lastindex(T)])
+      pv4 = petrotypes.type4.p / vsum(@view v[i4:i3-1])
+      pv5 = petrotypes.type5.p / vsum(@view v[i5:i4-1])
       pv6 = petrotypes.type6.p / vsum(@view v[imelt:i5-1])
 
       @inbounds for i = i3:lastindex(T)

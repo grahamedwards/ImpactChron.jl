@@ -136,11 +136,11 @@ Constructor takes a `NamedTuple` containing maximum temperatures as fields `T3`-
 If no argument given --  `PetroTypes()` -- returns zeroed `type_` fields and `weight=false`, which short-circuits weighting by petrologic type. 
 
 """
-struct PetroTypes
-    type3::TempProp
-    type4::TempProp
-    type5::TempProp
-    type6::TempProp
+struct PetroTypes{T<:AbstractFloat}
+    type3::TempProp{T}
+    type4::TempProp{T}
+    type5::TempProp{T}
+    type6::TempProp{T}
     weight::Bool
 end
 
@@ -206,7 +206,7 @@ struct AsteroidHistory{T<:Number}
     t_downscaled::AbstractRange{T}
 end
     
-function AsteroidHistory(typeseed::T; nnodes::Int, Δt::Number, tmax::Number, downscale_factor::Int ) where {T<:Number}
+function AsteroidHistory(::T; nnodes::Int, Δt::Number, tmax::Number, downscale_factor::Int ) where {T<:Number}
 
 # Vectors that correspond to radial nodes:
     Vfrxn = Vector{T}(undef,nnodes) # volumetric fraction of each concentric node in asteroid
