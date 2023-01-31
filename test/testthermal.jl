@@ -56,8 +56,8 @@ ImpactChron.planetesimal_cooling_timestep!(t☼,tcool,vₜₛ,Tₜₛ,ϕ, nᵣ=n
 # Use a new timestep. 
 t☼_ = 0:20:400
 
-# Add impact parameters to proposal.
-ϕᵢ = (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k, tχα=60., τχα=50., Fχα=3., tχβ=0., τχβ=63., Fχβ=9.)
+# Add impact parameters to proposal: 2 impact fluxes only (α,β)
+ϕ₂ = (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k, tχα=60., τχα=50., Fχα=3., tχβ=0., τχβ=63., Fχβ=9.,tχγ=200.,τχγ=50.,Fχγ=0.)
 
 # Preallocate time x radius matrix, impact log.
 A = fill(NaN,length(t☼_),nodes)
@@ -70,36 +70,40 @@ crater= ImpactSite(Parabola,dᵢ) #(; reheat_shape)
 # Overwrite primary cooling with new timesteps
 ImpactChron.planetesimal_cooling_timestep!(t☼_,tcool,vₜₛ,Tₜₛ,ϕ, nᵣ=nodes,Tmax=temp_max,Tmin=temp_min)
 
-impact_reset_array!(A, t☼_, tcool, vₜₛ, impact_log, ϕᵢ, crater, nᵣ=nodes, Δt=step(t☼_))
+impact_reset_array!(A, t☼_, tcool, vₜₛ, impact_log, ϕ₂, crater, nᵣ=nodes, Δt=step(t☼_))
 
 @test isapprox(vec(ImpactChron.vsum(A,dims=2)), [0.0, 0.0, 0.0, 0.0, 0.03904, 0.18619, 0.23539, 0.14912, 0.09822, 0.07544, 0.06407, 0.04467, 0.03404, 0.02867, 0.0147, 0.01508, 0.00764, 0.00773, 0.0, 0.0, 0.0], atol = 2e-5)
 
 
 # Combining everything into `asteroid_agedist!`
-AH = AsteroidHistory(ϕᵢ.R, nnodes=nodes, Δt=timestep,tmax=600, downscale_factor=50)
+AH = AsteroidHistory(ϕ₂.R, nnodes=nodes, Δt=timestep,tmax=600, downscale_factor=50)
 
 # Melted Condition
-asteroid_agedist!(AH,ϕᵢ,PetroTypes(),crater; nᵣ=nodes, Tmax=temp_max, Tmin=temp_min, melt_reject=0.1)
+asteroid_agedist!(AH,ϕ₂,PetroTypes(),crater; nᵣ=nodes, Tmax=temp_max, Tmin=temp_min, melt_reject=0.1)
 
 @test AH.agedist_downscaled == zero(AH.agedist_downscaled)
 
 # Impact Reset
-asteroid_agedist!(AH,ϕᵢ,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+asteroid_agedist!(AH,ϕ₂,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
 
 @test isapprox(AH.agedist_downscaled, [4.1411e-5, 0.0042482, 0.0079689, 0.0035466, 0.0021881, 0.0010999, 0.00050767, 0.00022672, 0.00010016, 4.4173e-5, 1.9515e-5, 8.6465e-6], rtol=1e-4)
 
 # Test a full-radius reheating scenario with 
-asteroid_agedist!(AH,ϕᵢ,PetroTypes(),ImpactSite(Cone,C=0.01); nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+asteroid_agedist!(AH,ϕ₂,PetroTypes(),ImpactSite(Cone,C=0.01); nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
 @test isapprox(AH.agedist_downscaled,[0.006511, 0.0065547, 0.0054583, 0.00083529, 0.00036393, 0.00015717, 6.7931e-5, 2.9486e-5, 1.2867e-5, 5.6438e-6, 2.4875e-6, 1.1009e-6],rtol=1e-5)
 
-# One Impact Flux
-ϕ₁ = perturb(ϕᵢ,:Fχα,0.)
-asteroid_agedist!(AH,ϕ₁,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+# Three Impact Fluxes 
+ϕ₃ = perturb(ϕ₂,:Fχγ,10.)
+asteroid_agedist!(AH,ϕ₃,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
+@test isapprox(AH.agedist_downscaled,[6.53e-8, 0.00257, 0.00435, 2.33e-5, 0.00142, 0.00411, 0.00391, 0.00213, 0.000923, 0.000366, 0.000141, 5.36e-5],rtol=1e-3)
 
+
+# One Impact Flux
+ϕ₁ = perturb(ϕ₂,:Fχα,0.); ϕ₁ = perturb(ϕ₁,:Fχγ,0.)
+asteroid_agedist!(AH,ϕ₁,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
 @test isapprox(AH.agedist_downscaled, [0.00030836, 0.0057676, 0.0079282, 0.002803, 0.0016347, 0.00083097, 0.00039634, 0.00018361, 8.3942e-5, 3.8147e-5, 1.7288e-5, 7.8255e-6], rtol=1e-4) 
 
 # No Impacts
-ϕ₂ = perturb(ϕ₁,:Fχβ,0.)
-asteroid_agedist!(AH,ϕ₂,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
-
+ϕ₀ = perturb(ϕ₁,:Fχβ,0.)
+asteroid_agedist!(AH,ϕ₀,PetroTypes(),crater; nᵣ=nodes, Tmax=1300, Tmin=temp_min, melt_reject=0.1)
 @test isapprox(AH.agedist_downscaled, [0.00976, 0.00592, 0.00432, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], rtol=1e-4)

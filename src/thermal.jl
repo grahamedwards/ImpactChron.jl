@@ -412,12 +412,9 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcool
 # Declare variables from input
     tₛₛ = p.tss
     R = exp(p.R) # m | asteroid radius
-    tᵅ = p.tχα # Ma after CAIs
-    Fᵅ = p.Fχα #Initial impactor flux Ma⁻¹
-    λᵅ = 1/p.τχα  # Ma⁻¹ | decay constant of impact flux
-    tᵝ = p.tχβ # Ma after CAIs
-    Fᵝ = p.Fχβ #Initial impactor flux Ma⁻¹
-    λᵝ = 1/p.τχβ  # Ma⁻¹ | decay constant of impact flux
+    tᵅ, tᵝ, tᵞ = p.tχα, p.tχβ, p.tχγ # Ma after CAIs
+    Fᵅ, Fᵝ, Fᵞ = p.Fχα, p.Fχβ, p.Fχγ # Initial impactor flux Ma⁻¹
+    λᵅ, λᵝ, λᵞ = 1/p.τχα, 1/p.τχβ, 1/p.τχγ  # Ma⁻¹ | decay constant of impact flux
 
 # Identify some useful variables that will be reused in reheating section.
     radii = LinRange(0.5*R/nᵣ,R*(1-0.5/nᵣ),nᵣ)
@@ -441,7 +438,8 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcool
     @tturbo for i ∈ eachindex(solartime)
         Iᵅ = ifelse(solartime[i] >= tᵅ, Fᵅ*exp(-λᵅ * (solartime[i]-tᵅ) ), zero(Fᵅ) )
         Iᵝ = ifelse(solartime[i] >= tᵝ, Fᵝ*exp(-λᵝ * (solartime[i]-tᵝ) ), zero(Fᵝ) )
-        impacts[i] = Δt * (Iᵅ + Iᵝ)
+        Iᵞ = ifelse(solartime[i] >= tᵞ, Fᵞ*exp(-λᵞ * (solartime[i]-tᵞ) ), zero(Fᵞ) )
+        impacts[i] = Δt * (Iᵅ + Iᵝ + Iᵞ)
     end
 
 # Time to reheat this planetesimal:

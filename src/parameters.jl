@@ -244,6 +244,9 @@ order of fields in `p` is as below
 Fields: `tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ`
 """
 function perturb(p::NamedTuple,k::Symbol,n::Number)
+    tχγ  = ifelse(k==:tχγ,n,p.tχγ)
+    τχγ  = ifelse(k==:τχγ,n,p.τχγ)
+    Fχγ  = ifelse(k==:Fχγ,n,p.Fχγ)
     tχβ  = ifelse(k==:tχβ,n,p.tχβ)
     τχβ  = ifelse(k==:τχβ,n,p.τχβ)
     Fχβ  = ifelse(k==:Fχβ,n,p.Fχβ)
@@ -260,5 +263,5 @@ function perturb(p::NamedTuple,k::Symbol,n::Number)
     ρ    = ifelse(k==:ρ,n,p.ρ)
     Cp   = ifelse(k==:Cp,n,p.Cp)
     k    = ifelse(k==:k,n,p.k)
-    (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ)
+    (; tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ,tχγ,τχγ,Fχγ)
 end

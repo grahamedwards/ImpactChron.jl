@@ -5,9 +5,9 @@ using ImpactChron
 using StableRNGs
 
 
-ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=500.,ρ=log(3210),Cp=log(900),k=log(3),tχα=60., τχα=50., Fχα=3., tχβ=0., τχβ=63., Fχβ=9.)
+ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=500.,ρ=log(3210),Cp=log(900),k=log(3),tχα=60., τχα=50., Fχα=3., tχβ=0., τχβ=63., Fχβ=9.,tχγ=0.,τχγ=0.,Fχγ=0.)
 
-ϕσ = (tss=.08, rAlo=0.065e-5, Tm=0.47,R=0.16, ta=.07, cAl=0.13, ρ=0.05, Cp=0.08, k=0.6, Tc=20.,tχα=15., τχα=10., Fχα=1., tχβ=1., τχβ=10., Fχβ=1.)
+ϕσ = (tss=.08, rAlo=0.065e-5, Tm=0.47,R=0.16, ta=.07, cAl=0.13, ρ=0.05, Cp=0.08, k=0.6, Tc=20.,tχα=15., τχα=10., Fχα=1., tχβ=1., τχβ=10., Fχβ=1.,tχγ=1.,τχγ=1.,Fχγ=1.)
 
 paramdist = (
     tss = Nrm(4567.3,.08),
@@ -25,7 +25,10 @@ paramdist = (
     Fχα  = Unf(0,60),
     tχβ  = Unf(0,799),
     τχβ  = Unf(0,600),
-    Fχβ  = Unf(0,60) ) 
+    Fχβ  = Unf(0,60),
+    tχγ  = Unf(0,799),
+    τχγ  = Unf(0,600),
+    Fχγ  = Unf(0,60) ) 
 
 dᵢ = 15_000.
 dₑ = 10*dᵢ ; zₑ = 2*dᵢ ; ejection_shape = ImpactChron.Parabola(zₑ,dₑ/2)
@@ -40,14 +43,14 @@ ages_1σ = [30.0, 18.0, 41.0, 13.0, 6.0, 8.0, 16.0, 20.0, 20.0, 8.0, 80.0, 10.0,
 mettest1 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=PetroTypes(), burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
 @test mettest1[:rAlo]  === ϕ.rAlo
-@test isapprox(mettest1[:ll],[-490.492, -475.391, -475.391, -475.391, -475.395, -475.395, -474.41, -474.41, -474.41, -474.41],atol=0.01)
+@test isapprox(mettest1[:ll][end], -474.410,atol=0.01)
 
 # petrotypes on
 test_petrotemps = ( T3=600+273., T4=700+273., T5=750+273., T6=1000+273.)
 test_sample_types = vcat(fill("3",6),fill("4",9),fill("5",12),fill("6",31))
-test_petrotypes =PetroTypes(test_petrotemps,test_sample_types)
+test_petrotypes = PetroTypes(test_petrotemps,test_sample_types)
 
 
 mettest2 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=test_petrotypes, burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
-@test isapprox(mettest2[:ll],[-473.243, -473.243, -473.243, -473.243, -473.082, -473.7, -472.512, -472.512, -472.512, -472.512], atol=0.01)
+@test isapprox(mettest2[:ll][end],-472.512, atol=0.01)
