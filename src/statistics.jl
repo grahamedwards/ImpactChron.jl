@@ -324,7 +324,7 @@ function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::Petro
     i5 = findfirst(x -> x<=petrotypes.type5.T, T)
 
 # Require all petrologic types to occur and occupy at least one layer. 
-    if isnothing(i3) || lastindex(T) >= i3 > i4 > i5 > imelt
+    if !isnothing(i3) && lastindex(T) >= i3 > i4 > i5 > imelt
 # Calculate and apply the conversion between fractional volume of body and fractional abundance in the meteorite record.
       pv3 = petrotypes.type3.p / vsum(@view v[i3:lastindex(T)])
       pv4 = petrotypes.type4.p / vsum(@view v[i4:i3-1])
