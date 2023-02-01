@@ -103,8 +103,8 @@ ImpactChron.weight_petro_types!(V_wpt,T_wpt,types_wpt)
 wpt_6 = [0.1,0.12] .* (1/2)/.22; wpt_5 = .13 * (1/4)/.13; wpt_4 = [.14,.15] .* (1/8)/.29; wpt_3 = [.16,.2] .* (1/8)/.36
 @test V_wpt ≈ vcat([0.,0.], wpt_6,wpt_5,wpt_4,wpt_3)
 
-V_wpt = [.3,.2,.5]
-T_wpt = [ 1150, 1100, 745]
+# Missing type 4
+@test iszero(ImpactChron.weight_petro_types!([.3,.2,.5],[ 1150, 1100, 745],types_wpt))
 
-ImpactChron.weight_petro_types!(V_wpt,T_wpt,types_wpt)
-@test iszero(V_wpt)
+# Everything hotter than type 3
+@test iszero(ImpactChron.weight_petro_types!([.3,.2,.5],[ 1150, 1100, 845],types_wpt))
