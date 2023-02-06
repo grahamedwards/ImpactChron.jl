@@ -50,9 +50,9 @@ function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
         :tχβ=> "Primordial bombardment onset (Ma after CAIs)",
         :τχβ=> "Primordial bombardment ℯ-folding time (Ma)",
         :Fχβ=> "Primordial initial impactor flux (Ma⁻¹)",
-        :tχγ=> "Post-accretion (2) bombardment onset (Ma after CAIs)",
-        :τχγ=> "Post-accretion (2) bombardment ℯ-folding time (Ma)",
-        :Fχγ=> "Post-accretion (2) initial impactor flux (Ma⁻¹)",            )
+        :tχγ=> "2ⁿᵈ Post-accretion bombardment onset (Ma after CAIs)",
+        :τχγ=> "2ⁿᵈ Post-accretion bombardment ℯ-folding time (Ma)",
+        :Fχγ=> "2ⁿᵈ Post-accretion initial impactor flux (Ma⁻¹)",              )
 
     nᵥ=length(v)
 
@@ -148,7 +148,10 @@ function proposal_histograms(data_in::Dict,plims::NamedTuple,v::Tuple;
         :Fχα=> "Post-accretion initial impactor flux (Ma⁻¹)",
         :tχβ=> "Primordial bombardment onset (Ma after CAIs)",
         :τχβ=> "Primordial bombardment ℯ-folding time (Ma)",
-        :Fχβ=> "Primordial initial impactor flux (Ma⁻¹)"             )
+        :Fχβ=> "Primordial initial impactor flux (Ma⁻¹)",
+        :tχγ=> "2ⁿᵈ Post-accretion bombardment onset (Ma after CAIs)",
+        :τχγ=> "2ⁿᵈ Post-accretion bombardment ℯ-folding time (Ma)",
+        :Fχγ=> "2ⁿᵈ Post-accretion initial impactor flux (Ma⁻¹)",            )
 
     nᵥ=length(v)
 
