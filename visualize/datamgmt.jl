@@ -145,15 +145,14 @@ cleanhist(x; nbins=50, scooch_nbins=4)
 ```
 Calculates a histogram with extra (0 count) bins to buffer the edges and make it look nice and clean. 🧼
 
-Optionally specify the number of total histogram `bins` (default: 50 bins) and the number of buffering bins `scooch_nbins`.
+Optionally specify the number of histogram `bins` (default: 64 bins) and the number of buffering bins `scooch_nbins`. (Total bins = `nbins + scoochbins`)
 
 Returns a `NamedTuple` with `x` and `y` values of histogram.
 """
+function cleanhist(x::AbstractArray; nbins::Int=64, scooch_nbins::Int=2)
 
-function cleanhist(x::AbstractArray; nbins::Int=50, scooch_nbins::Int=4)
-    x_scooch = (maximum(x)-minimum(x))/ (nbins-scooch_nbins)
-    binedges = LinRange(minimum(x)-2*x_scooch,maximum(x)+2*x_scooch,nbins+1)
-    #bincenters = LinRange( first(binedges)+step(binedges)/2, last(binedges)-step(binedges)/2,nbins)
+    x_scooch = scooch_nbins*(maximum(x)-minimum(x))/(nbins)
+    binedges = LinRange(minimum(x)-x_scooch,maximum(x)+x_scooch,nbins+2*scooch_nbins+1)
     y=histcounts(x,binedges)
     return (x=binweave(binedges), y=interleave(y),)
 end
