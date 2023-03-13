@@ -57,6 +57,7 @@ Menow,H,4,4480,30,SJ77,Turn1978,pg. 1006,Ar-Ar high-temperature plateau age
 Ochansk,H,4,4450,40,SJ77,Turn1978,pg. 1006,Ar-Ar reduced plateau age. Overlaps plateau age at 1sigma (4480 ± 30 Ma)
 Butsura,H,6,4480,30,SJ77,Turn1978,pg. 1008,"Ar-Ar age: identical summed extraction, plateau, and reduced plateau ages"
 Tieschitz,"H,L",3,4450,50,SJ77,Turn1978,"Fig 2, pg. 1005",Ar-Ar total/summed age; age spectrum indicates dominance of recoil in variability.
+Almahata Sitta 25 (H clast),H,5,4546.00,7.11,SJ77,Turr2023,"Table 3, pg. 312", Recalculated in this study: mean of integrated ages of fractions RU21898(4537±11) and RU22316 (4555±9)
 Zag,H,"3,4,5,6",4270,42,SJ77,Whit2000,recalculated,Recalculated in this study: mean of overlapping light phases and gray matrix Ar-Ar plateau ages.
 ALH A77226,H,4,4190,10,SJ77,Step1988,"Table 1, pg. 374",Reduced plateau age
 RKP A78002,H,4,4390,10,SJ77,Step1988,"Table 1, pg. 374","Reduced plateau age, consistent with constituent chondrule ages"
@@ -110,6 +111,7 @@ Marion (Iowa),L,6,4380,11.5,T69,Turn1969,recalculated,"Recalculated in this stud
 Barwell,L,5,4430,30,SJ77,Turn1978,"Table 5, pg. 1015",Reduced plateau age
 Shaw,L,7,4410,21.2,SJ77,Turn1978,recalculated,"Recalculated in this study: Mean of reduced plateau ages of samples #1 and #2. Turn1978, Table 5, pg. 1015. Chosen over imprecise date in Boga1980 with poor monitor data quality."
 Saratov,L,4,4440,30,SJ77,Turn1978,"Table 5, pg. 1015",Whole-rock Ar-Ar age (no plateau age)
+Almahata Sitta A100 (L clast),L,4,4535,10,SJ77,Turr2023,"Table 4, pg. 313", Integrated Ar-Ar age of fraction RU21889 - authors' preferred age
 Tsarev,L,5,650,50,SJ77,Minh1984,para. 5,"Apparent age plateau of 4 extractions (45% of 39Ar, 700-1000 C)"
 MIL 05029,L,im,4517.3,10.7,SJ77,Weir2010,"Table 5, pg. 1879",Weighted average of 3 samples' raw plateau ages
 NWA 091,L,6,475.4,5.9,uSJ77,Weir2012,"Table 1, pg. 1330",Final plateau
@@ -193,6 +195,7 @@ EET 96135,EH,"4,5",4491,65,SJ77,Hopp2014,"Table 1, pg. 362",Isochron age of 5 ex
 Sahara 97096,EH,3,2288,69,SJ77,Hopp2014,"Table 1, pg. 362","Isochron age defined by 3 extractions (1090-1170C); lots of degassing, severely lowered ages"
 Happy Canyon,EL,im,4530,20,SJ77,Mcco1995,pg. 171,"High-temperature phase plateau age of 5 extractions (40% of Ar). Represents last major degassing event, presumably the impact melting event"
 Ilafegh 009,EL,im,4390,219.5,SJ77,Mcco1995,pg. 171,Authors conclude age lies between 4340-4440 Ma. We take average and add 10% 2sigma
+Almahata Sitta MS-D (EL clast),EL,6,4513,17,SJ77,Turr2023,"Table 4, pg. 313",Plateau age of of fraction RU22318 - authors' preferred age
 NWA 4799,EH,im,4220.7,8.8,uSJ77,Udry2019,pg. 12,Isochron age
 NWA 7214,EH,im,4484.7,3.5,uSJ77,Udry2019,pg. 12,Isochron age
 NWA 7809,EH,im,4463,10,uSJ77,Udry2019,pg. 12,Isochron age

@@ -5,7 +5,7 @@ using DelimitedFiles
 cd(@__DIR__)
 
 data_mat = readdlm("KArArages_compilation.csv",',')
-data_headers = Symbol.(data_in_mat[1,:])
+data_headers = Symbol.(data_mat[1,:])
 d = Dict{Symbol,Any}()
 for i ∈ eachindex(data_headers)
     k = data_headers[i]
@@ -42,7 +42,7 @@ for i ∈ iT69
     ageMa[i],σ[i] = agerecal(d[:ageMa][i],d[:sigma][i])
 end
 
-outmat = hcat(data.name, data.group, data.type, ageMa,σ)
+outmat = hcat(d[:name], d[:group], d[:type], ageMa,σ)
 
 writedlm("KArArages.csv", outmat,',')
 writedlm("ArArages.csv", outmat[indices_ArAr,:],',')
