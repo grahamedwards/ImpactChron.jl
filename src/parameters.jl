@@ -1,6 +1,8 @@
 ## Parameters & parameter functions for planetesimal thermal model & metropolis code.
 
 ## Distribution structs
+abstract type PriorDistribution end
+
 """
 
 ```julia
@@ -11,7 +13,7 @@ Immutable `struct` to describe normally distributed data,
     reported as mean (`μ`) and 1σ (`σ`)
 
 """
-struct Nrm
+struct Nrm <: PriorDistribution
     μ::Float64
     σ::Float64
 end
@@ -26,7 +28,7 @@ Immutable `struct` to describe lognormally distributed data,
     reported as log-space mean (`μ`) and 1σ (`σ`)
 
 """
-struct lNrm
+struct lNrm <: PriorDistribution
     μ::Float64
     σ::Float64
 end
@@ -41,7 +43,7 @@ Immutable `struct` to describe uniformly distributed data,
     reported as minimum (`a`) and maximum (`b`).
 
 """
-struct Unf
+struct Unf <: PriorDistribution
     a::Float64
     b::Float64
 end
@@ -241,7 +243,7 @@ with one field (key `k`) changed to the value of `n`.
 Note that `==` identity is preserved only if the
 order of fields in `p` is as below
 
-Fields: `tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ`
+Fields: `tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ,tχγ,τχγ,Fχγ`
 """
 function perturb(p::NamedTuple,k::Symbol,n::Number)
     tχγ  = ifelse(k==:tχγ,n,p.tχγ)

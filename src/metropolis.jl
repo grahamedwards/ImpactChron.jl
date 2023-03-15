@@ -13,6 +13,46 @@ function metropolis_status(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,s
     println("---------------------------")
 end
 
+"""
+```julia
+ImpactChron.prior_bounds(x,p<:PriorDistribution)
+```
+
+Evaluates whether a proposal `x` falls within the permissible bounds of its prior `p <: PriorDistribution`. 
+Always returns `true` if p is of type `Nrm` or `lNrm`, tests if `x ∈ (p.a,p.b)` for `p::Unf`.
+"""
+prior_bounds(x::Number,p::Unf) = p.a < x < p.b
+prior_bounds(x::Number,p::Nrm) = true
+prior_bounds(x::Number,p::lNrm) = true
+
+"""
+
+```julia
+strict_priors(p::NamedTuple,k,p_prior<:PriorDistribution)
+```
+
+Evaluates strict priors related to Uniform distributions and other rules for paramter proposal `p` and perturbed variable `k::Symbol`, where `p_prior` is the prior distribution of `p[k]`.
+
+Returns `true` if all priors are satisfied. Returns `false` if any priors fail.
+
+Currently includes:\n
+    1. Ensure bounds of uniform priors are not exceeded.\n
+    2. Ensure bombardment events α, β, γ are in sequential order.\n
+    3. Ensure fluxes β and γ exceed the background flux (α) if/when they begin (i.e. instability/scattering fluxes exceed the background flux, by definition.)
+
+"""
+function strict_priors(p::NamedTuple,k::Symbol,p_prior::PriorDistribution)
+
+# Return false if p[k] falls outside of Uniform bounds
+    bool = prior_bounds(p[k],p_prior)
+# Return false if the bombardment onset times fall out of order.
+    bool *= p.tχα <= p.tχβ <= p.tχγ
+# The F of instability/scattering fluxes exceed the background flux by definition. 
+    bool *= p.Fχα*exp(-(p.tχβ-p.tχα)/p.τχα) <= ifelse(iszero(p.Fχβ),Inf,p.Fχβ)
+    bool *= p.Fχα*exp(-(p.tχγ-p.tχα)/p.τχα) <= ifelse(iszero(p.Fχγ),Inf,p.Fχγ)
+    
+    bool
+end
 
 
 
@@ -60,6 +100,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
         isa(plims[i],Unf) && ( plims[i].a <= p[i] <= plims[i].b || error("Initial proposal for $i exceeds permissible bounds ($(plims[i].a),$(plims[i].b))") )
     end
 
+    strict_priors(p,:tss,plims[:tss]) || error("'Strict' priors are not met.  See docs on `ImpactChron.strict_priors` for requirements.")
 
     stepfactor = 2.9 # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
 
@@ -87,18 +128,18 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
 
 # Adjust one parameter
         k = rand(rng,pvars)
-        δpₖ = pσ[k] * randn(rng) #getproperty(step_σ,k)*randn(rng)
-        pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
+        δpₖ = pσ[k] * randn(rng)
+        pₚ = perturb(p,k,p[k]+δpₖ)
 
-# Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if isa(plims[k], Unf) && !(plims[k].a < pₚ[k] < plims[k].b)
-# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k].a , plims[k].b )
-            llₚ = -Inf
-        else
-# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
+# Ensure "strict" priors are met.
+        if strict_priors(pₚ,k,plims[k]) 
+# Calculate thermochronologic history
             asteroid_agedist!(ah, pₚ, petrotypes, impactsite,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
-# Log likelihood of initial proposal
+# Calculate log-likelihood of thermochronologic history
             llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
+# Reject proposal if it fails `strict_priors` tests
+        else
+            llₚ = -Inf
         end
 
 # Decide to accept or reject the proposal
@@ -106,7 +147,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
 # Record new step sigma
             pσ = perturb(pσ,k,abs(δpₖ)*stepfactor) #setproperty!(step_σ,k,abs(δpₖ)*stepfactor)
 # Record new parameters
-            p = pₚ  #copyto!(p, pₚ)
+            p = pₚ  
 # Record new log likelihood
             ll = llₚ
         end
@@ -127,24 +168,21 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
 # Step through each of the nsteps in the Markov chain
     @inbounds for i=1:nsteps
 
-        # Start with fresh slate of parameters
-        #copyto!(pₚ, p)
-
-        # Adjust one parameter
+# Adjust one parameter
         k = rand(rng,pvars)
         prt[i]=k
-        δpₖ = pσ[k] * randn(rng) #getproperty(step_σ,k)*randn(rng)
-        pₚ = perturb(p,k,p[k]+δpₖ)    #setproperty!(pₚ,k,getproperty(pₚ,k)+δpₖ)
+        δpₖ = pσ[k] * randn(rng) 
+        pₚ = perturb(p,k,p[k]+δpₖ)
 
-# Calculate log likelihood for new proposal, ensuring bounds are not exceeded
-        if isa(plims[k], Unf) && !(plims[k].a < pₚ[k] < plims[k].b)
-# Reject proposal if propposal exceeds uniform bounds: pₚ[k] ∉ ( plims[k].a , plims[k].b )
-            llₚ = -Inf
-        else
-# Calculate cooling history if  pₚ[k] ∈ ( plims[k][1] , plims[k][2] )
+# Ensure "strict" priors are met.
+        if strict_priors(pₚ,k,plims[k]) 
+# Calculate thermochronologic history
             asteroid_agedist!(ah, pₚ, petrotypes, impactsite,nᵣ=nᵣ, Tmax=Tmax,Tmin=Tmin) 
-# Log likelihood of initial proposal
+# Calculate log-likelihood of thermochronologic history
             llₚ = ll_dist_params(ah,pₚ, plims,mu_sorted,sigma_sorted)
+# Reject proposal if it fails `strict_priors` tests
+        else
+            llₚ = -Inf
         end
 
 # Decide to accept or reject the proposal
