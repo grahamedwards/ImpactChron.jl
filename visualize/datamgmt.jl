@@ -27,10 +27,21 @@ julia> interleave([1,2,3])
 
 """
 function interleave(a::AbstractVector)
-    isa(a,AbstractRange) && (a=collect(a))
     c = Vector{eltype(a)}(undef, 2*(length(a)))
+    interleave!(c,a)
+    return c
+end
+
+"""
+```julia
+interleave!(c,a)
+```
+In-place version of `interleave`, that fills `c` with pairs of each index in `a`.
+"""
+function interleave!(c::AbstractVector,a::AbstractVector)
+    @assert length(c) == 2*length(a)
     i = 0
-    for x in 1:length(a)
+    @inbounds for x in 1:length(a)
         c[i += 1] = a[x]
         c[i += 1] = a[x]
     end
@@ -62,7 +73,7 @@ function binweave(a::AbstractVector)
     isa(a,AbstractRange) && (a=collect(a))
     c = Vector{eltype(a)}(undef, 2*(length(a)-1))
     i = 0
-    for x in 1:length(a)-1
+    @inbounds for x in 1:length(a)-1
         c[i += 1] = a[x]
         c[i += 1] = a[x+1]
     end
