@@ -24,15 +24,17 @@ ptp = ( tss=0,rAlo=0,R=0,ta=0,cAl=0,Tm=0,Tc=0,ρ=0,Cp=0,k=0,tχα=0., τχα=20.
 # Test low fluxes.
 @test !ImpactChron.strict_priors(perturb(ptp,:Fχβ,2.),:tχα,Unf(-1,1))
 @test !ImpactChron.strict_priors(perturb(ptp,:Fχγ,2.),:tχα,Unf(-1,1))
+# Priors still accepted if tχγ<tχβ when γ-flux turned off (Fχγ=0)
+@test ImpactChron.strict_priors(perturb(perturb(ptp,:Fχγ,0.),:tχγ,0.),:tχα,Unf(-1,1))
 
 #----------
 #----------
 
 ## Testing the Markov chain 
 
-ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=500.,ρ=log(3210),Cp=log(900),k=log(3),tχα=0., τχα=50., Fχα=3., tχβ=0., τχβ=63., Fχβ=9.,tχγ=0.,τχγ=0.,Fχγ=0.)
+ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=500.,ρ=log(3210),Cp=log(900),k=log(3),tχα=0., τχα=50., Fχα=3., tχβ=1., τχβ=63., Fχβ=9.,tχγ=0.,τχγ=0.,Fχγ=0.)
 
-ϕσ = (tss=.08, rAlo=0.065e-5, Tm=0.47,R=0.16, ta=.07, cAl=0.13, ρ=0.05, Cp=0.08, k=0.6, Tc=20.,tχα=15., τχα=10., Fχα=1., tχβ=1., τχβ=10., Fχβ=1.,tχγ=1.,τχγ=1.,Fχγ=1.)
+ϕσ = (tss=.08, rAlo=0.065e-5, Tm=0.47,R=0.16, ta=.07, cAl=0.13, ρ=0.05, Cp=0.08, k=0.6, Tc=20.,tχα=15., τχα=10., Fχα=1., tχβ=1., τχβ=1., Fχβ=1.,tχγ=1.,τχγ=1.,Fχγ=1.)
 
 paramdist = (
     tss = Nrm(4567.3,.08),
@@ -68,7 +70,7 @@ ages_1σ = [30.0, 18.0, 41.0, 13.0, 6.0, 8.0, 16.0, 20.0, 20.0, 8.0, 80.0, 10.0,
 mettest1 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=PetroTypes(), burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
 @test mettest1[:rAlo]  === ϕ.rAlo
-@test isapprox(mettest1[:ll][end], -474.753,atol=0.01)
+@test isapprox(mettest1[:ll][end], -474.803,atol=0.01)
 
 # petrotypes on
 test_petrotemps = ( T3=600+273., T4=700+273., T5=750+273., T6=1000+273.)
@@ -78,4 +80,4 @@ test_petrotypes = PetroTypes(test_petrotemps,test_sample_types)
 
 mettest2 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=test_petrotypes, burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
-@test isapprox(mettest2[:ll][end],-472.638, atol=0.01)
+@test isapprox(mettest2[:ll][end],-473.030, atol=0.01)
