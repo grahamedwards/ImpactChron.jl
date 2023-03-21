@@ -10,29 +10,37 @@ using StableRNGs
 @test ImpactChron.prior_bounds(5,lNrm(1,1))
 @test ImpactChron.prior_bounds(5,Nrm(1,1))
 
-ptp = ( tss=0,rAlo=0,R=0,ta=0,cAl=0,Tm=0,Tc=0,ρ=0,Cp=0,k=0,tχα=0., τχα=20., Fχα=10., tχβ=10., τχβ=20., Fχβ=10.,tχγ=20.,τχγ=20.,Fχγ=20.) # prior test proposals
+ptp = ( tss=0,rAlo=0,R=0,ta=0,cAl=0,Tm=0,Tc=0,ρ=0,Cp=0,k=0,tχα=0., τχα=20., Fχα=10., tχβ=10., τχβ=10., Fχβ=10.,tχγ=20.,τχγ=10.,Fχγ=20.) # prior test proposals
 
 # Test `prior_bounds` within `strict_priors`
 @test ImpactChron.strict_priors(ptp,:tχα,Unf(-1,1))
 @test !ImpactChron.strict_priors(ptp,:tχα,Unf(0,1))
+
 # Test bombardment onset order
 @test !ImpactChron.strict_priors(perturb(ptp,:tχα,15.),:tχα,Nrm(0,1))
 @test !ImpactChron.strict_priors(perturb(ptp,:tχβ,40.),:tχα,Unf(-1,1))
+@test ImpactChron.strict_priors(perturb(perturb(ptp,:Fχγ,0.),:tχγ,0.),:tχα,Unf(-1,1)) # Priors still accepted if tχγ<tχβ when γ-flux turned off (Fχγ=0)
+
 # Test zeroed flux switch
 @test ImpactChron.strict_priors(perturb(ptp,:Fχβ,0.),:tχα,Unf(-1,1))
 @test ImpactChron.strict_priors(perturb(ptp,:Fχγ,0.),:tχα,Unf(-1,1))
+
 # Test low fluxes.
 @test !ImpactChron.strict_priors(perturb(ptp,:Fχβ,2.),:tχα,Unf(-1,1))
 @test !ImpactChron.strict_priors(perturb(ptp,:Fχγ,2.),:tχα,Unf(-1,1))
-# Priors still accepted if tχγ<tχβ when γ-flux turned off (Fχγ=0)
-@test ImpactChron.strict_priors(perturb(perturb(ptp,:Fχγ,0.),:tχγ,0.),:tχα,Unf(-1,1))
+
+# Test long post-accretion bombardment e-folding times
+@test !ImpactChron.strict_priors(perturb(ptp,:τχγ,30.),:tχα,Unf(-1,1)) # Reject
+@test !ImpactChron.strict_priors(perturb(ptp,:τχβ,30.),:tχα,Unf(-1,1)) # Reject
+@test ImpactChron.strict_priors(perturb(perturb(ptp,:Fχγ,0.),:τχγ,30.),:tχα,Unf(-1,1)) # Accept if F=0
+@test ImpactChron.strict_priors(perturb(perturb(ptp,:Fχβ,0.),:τχβ,30.),:tχα,Unf(-1,1)) # Accept if F=0
 
 #----------
 #----------
 
 ## Testing the Markov chain 
 
-ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=500.,ρ=log(3210),Cp=log(900),k=log(3),tχα=0., τχα=50., Fχα=3., tχβ=1., τχβ=63., Fχβ=9.,tχγ=0.,τχγ=0.,Fχγ=0.)
+ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=500.,ρ=log(3210),Cp=log(900),k=log(3),tχα=0., τχα=60., Fχα=3., tχβ=1., τχβ=40., Fχβ=9.,tχγ=0.,τχγ=0.,Fχγ=0.)
 
 ϕσ = (tss=.08, rAlo=0.065e-5, Tm=0.47,R=0.16, ta=.07, cAl=0.13, ρ=0.05, Cp=0.08, k=0.6, Tc=20.,tχα=15., τχα=10., Fχα=1., tχβ=1., τχβ=1., Fχβ=1.,tχγ=1.,τχγ=1.,Fχγ=1.)
 
@@ -70,7 +78,7 @@ ages_1σ = [30.0, 18.0, 41.0, 13.0, 6.0, 8.0, 16.0, 20.0, 20.0, 8.0, 80.0, 10.0,
 mettest1 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=PetroTypes(), burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
 @test mettest1[:rAlo]  === ϕ.rAlo
-@test isapprox(mettest1[:ll][end], -474.803,atol=0.01)
+@test isapprox(mettest1[:ll][end], -479.352,atol=0.01)
 
 # petrotypes on
 test_petrotemps = ( T3=600+273., T4=700+273., T5=750+273., T6=1000+273.)
@@ -80,4 +88,4 @@ test_petrotypes = PetroTypes(test_petrotemps,test_sample_types)
 
 mettest2 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=test_petrotypes, burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
-@test isapprox(mettest2[:ll][end],-473.030, atol=0.01)
+@test isapprox(mettest2[:ll][end],-474.326, atol=0.01)
