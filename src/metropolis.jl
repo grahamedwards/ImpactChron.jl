@@ -75,8 +75,8 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
                         downscale::Integer=1, # Downscale high-res timesteps to `downscale`-times fewer bins
                         petrotypes::PetroTypes=PetroTypes(), # petrologic types, each with max Temp and rel. abundances in record
-                        rng = Random.Xoshiro(45687)) # Seed a specific random number generator
-
+                        rng = Random.Xoshiro(45687), # Seed a specific random number generator
+                        stepfactor = 2.9) # σ of the proposal function is stepfactor * last_σ; 2.9 -> ~50% acceptance...
 # PREPARE OUTPUT DISTRIBUTIONS
     acceptanceDist = falses(nsteps)
     nᵥ = length(pvars)
@@ -101,8 +101,6 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
     end
 
     strict_priors(p,:tss,plims[:tss]) || error("'Strict' priors are not met.  See docs on `ImpactChron.strict_priors` for requirements.")
-
-    stepfactor = 2.9 # standard deviation of the proposal function is stepfactor * last step; this is tuned to optimize acceptance probability at 50%
 
 # SORT OBSERVED COOLING AGE DATASET (for ll_dist function)
     sI = sortperm(mu)
