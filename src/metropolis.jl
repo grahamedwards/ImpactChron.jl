@@ -38,8 +38,7 @@ Returns `true` if all priors are satisfied. Returns `false` if any priors fail.
 Currently includes:\n
     1. Ensure bounds of uniform priors are not exceeded.\n
     2. Ensure bombardment events α, β, γ are in sequential order.\n
-    3. Ensure fluxes β and γ exceed the background flux (α) if/when they begin (i.e. instability/scattering fluxes exceed the background flux, by definition.)\n
-    4. The ℯ-folding time of the primordial flux must be longer than that of post-accretion bombardments. 
+    3. The ℯ-folding time of the primordial flux must be longer than that of post-accretion bombardments. 
 
 """
 function strict_priors(p::NamedTuple,k::Symbol,p_prior::PriorDistribution)
@@ -48,9 +47,6 @@ function strict_priors(p::NamedTuple,k::Symbol,p_prior::PriorDistribution)
     bool = prior_bounds(p[k],p_prior)
 # Return false if the bombardment onset times fall out of order.
     bool *= p.tχα <= p.tχβ <= ifelse(iszero(p.Fχγ),Inf,p.tχγ) # ifelse in case γ-flux is off (Fχγ=0)
-# The F of instability/scattering fluxes exceed the background flux by definition. 
-    bool *= p.Fχα*exp(-(p.tχβ-p.tχα)/p.τχα) <= ifelse(iszero(p.Fχβ),Inf,p.Fχβ)
-    bool *= p.Fχα*exp(-(p.tχγ-p.tχα)/p.τχα) <= ifelse(iszero(p.Fχγ),Inf,p.Fχγ)
 # The τ of instability/scattering fluxes must be shorter than that of the background impactor flux.
     bool *= ifelse(iszero(p.Fχβ),-Inf,p.τχβ) <= p.τχα
     bool *= ifelse(iszero(p.Fχγ),-Inf,p.τχγ) <= p.τχα
