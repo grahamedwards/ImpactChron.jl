@@ -81,9 +81,9 @@ Physical and environmental parameters are described in `p`. Alternatively, these
 
     | Parameter                 | log?  | `NmTpl` | `func`  |
     | ------------------------- | ----  | ------ | -------- |
-    | closure temperature (K)   | no    | `Tc`   | `Tc`     |
     | solar system age (Ma)     | no    | `tss`  | `tₛₛ`    |
     | initial ²⁶Al/²⁷Al         | no    | `rAlo` | `rAlo`   |
+    | closure temperature (K)   | yes   | `Tc`   | `Tc`     |
     | body radius (m)           | yes   | `R`    | `R`      |
     | accretion date (Ma)       | yes   | `ta`   | `tₐ`     |
     | disk temperature (K)      | yes   | `Tm`   | `To`     |
@@ -170,6 +170,7 @@ function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector 
     Al_conc = exp(p.cAl) # fractional abundance of Al (g/g) (lognormally distributed)
     ρ = exp(p.ρ)         # rock density (lognormally distributed)
     K = exp(p.k)         # thermal conductivity (lognormally distributed)
+    Tc = exp(p.Tc)       # Ar closure temperature (K) (lognormally distributed)
 
 
     κ = K / (ρ*Cₚ)
@@ -278,6 +279,7 @@ function planetesimal_cooling_timestep!(solartime::AbstractRange,
     Al_conc = exp(p.cAl) # fractional abundance of Al (g/g) (lognormally distributed)
     ρ = exp(p.ρ)         # rock density (lognormally distributed)
     K = exp(p.k)         # thermal conductivity (lognormally distributed)
+    Tc = exp(p.Tc)       # Ar closure temperature (K) (lognormally distributed)
 
     κ = K / (ρ*Cₚ)
     s_a  = 3.155692608e7 # seconds per annum, for Physics™!

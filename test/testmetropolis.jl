@@ -32,9 +32,9 @@ ptp = ( tss=0,rAlo=0,R=0,ta=0,cAl=0,Tm=0,Tc=0,ρ=0,Cp=0,k=0,tχα=0., τχα=20.
 
 ## Testing the Markov chain 
 
-ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=500.,ρ=log(3210),Cp=log(900),k=log(3),tχα=0., τχα=60., Fχα=3., tχβ=1., τχβ=40., Fχβ=9.,tχγ=0.,τχγ=0.,Fχγ=0.)
+ϕ = (tss=4567.3,rAlo=5.23e-5,R=log(150e3),ta=log(2.13),cAl=log(0.011),Tm=log(250),Tc=log(500),ρ=log(3210),Cp=log(900),k=log(3),tχα=0., τχα=60., Fχα=3., tχβ=1., τχβ=40., Fχβ=9.,tχγ=0.,τχγ=0.,Fχγ=0.)
 
-ϕσ = (tss=.08, rAlo=0.065e-5, Tm=0.47,R=0.16, ta=.07, cAl=0.13, ρ=0.05, Cp=0.08, k=0.6, Tc=20.,tχα=15., τχα=10., Fχα=1., tχβ=1., τχβ=1., Fχβ=1.,tχγ=1.,τχγ=1.,Fχγ=1.)
+ϕσ = (tss=.08, rAlo=0.065e-5, Tm=0.47,R=0.16, ta=.07, cAl=0.13, ρ=0.05, Cp=0.08, k=0.6, Tc=0.2, tχα=15., τχα=10., Fχα=1., tχβ=1., τχβ=1., Fχβ=1.,tχγ=1.,τχγ=1.,Fχγ=1.)
 
 paramdist = (
     tss = Nrm(4567.3,.08),
@@ -43,7 +43,7 @@ paramdist = (
     ta  = lNrm(0.6994,0.0726),
     cAl = lNrm(-4.5665, 0.1316),
     Tm  = lNrm(5.3517,0.4691),
-    Tc  = Nrm(500,75),
+    Tc = lNrm(6.1914, 0.2571),
     ρ   = lNrm(8.112,0.0507),
     Cp  = lNrm(6.74,0.085),
     k   = lNrm(0.3319,0.6335),
@@ -70,7 +70,7 @@ ages_1σ = [30.0, 18.0, 41.0, 13.0, 6.0, 8.0, 16.0, 20.0, 20.0, 8.0, 80.0, 10.0,
 mettest1 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=PetroTypes(), burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
 @test mettest1[:rAlo]  === ϕ.rAlo
-@test isapprox(mettest1[:ll][end], -479.352,atol=0.01)
+@test isapprox(mettest1[:ll][end], -479.357,atol=0.01)
 
 # petrotypes on
 test_petrotemps = ( T3=600+273., T4=700+273., T5=750+273., T6=1000+273.)
@@ -80,4 +80,4 @@ test_petrotypes = PetroTypes(test_petrotemps,test_sample_types)
 
 mettest2 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=test_petrotypes, burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
-@test isapprox(mettest2[:ll][end],-474.326, atol=0.01)
+@test isapprox(mettest2[:ll][end],-474.377, atol=0.01)
