@@ -68,6 +68,8 @@ struct Hemisphere{T<:Number} <: ImpactSiteShape
     r::T
 end
 
+Hemisphere(x::Number) = Hemisphere(x,x)
+
 struct ImpactSite{T<:ImpactSiteShape, N<:Number}
     heat::T
     #eject::ImpactSiteShape # an ejecta volume may be added some day.

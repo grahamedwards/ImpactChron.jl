@@ -2,14 +2,17 @@
     # radius_at_depth
     #
 
-"""
-    radius_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
-    radius_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -R) / x.z ) # Parabolic approximation
-    radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.r*x.r - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes z=r
-    nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
-"""
 
 using ImpactChron # safetestset
+
+## A few of the small helper functions
+@test isequal(ImpactChron.nan_regolith!([0.,0.,0.], [8.,2.,6.], 4), [0.,NaN,0.])
+
+@test ImpactChron.radius_at_depth(18.,20.,Cone(4.,2.)) ≈ 1
+@test ImpactChron.radius_at_depth(18.,20.,Parabola(4.,2.)) ≈ sqrt(2)
+@test ImpactChron.radius_at_depth(18.,20.,Hemisphere(4.)) ≈ sqrt(12)
+
+## All the larger functions 
 
 tss=4567.3
 rAlo=5.23e-5
