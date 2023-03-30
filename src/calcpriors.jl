@@ -15,7 +15,7 @@ If `fullpost=true`, returns posterior samples rather than summary statistics.
 """
 function mcmean(x::AbstractArray,xsig::AbstractArray;n::Int=10_000_000,fullpost::Bool=false)
 
-    out = Vector{eltype(x)}(undef,n)
+    out = Vector{float(eltype(x))}(undef,n)
     nₓ = length(x)
     for i in 1:n
         mcx = zero(eltype(out))
@@ -80,4 +80,77 @@ function agerecal(x::Number,sig::Number;monitor_age::Number=0,n::Int64=1_000_000
     μ = vmean(tc)
     σ = vstd(tc, mean=μ)
     return μ*1e-6 ,σ*1e-6
+end
+
+
+
+"""
+
+```julia
+lognorm(x)
+```
+
+Calculate the lognormal distribution of `x`, a collection of `Number`s. Returns a `lNrm` type. Conveniently accepts `NamedTuple`s.
+
+See also: `lognorm`
+
+"""
+function lognorm(y)
+    y isa NamedTuple ? x = log.(getproperty.(Ref(y),eachindex(y))) : x=log.(y)
+    μ = vmean(x)
+    σ = vstd(x)
+    lNrm(μ,σ)
+end
+
+
+"""
+
+```julia
+draw(x::Union{Number,ImpactChron.PriorDistribution})
+```
+
+Make a random draw from  `x`, which may be a `Tuple` or any subtype of `PriorDistribution``. If `x` is a `Number`, it simply returns `x`.
+
+Used exclusively in support of `lognormMC`.
+
+See also: `Nrm`, `lNrm`, `Unf`, `lognormMC`
+
+"""
+draw(x::Nrm) = x.μ + x.σ*randn()
+draw(x::Unf) = x.a+ (x.b-x.a) * rand()
+draw(x::Number) = x
+draw(x::Tuple) = rand(x)
+
+
+"""
+
+```julia
+lognormMC(x ; n)
+```
+
+Calculate the lognormal distribution of a collection `x` by resampling the entire collection `n`` times (default=1M).
+
+`x` may contain data in the form of `Tuple`s, `PriorDistribution` subtypes, or `Number`s.
+
+Returns a `lNrm` type.
+
+See also: `lognorm`, `ImpactChron.draw`
+
+---
+Just in case, the function has a (very slow) safety net to prevent it from trying to calculate the `log` of any negative resamples. (This has never happened for the data I used)
+"""
+function lognormMC(x;n::Int=1_000_000)
+    xn = length(x)*n
+    xdraws = Vector{Float64}(undef,xn)
+    xinds = eachindex(x)
+    @inbounds for i ∈ eachindex(xdraws)
+        d = draw(x[rand(xinds)])
+        d = ifelse(d>0,d,NaN)
+        isnan(d)  &&  @warn "There was a negative log! But I've ignored it for you. 😎"
+        xdraws[i] = log(d)
+    end
+    good_draws = xdraws[.!isnan.(xdraws)]
+    μ = vmean(good_draws)
+    σ = vstd(good_draws)
+    lNrm(μ,σ)
 end
