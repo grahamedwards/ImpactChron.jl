@@ -90,7 +90,7 @@ Turner1978 = ( Tieschitz=Unf(313,333), Menow=Unf(563,593), Ochansk=Unf(423,443),
 
 # Aluminium abundance 
     # Al mass fraction in Ordinary, Enstatite, and Rumuruti-type chondrites 
-    # From Table 16.11 in Lodders & Fegley, 1999 (ISBN: 9780195116946)
+    # From Table 16.11 in Lodders & Fegley, 1998 (ISBN: 9780195116946)
     Al_abundances = (H=0.0106, L=0.0116, LL=0.0118, EH=0.0082, EL=0.01, R=0.0106)
     cAl=lognorm(Al_abundances)
 
