@@ -6,7 +6,7 @@
 @test ImpactChron.draw((1,2,3)) ∈ (1,2,3)
 @test ImpactChron.draw(0.2) === 0.2
 @test 1 <= ImpactChron.draw(Unf(1,5)) <= 5
-# no test for the normal draw without an explicit rng.
+@test ImpactChron.draw(Nrm(2,1),rng=StableRNG(4567)) ≈ 0.9470581634676831
 
 @test ImpactChron.lognorm((x=5,y=7,z=4)).μ ≈ 1.647214140869768
 @test ImpactChron.lognorm((x=5,y=7,z=4)).σ ≈ 0.28171393310016424

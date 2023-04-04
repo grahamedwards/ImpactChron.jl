@@ -116,10 +116,10 @@ Used exclusively in support of `lognormMC`.
 See also: `Nrm`, `lNrm`, `Unf`, `lognormMC`
 
 """
-draw(x::Nrm) = x.μ + x.σ*randn()
-draw(x::Unf) = x.a+ (x.b-x.a) * rand()
-draw(x::Number) = x
-draw(x::Tuple) = rand(x)
+draw(x::Nrm; rng=Random.Xoshiro()) = x.μ + x.σ*randn(rng)
+draw(x::Unf; rng=Random.Xoshiro()) = x.a+ (x.b-x.a) * rand(rng)
+draw(x::Number; rng=Random.Xoshiro()) = x
+draw(x::Tuple; rng=Random.Xoshiro()) = rand(rng,x)
 
 
 """
@@ -139,12 +139,11 @@ See also: `lognorm`, `ImpactChron.draw`
 ---
 Just in case, the function has a (very slow) safety net to prevent it from trying to calculate the `log` of any negative resamples. (This has never happened for the data I used)
 """
-function lognormMC(x;n::Int=1_000_000)
-    xn = length(x)*n
-    xdraws = Vector{Float64}(undef,xn)
+function lognormMC(x;n::Int=1_000_000,rng=Random.Xoshiro())
+    xdraws = Vector{Float64}(undef,length(x)*n)
     xinds = eachindex(x)
     @inbounds for i ∈ eachindex(xdraws)
-        d = draw(x[rand(xinds)])
+        d = draw(x[rand(rng,xinds)],rng=rng)
         d = ifelse(d>0,d,NaN)
         isnan(d)  &&  @warn "There was a negative log! But I've ignored it for you. 😎"
         xdraws[i] = log(d)

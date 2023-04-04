@@ -1,8 +1,6 @@
 ## Test functions in ImCh_metropolis.jl
     # thermochron_metropolis
 
-using ImpactChron
-using StableRNGs
 
 ## Test "strict" priors
 @test ImpactChron.prior_bounds(5,Unf(2,6))
