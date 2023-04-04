@@ -75,7 +75,7 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
                         downscale::Integer=1, # Downscale high-res timesteps to `downscale`-times fewer bins
                         petrotypes::PetroTypes=PetroTypes(), # petrologic types, each with max Temp and rel. abundances in record
-                        rng = Random.Xoshiro(45687), # Seed a specific random number generator
+                        rng = Random.Xoshiro(), # Seed a specific random number generator
                         stepfactor = 2.9) # σ of the proposal function is stepfactor * last_σ; 2.9 -> ~50% acceptance...
 # PREPARE OUTPUT DISTRIBUTIONS
     acceptanceDist = falses(nsteps)
