@@ -9,4 +9,4 @@ A Bayesian framework to deconvolve the dual contributions of (1.) cooling in pri
 
 Developed from the approaches of [Chron.jl](https://github.com/brenhinkeller/Chron.jl).
 
-:construction: Still very much under construction. :construction:
+:construction: Under construction. :construction:
