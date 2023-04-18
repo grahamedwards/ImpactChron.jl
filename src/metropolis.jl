@@ -63,7 +63,7 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         mu::AbstractArray,  # Observed means
                         sigma::AbstractArray, # Observed 1σ's
                         impactsite::ImpactSite; # crater/impact parameters
-                        plims::NamedTuple=(;), # Paramter distributions.
+                        plims::NamedTuple=(;), # Paramter prior distributions.
                         burnin::Int=0,      # Burn-in iterations
                         nsteps::Int,  # Post burn-in iterations
                         Δt::Number= 1.,    # Time-step (Ma)
@@ -73,6 +73,7 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
                         nᵣ::Integer=100,    # Radial nodes
                         updateN::Integer=1_000, # Frequency of status updates (every `updateN` steps)
                         archiveN::Integer=0, # Save archive of output data every `archiveN` steps. Off (=0) by default.
+                        archiveages::Bool=false, # Archive the thermal history at each timestep.
                         downscale::Integer=1, # Downscale high-res timesteps to `downscale`-times fewer bins
                         petrotypes::PetroTypes=PetroTypes(), # petrologic types, each with max Temp and rel. abundances in record
                         rng = Random.Xoshiro(), # Seed a specific random number generator
@@ -83,10 +84,12 @@ function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal
     llDist = Array{float(eltype(mu))}(undef,nsteps) # Vector to track loglikelihood
     pDist = Array{float(eltype(mu))}(undef,nsteps,nᵥ) # Array to track proposal evolutions
     prt = similar(acceptanceDist,Symbol) # Vector to track proposed perturbations
-
 # Prepare AsteroidHistory 
 
 ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=downscale)
+
+# Preallocate cooling age archive if keeping track of it.
+archiveages && (agearchive = fill(NaN,length(ah.agedist_downscaled),nsteps))
 
 # TIME MANAGEMENT
     # Ensure that age of CAIs (tₛₛ) is constant
@@ -192,6 +195,7 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
 # Record new log likelihood
             ll = llₚ
             acceptanceDist[i]=true
+            archiveages && (agearchive[:,i] .= ah.agedist_downscaled)
         end
 
         @inbounds for j = 1:nᵥ
@@ -212,5 +216,6 @@ ah = AsteroidHistory(p.R, nnodes=nᵣ, Δt=Δt, tmax=tmax, downscale_factor=down
     MetOut[:ll] = llDist
     MetOut[:accept] = acceptanceDist
     MetOut[:prt] = prt
+    archiveages && (MetOut[:ages] = agearchive)
     return MetOut
 end

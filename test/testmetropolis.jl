@@ -79,3 +79,8 @@ test_petrotypes = PetroTypes(test_petrotemps,test_sample_types)
 mettest2 = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=test_petrotypes, burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567))
 
 @test isapprox(mettest2[:ll][end],-474.377, atol=0.01)
+
+mettest_agearchive = thermochron_metropolis(ϕ, ϕσ, vars, ages, ages_1σ,crater,plims=paramdist, petrotypes=test_petrotypes, burnin=10, nsteps=10,  Δt= 1., downscale=10,Tmin=0.,Tmax=1373., tmax=999., nᵣ=200, updateN=10_000, archiveN=0,rng=StableRNG(4567),archiveages=true)
+
+@test first(mettest_agearchive[:ages]) ≈ 1.3203322759409092e-18
+@test isnan(last(mettest_agearchive[:ages]))
