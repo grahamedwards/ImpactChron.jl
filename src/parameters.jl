@@ -217,12 +217,7 @@ function AsteroidHistory(::T; nnodes::Int, Δt::Number, tmax::Number, downscale_
     peakT = Vector{T}(undef,nnodes) # peak temperature of each concentric node
     cooltime = Vector{Int}(undef,nnodes) # tracker of indices of primary cooling date in timeseries
 
-# Time Management: correct for downscaling (if downscale_factor ==1, time_vec == collect(time_rng))
-    downscale_adj = length(0:Δt:tmax)%downscale_factor
-    tmax = tmax - downscale_adj * Δt
-    iszero(downscale_adj) || @warn "time range adjusted for downscale to 0:Δt(=$Δt):$tmax"
-    timerange = 0:Δt:tmax
-    time_downscaled = sum(timerange[1:downscale_factor])/downscale_factor : Δt*downscale_factor : tmax
+timerange, time_downscaled = timemanagement(Δt,tmax,downscale_factor)
 
 # Vectors that correspond to timesteps:
     impacts = Vector{T}(undef,length(timerange)) # tracker of # of impacts at each timestep
@@ -234,6 +229,24 @@ function AsteroidHistory(::T; nnodes::Int, Δt::Number, tmax::Number, downscale_
 end
 
 
+"""
+
+```julia
+timemanagement(Δt, tmax, downscale_factor::Int)
+```
+
+Calculate (and adjust if necessary) the model timescales for a given `tmax` (Ma after CAIs), `Δt` timestep (in Ma), and a `downscale_factor`. May overwrite tmax to ensure  
+
+Returns a `Tuple` containing the timescale and the downscaled timescale.
+"""
+function timemanagement(Δt::Number, tmax::Number, downscale_factor::Int)
+    downscale_adj = length(0:Δt:tmax)%downscale_factor
+    tmax = tmax - downscale_adj * Δt
+    iszero(downscale_adj) || @warn "time range adjusted for downscale to 0:Δt(=$Δt):$tmax"
+    timerange = 0:Δt:tmax
+    time_downscaled = sum(timerange[1:downscale_factor])/downscale_factor : Δt*downscale_factor : tmax
+    timerange, time_downscaled
+end
 
 ## Function(s)
 """

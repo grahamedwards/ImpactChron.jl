@@ -1,8 +1,7 @@
 ## Data Management: functions to aid visualization of ImpactChron outputs.
 
-using Statistics, VectorizedStatistics
-using LoopVectorization
-using NaNStatistics
+using NaNStatistics, VectorizedStatistics
+using LoopVectorization, Polyester
 import ImpactChron: downscale!, rangemidbounds,rangemidpoints
 
 """
@@ -70,16 +69,29 @@ julia> binweave([1,2,3])
 ```
 """
 function binweave(a::AbstractVector)
-    isa(a,AbstractRange) && (a=collect(a))
     c = Vector{eltype(a)}(undef, 2*(length(a)-1))
+    binweave!(c,a)
+    return c
+end
+
+
+"""
+```julia
+binweave!(c,a)
+```
+In-place version of `binweave`, that overwrites `c` with woven bin edges.
+
+See also: `binweave`
+"""
+function binweave!(c::AbstractVector, a::AbstractVector)   
+    @assert length(c) == 2*(length(a)-1)
     i = 0
     @inbounds for x in 1:length(a)-1
         c[i += 1] = a[x]
         c[i += 1] = a[x+1]
     end
-    return c
+    c 
 end
-
 
 """
 ```julia
@@ -128,10 +140,10 @@ function distmedians(d::Dict;ci::Number=0.)
         dₒᵤₜ = Dict{Symbol,Tuple}()
         for i ∈ keys(d)
             if eltype(d[i]) <: Number
-                med = median(d[i])
+                med = vmedian(d[i])
                 if length(d[i])>1
-                    lower = med - quantile(d[i],α/2)
-                    upper = quantile(d[i],1-α/2) - med
+                    lower = med - vquantile(d[i],α/2)
+                    upper = vquantile(d[i],1-α/2) - med
                 else
                     lower = upper = zero(med)
                 end
@@ -142,7 +154,7 @@ function distmedians(d::Dict;ci::Number=0.)
         dₒᵤₜ = Dict{Symbol,Number}()
         for i ∈ keys(d)
             if eltype(d[i]) <: Number
-                dₒᵤₜ[i]= median(d[i])
+                dₒᵤₜ[i]= vmedian(d[i])
             end
         end
     end
@@ -172,32 +184,54 @@ end
 """
 
 ```julia
-summedpdfhist(x,d,ds; bins=50)
+summedpdfhist(x,d,ds; bins)
 ```
 
-Create a histogram of the summed probability density functions (PDFs) of data with means `d` and standard deviations `ds`, respectively, calculated over domain `x`. Optionally specify the number of histogram `bins` (default: 50 bins).
+Create a histogram of the summed probability density functions (PDFs) of data with means `d` and standard deviations `ds`, respectively, calculated over domain `x`. Optionally specify the number of histogram `bins` (default: 64 bins).
 
 Returns a `NamedTuple` with `x` and `y` values of histogram.
 
 """
-function summedpdfhist(x::AbstractRange,d::AbstractVector,ds::AbstractVector; bins::Int=50)
+function summedpdfhist(x::AbstractRange,d::AbstractVector,ds::AbstractVector; bins::Int=64)
 # Ensure downscaling will work correctly
-    if !iszero(length(x)%bins)
-        x = first(x):step(x): (last(x) - step(x)*length(x)%bins)
-        @warn "input range adjusted for binning to x=$x"
+    rr = length(x)%bins # range residual when divied up by bins.
+    if !iszero(rr)
+        x = LinRange(first(x),last(x) - step(x)*rr,length(x)-rr) #first(x) : step(x) : (last(x) - step(x)*(length(x) % bins))
+        @warn "input range adjusted for binning to x=$x. Use this for additional histograms. "
     end
 
 # Prepare output range of x
     downscale_factor = div(length(x),bins)
     Δbin = downscale_factor*step(x)
     bincenters = sum(x[1:downscale_factor])/downscale_factor : Δbin : last(x)
+    binnedpdf = Vector{eltype(d)}(undef,length(bincenters))
 
 # Calculate pdf and downscale into bins
     summedpdf = sumpdfs(x,d,ds)
-    binnedpdf = Vector{eltype(d)}(undef,length(bincenters))
     downscale!(binnedpdf,summedpdf)
 
-    return (x=binweave(rangemidbounds(bincenters)),y=interleave(binnedpdf))
+    return (x=binweave(rangemidbounds(bincenters)), y=interleave(binnedpdf), etc=(; summedpdf, binnedpdf, x))
+end
+
+
+"""
+
+```julia
+summedpdfhist!(A,d,ds)
+```
+
+In-place version of `summedpdfhist` that takes the output of a previously-run `summedpdfhist` operation (`A::NamedTuple`) as its input along with the observations `d` and `ds`. 
+
+See also: `summedpdfhist`
+
+"""
+function summedpdfhist!(A::NamedTuple,d::AbstractVector,ds::AbstractVector)
+    
+# Calculate pdf and downscale into bins
+    sumpdfs!(A.etc.summedpdf, A.etc.x, d,ds)
+    downscale!(A.etc.binnedpdf,A.etc.summedpdf)
+
+    (x=A.x, y=interleave!(A.y,A.etc.binnedpdf), etc=A.etc)
 end
 
 """
@@ -222,40 +256,75 @@ sumpdfs(z,x,δx)
 Sum pdfs of values in `x` with 1σ uncertainties `δx` over a domain defined by `z`, which can be either a `Vector` of constant spacing or a `Range`.
 
 """
-function sumpdfs(z,x,δx)
-	densities=Array{eltype(x)}(undef,length(z),length(x));
+function sumpdfs(z::AbstractVector,x::AbstractVector,δx::AbstractVector)
+    ρ = Vector{float(eltype(x))}(undef,length(z))
 	if isempty(x)
-        densities .= 0
+        ρ .= 0
     else
+        sumpdfs!(ρ,z,x,δx)
+    end
+    ρ	
+end
+
+
+"""
+
+```julia
+sumpdfs!(ρ,z,x,δx)
+```
+In-place version of `sumpdfs` that overwrites a vector of probability densities `ρ` corresponding to values in `z`.
+
+"""
+function sumpdfs!(ρ::AbstractVector, z::AbstractVector, x::AbstractVector, δx::AbstractVector)
+    @assert length(ρ) == length(z)
+    ρ .= zero(float(eltype(ρ)))
+
         @tturbo for j in eachindex(x)
             xj = x[j]
             δxj = δx[j]
             for i in eachindex(z)
-                densities[i,j] = normdens(z[i],xj,δxj)
+                ρ[i] += normdens(z[i],xj,δxj)
             end
         end
-    end
 # Calculate the stepsize of z for normalization
 	isa(z,AbstractRange) ? Δz = step(z) : Δz = z[2]-z[1]
 # flatten and normalize z
-	vec(vsum(densities,dims=2)) ./ (vsum(densities)*Δz)
-	
+	ρ ./= (vsum(ρ)*Δz)
+end
+
+
+"""
+
+```julia
+pdfsample(x::AbstractVector, p::AbstractVector; n::Int=1)
+```
+
+Draw a sample (optionally `n` samples) from a pdf corresponding to values `x` and probabilities `p`. Calculates a CDF from `p` and linearly interpolates the values of `x` from a `rand()` on the CDF.
+
+"""
+function pdfsample(x::AbstractVector, p::AbstractVector; n::Int=1)
+    samples = Vector{float(eltype(x))}(undef,n)
+    cp = copy(p)
+    pdfsample!(samples,x,cp,n=n)
+	ifelse(isone(length(samples)), samples[1], samples)
 end
 
 """
 
 ```julia
-pdfsample(x::AbstractVector,p::AbstractVector;n::Integer=100)
+pdfsample!(samples::AbstractVector, x::AbstractVector, p::AbstractVector; n::Int=1)
 ```
 
-Draw `n` samples from a pdf corresponding to values `x` and probabilities `p`. Calculates a CDF from `p` and linearly interpolates the values of `x` from a `rand()` on the CDF.
+In-place version of `pdfsample`. Overwrites `samples` and `p`. 
+
+see also: `pdfsample`
 
 """
-function pdfsample(x::AbstractVector,p::AbstractVector;n::Integer=100)
-	cp = cumsum(p)
-	cp ./= last(cp)
-	samples = Vector{eltype(x)}(undef,n)
-	for i = 1:n
+function pdfsample!(samples::AbstractVector, x::AbstractVector, cp::AbstractVector; n::Int=1)
+    @assert length(samples) == n
+	cumsum!(cp,cp)
+	cp ./= last(cp) # ensure the cdf max = 1
+	@batch for i = 1:n
 		r = rand() # draw a random value from the cdf
 		ir = searchsortedfirst(cp,r)
 # Since searchsortedfirst returns the index ≥ the cumulative probability, interpolate between the returned step and the preceding step where the sample likely lies.
@@ -265,7 +334,6 @@ function pdfsample(x::AbstractVector,p::AbstractVector;n::Integer=100)
 			samples[i] = x[ir]
 		end
 	end
-	return samples
 end
 
 println("""
