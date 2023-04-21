@@ -1,8 +1,9 @@
 ## Data Management: functions to aid visualization of ImpactChron outputs.
 
-using NaNStatistics, VectorizedStatistics
-using LoopVectorization, Polyester
-import ImpactChron: downscale!, rangemidbounds,rangemidpoints
+using VectorizedStatistics # fast summary statistics, e.g. vmean, vmedian, vquantile, vstd
+using LoopVectorization, Polyester # We need speed.
+using ImpactChron # This is probably already loaded, but just in case.
+import NaNStatistics: histcounts!, histcounts
 
 """
 ```julia
@@ -208,9 +209,9 @@ function summedpdfhist(x::AbstractRange,d::AbstractVector,ds::AbstractVector; bi
 
 # Calculate pdf and downscale into bins
     summedpdf = sumpdfs(x,d,ds)
-    downscale!(binnedpdf,summedpdf)
+    ImpactChron.downscale!(binnedpdf,summedpdf)
 
-    return (x=binweave(rangemidbounds(bincenters)), y=interleave(binnedpdf), etc=(; summedpdf, binnedpdf, x))
+    return (x=binweave(rangemidbounds(bincenters)), y=interleave(binnedpdf), etc=(; summedpdf, binnedpdf, bincenters, x))
 end
 
 
@@ -229,7 +230,7 @@ function summedpdfhist!(A::NamedTuple,d::AbstractVector,ds::AbstractVector)
     
 # Calculate pdf and downscale into bins
     sumpdfs!(A.etc.summedpdf, A.etc.x, d,ds)
-    downscale!(A.etc.binnedpdf,A.etc.summedpdf)
+    ImpactChron.downscale!(A.etc.binnedpdf,A.etc.summedpdf)
 
     (x=A.x, y=interleave!(A.y,A.etc.binnedpdf), etc=A.etc)
 end
@@ -312,7 +313,7 @@ end
 """
 
 ```julia
-pdfsample!(samples::AbstractVector, x::AbstractVector, p::AbstractVector; n::Int=1)
+pdfsample!(samples::AbstractVector, x::AbstractVector, p::AbstractVector)
 ```
 
 In-place version of `pdfsample`. Overwrites `samples` and `p`. 
@@ -320,11 +321,11 @@ In-place version of `pdfsample`. Overwrites `samples` and `p`.
 see also: `pdfsample`
 
 """
-function pdfsample!(samples::AbstractVector, x::AbstractVector, cp::AbstractVector; n::Int=1)
-    @assert length(samples) == n
+function pdfsample!(samples::AbstractVector, x::AbstractVector, cp::AbstractVector)
+    @assert length(samples) > 1
 	cumsum!(cp,cp)
 	cp ./= last(cp) # ensure the cdf max = 1
-	@batch for i = 1:n
+	@batch for i = eachindex(samples)
 		r = rand() # draw a random value from the cdf
 		ir = searchsortedfirst(cp,r)
 # Since searchsortedfirst returns the index ≥ the cumulative probability, interpolate between the returned step and the preceding step where the sample likely lies.
@@ -336,9 +337,75 @@ function pdfsample!(samples::AbstractVector, x::AbstractVector, cp::AbstractVect
 	end
 end
 
+
+
+"""
+
+```julia
+histhist(ht, t, d, ages, ages_sig; xbins=2^6, ybins=200, model_draws=100)
+```
+
+Calculate a histogram of the densities of the modelled cooling age distributions at each timestep. Calculates the histogram of each modeled distributions with `model_draws` resamplings, assuming uncertainties equal to the mean of `ages_sig`.
+
+Outputs a `x`, `y`, and `z` (wrapped in a `NamedTuple`) to be used in any heatmap-style plot, with each vector of densities for a given `x` normalized to its maximum value. Also includes the `prior` with keys `x` and `y` to plot over heatmap.
+
+| Inputs | Description | Type |
+| --- | --- | --- | 
+| `ht` | histogram timeseries | `Range` |
+| `t` | input time parameters to model (`Δt`, `tmax`, `downscale`) | `NamedTuple` |
+| `d` | logged `agedist` values from MCMC run | `Matrix` |
+| `ages`, `ages_sig` | mean and 1σ of measured ages (prior) | `Vector` |
+
+"""
+function histhist(ht::AbstractRange, t::NamedTuple, d::AbstractMatrix, ages::AbstractVector, ages_sig::AbstractVector; xbins::Int=2^6, ybins::Int=200, model_draws::Int=100)
+
+    @assert length(ages) == length(ages_sig)
+
+    gt = 4567.3 .- ImpactChron.timemanagement(t.Δt,t.tmax,t.downscale)[2]
+
+    prior = summedpdfhist(ht,ages,ages_sig, bins=xbins) #add bins
+    m = deepcopy(prior)
+
+    μσ = fill(sum(ages_sig)/length(ages_sig), model_draws) # mean of 1σ uncertainties on ages.
+    model_samples = Vector{eltype(d)}(undef,model_draws)
+
+    i1 = findfirst(!isnan, view(d,1,:)) # start at first accepted and logged step.
+
+    di = Vector{eltype(d)}(undef,size(d,1))
+    hists = Matrix{eltype(d)}(undef,size(m.etc.binnedpdf,1),size(d,2)-i1+1)
+
+    printstyled("Resampling posterior date distributions: \n", color=:green)
+    for i in axes(hists,2)
+        i_ = i + i1 - 1 # calculate index in d
+        if !isnan(d[1,i_]) 
+            di .= view(d,:,i_)
+            pdfsample!(model_samples,gt,di)
+            summedpdfhist!(m,model_samples,μσ)
+        end
+        hists[:,i] .= m.etc.binnedpdf
+        if iszero(i % (size(d,2)÷10)) 
+            print(string("  ",100*i÷size(d,2),"% complete \r"))
+            flush(stdout)
+        end
+    end
+
+    ybinedges = LinRange(0,maximum(hists),ybins+1)
+    ybincenters = rangemidpoints(ybinedges)
+    counts = zeros(size(hists,1), size(ybincenters,1))
+    printstyled("Almost there... counting each timestep: \n", color=:blue)
+    @inbounds for i in axes(counts,1)
+        cv = view(counts,i,:)
+        histcounts!(cv, view(hists,i,:),ybinedges)
+        cv ./= maximum(cv)
+    end 
+
+    (x=m.etc.bincenters, y=ybincenters, z=counts, prior)
+end
+
+
 println("""
 Data Management Functions Loaded Successfully:
 
 Summary statistics: `distmeans`, `distmedians`
-Visualization prep: `interleave`, `binweave`, `cleanhist`, `summedpdfhist`, `normdens`, `sumpdfs`, `pdfsample`
+Visualization prep: `interleave(!)`, `binweave(!)`, `cleanhist`, `summedpdfhist(!)`, `normdens`, `sumpdfs(!)`, `pdfsample(!)`, `histhist`
 """)

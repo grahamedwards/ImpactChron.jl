@@ -90,7 +90,6 @@ function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
 
         if isa(B,Unf)
             prdst = Distributions.Uniform(B.a,ifelse(isinf(B.b),maximum(x),B.b))
-
         elseif isa(B,Nrm)
             prdst = Distributions.Normal(B.μ,B.σ)
         elseif isa(B,lNrm)
