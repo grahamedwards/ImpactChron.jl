@@ -3,7 +3,7 @@
 using VectorizedStatistics # fast summary statistics, e.g. vmean, vmedian, vquantile, vstd
 using LoopVectorization, Polyester # We need speed.
 using ImpactChron # This is probably already loaded, but just in case.
-import NaNStatistics: histcounts!, histcounts
+using NaNStatistics
 
 """
 ```julia
@@ -108,14 +108,14 @@ function distmeans(d::Dict;stdev::Bool=false)
     if stdev
         dₒᵤₜ = Dict{Symbol,Tuple{Number,Number}}()
         for i ∈ keys(d)
-            if eltype(d[i]) <: Number
+            if eltype(d[i]) <: AbstractFloat
                 dₒᵤₜ[i]= (vmean(d[i]), vstd(d[i]))
             end
         end
     else
         dₒᵤₜ = Dict{Symbol,Number}()
         for i ∈ keys(d)
-            if eltype(d[i]) <: Number
+            if eltype(d[i]) <: AbstractFloat
                 dₒᵤₜ[i]= vmean(d[i])
             end
         end
@@ -140,12 +140,15 @@ function distmedians(d::Dict;ci::Number=0.)
         α=1-ci
         dₒᵤₜ = Dict{Symbol,Tuple}()
         for i ∈ keys(d)
-            if eltype(d[i]) <: Number
-                med = vmedian(d[i])
+            if eltype(d[i]) <: AbstractFloat
                 if length(d[i])>1
+                    println(i)
+                    med = vmedian(d[i])
+                    "median was ok"
                     lower = med - vquantile(d[i],α/2)
                     upper = vquantile(d[i],1-α/2) - med
                 else
+                    med = d[i]
                     lower = upper = zero(med)
                 end
                 dₒᵤₜ[i]= (med,lower,upper)
@@ -154,8 +157,8 @@ function distmedians(d::Dict;ci::Number=0.)
     else
         dₒᵤₜ = Dict{Symbol,Number}()
         for i ∈ keys(d)
-            if eltype(d[i]) <: Number
-                dₒᵤₜ[i]= vmedian(d[i])
+            if eltype(d[i]) <: AbstractFloat
+                length(d[i])>1 ? dₒᵤₜ[i]= vmedian(d[i]) : dₒᵤₜ[i] = d[i]
             end
         end
     end
@@ -306,7 +309,7 @@ Draw a sample (optionally `n` samples) from a pdf corresponding to values `x` an
 function pdfsample(x::AbstractVector, p::AbstractVector; n::Int=1)
     samples = Vector{float(eltype(x))}(undef,n)
     cp = copy(p)
-    pdfsample!(samples,x,cp,n=n)
+    pdfsample!(samples,x,cp)
 	ifelse(isone(length(samples)), samples[1], samples)
 end
 
