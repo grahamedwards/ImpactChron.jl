@@ -177,7 +177,7 @@ function cleanhist(x::AbstractArray; nbins::Int=64, scooch_nbins::Int=2)
 
     x_scooch = scooch_nbins*(maximum(x)-minimum(x))/(nbins)
     binedges = LinRange(minimum(x)-x_scooch,maximum(x)+x_scooch,nbins+2*scooch_nbins+1)
-    y=histcounts(x,binedges)
+    y=histcounts(x,binedges) ./ (length(x)*step(binedges))
     return (x=binweave(binedges), y=interleave(y),)
 end
 

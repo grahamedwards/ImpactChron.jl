@@ -10,18 +10,16 @@ if !isdefined(@__MODULE__,:interleave)
     end
 end
 
-import Plots; Plots.gr()
+using CairoMakie
 import Distributions
 
 """
 
 ```julia
-proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
-    cols::Integer=1, nbins::Integer=20,figsize=(800,600),darkmode::Bool=false)
+proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple; cols=3, nbins=32,figsize=(800,600),darkmode=false)
 ```
 
-Plots a grid of pretty (top-traced with translucent fill) histograms for parameters listed in `v`.
-Parameter `plims` tracks whether log-normal distributions need to be converted back to linear space.
+Plots a grid of pretty (top-traced with translucent fill) histograms for parameters listed in `v` and Markov chains in `data_in`, overlain by prior distributions in `plims`.
 
 `cols` specifies the number of columns in the histogram grid,
 `nbins` specifies the number of bins to plot,
@@ -30,12 +28,23 @@ Parameter `plims` tracks whether log-normal distributions need to be converted b
 Set to a transparent background color scheme by setting `darkmode=true`
 
 """
-function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
-    cols::Integer=1, nbins::Integer=20,figsize=(800,600),darkmode::Bool=false)
+function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;cols::Int=3, nbins::Int=32,figsize=(800,600),darkmode::Bool=false)
+    rows = ceil(Int,length(v)/cols)
+    f=Figure(resolution=(figsize), backgroundcolor=ifelse(darkmode,:transparent,:white))
+    for j in CartesianIndices((rows,cols))
+        i = j[1] + rows * (j[2]-1) #calculate index in v
+        if i <= length(v)
+            proposalhist_priordist(v[i], data_in[v[i]], plims[v[i]], f=f[j[1],j[2]], nbins=nbins, darkmode=darkmode)
+        end
+    end
+    f
+end
+
+function proposalhist_priordist(v::Symbol, data_in::Vector,B::ImpactChron.PriorDistribution; f=Figure(), nbins::Int=32,darkmode::Bool=false)
 
     names = Dict(   
         :tss => "Age of CAIs (Ma)", 
-        :rAlo=>"Initial ²⁶Al/²⁷Al",
+        :rAlo=>"Initial ²⁶Al/²⁷Al (×10⁻⁵)",
         :Tm=> "Midplane temperature (K, 2.5 AU)",
         :R => "Radius (km)",
         :ta=> "Accretion time (Ma after CAIs)", 
@@ -54,196 +63,46 @@ function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;
         :τχγ=> "2ⁿᵈ Post-accretion bombardment ℯ-folding time (Ma)",
         :Fχγ=> "2ⁿᵈ Post-accretion initial impactor flux (Ma⁻¹)",            )
 
-    nᵥ=length(v)
-
-    d=deepcopy(data_in)
+    x=deepcopy(data_in)
 # Convert
-    d[:R] .+= log(1e-3) # m -> km
-    d[:cAl] .+= log(100) # Multiply by 100 -> wt%, but in natural-log-space
-# INCORPORATE ADJUSTMENTS INTO BOUNDS BELOW
 
-#Convert to strings if necessary
-    isequal(eltype(keys(d)),String) ? (v= String.(v); acpt = "accept") : ( acpt = :accept)
-# Calculate number of rows needed to accomodate all variables in `cols` columns.
-    rows = ceil(Int,nᵥ/cols)
+    if v==:R 
+        x .+= log(1e-3) # m -> km
+        B = lNrm(B.μ +log(1e-3),B.σ)
+    elseif v== :cAl
+        x .+= log(100) # Multiply by 100 -> wt%, but in natural-log-space
+        B = lNrm(B.μ +log(100),B.σ)
+    elseif v== :rAlo 
+        x .*= 1e5
+        B = Nrm(B.μ *1e5,B.σ*1e5)
+    end
+    pltclr = fillcolor=ifelse(darkmode,:white,:black)
 
-    pltclr,bkgrnd = ifelse(darkmode,(:white,:transparent),(:black,:white))
+    isa(B,lNrm) && map!(exp,x,x)
 
-
-    panels = Vector{Any}(nothing,nᵥ)
-    for i ∈ 1:nᵥ
-        k = v[i]
-        x = d[k]
-
-        isa(plims[k],lNrm) && map!(exp,x,x)
-
-        x_scooch = (maximum(x)-minimum(x))/ (nbins-4)
-        binedges = LinRange(minimum(x)-2*x_scooch,maximum(x)+2*x_scooch,nbins+1)
-        y = histcounts(x,binedges) ./ (length(x)*step(binedges))
-        panels[i] = Plots.plot(binweave(binedges),interleave(y),yaxis=false,yticks=[],grid=false,label="", xlabel=names[k],
-            xlabelfontsize=16,xtickfontsize=12,linewidth=2,linecolor=pltclr, background=bkgrnd,fillcolor=pltclr,fillrange=0,fillalpha=0.1)
+    h = cleanhist(x, nbins=nbins,scooch_nbins=1)
+    ax = Axis(f[1,1], xlabel=names[v],bottomspinecolor=pltclr,xtickcolor=pltclr,xticklabelcolor=pltclr, xlabelcolor=pltclr,backgroundcolor=ifelse(darkmode,:transparent,:white),
+    xgridvisible=false,ygridvisible=false,yticklabelsvisible=false,yticksvisible=false,rightspinevisible=false,leftspinevisible=false,topspinevisible=false,)
+    Makie.band!(ax,h.x,h.y,zero(h.y), color=(fillcolor,0.1))
+    Makie.lines!(ax,h.x,h.y, color=pltclr,linewdith=2,)
 
 # Plot prior distributions
-        B = plims[Symbol(k)]
-        isequal(k,:cAl) && (B= lNrm(B.μ +log(100),B.σ))
-        isequal(k,:R) && (B = lNrm(B.μ +log(1e-3),B.σ))
-
-        if isa(B,Unf)
-            prdst = Distributions.Uniform(B.a,ifelse(isinf(B.b),maximum(x),B.b))
-        elseif isa(B,Nrm)
-            prdst = Distributions.Normal(B.μ,B.σ)
-        elseif isa(B,lNrm)
-            prdst = Distributions.LogNormal(B.μ,B.σ)
-        end
-        prdst_x = LinRange(first(binedges),last(binedges),100)
-        Plots.plot!(prdst_x,Distributions.pdf.(prdst,prdst_x),linewidth=2,linecolor=pltclr,linestyle=:dash,linealpha=.6)
-
+    if isa(B,Unf)
+        prdst = Distributions.Uniform(B.a,ifelse(isinf(B.b),maximum(x),B.b))
+    elseif isa(B,Nrm)
+        prdst = Distributions.Normal(B.μ,B.σ)
+    elseif isa(B,lNrm)
+        prdst = Distributions.LogNormal(B.μ,B.σ)
     end
-
-    sbplts=rows*cols
-    Δplts = sbplts-length(panels)
-    if Δplts > 0
-        blnkplt = Plots.plot(legend=false,grid=false,foreground_color_subplot=bkgrnd,axis=:none,ticks=:none)
-        [ push!(panels,blnkplt) for j ∈ 1:Δplts]
-    end
-
-    Plots.plot(panels...,layout=Plots.grid(rows,cols),labels="",size=figsize,bottom_margin=10Plots.mm)
+    prdst_x = LinRange(first(h.x),last(h.x),100)
+    lines!(prdst_x,Distributions.pdf.(prdst,prdst_x),linewidth=2,linestyle=:dash,color=(fillcolor,0.6))
+    f
 end
 
-"""
-
-```julia
-proposal_histograms(data_in::Dict,plims::NamedTuple,v::Tuple;
-    cols::Integer, nbins::Integer,bounds::Bool,figsize::Tuple, dark=false)
-```
-
-Plots a grid of pretty (only top-traced) histograms for parameters listed in `v`.
-Parameter `plims` tracks whether log-normal distributions need to be converted back to linear space.
-
-`cols` specifies the number of columns in the histogram grid,
-`nbins` specifies the number of bins to plot,
-`bounds`=`true` plots the metropolis-enforced bounds in grey (uniform: solid, normal: dash, log-normal: dot-dash),
-and `figsize` specifies full figure size in pixels.
-
-Set to a transparent background color scheme by setting `dark=true`
-
-"""
-function proposal_histograms(data_in::Dict,plims::NamedTuple,v::Tuple;
-    cols::Integer=1, nbins::Integer=20,bounds::Bool=false,cent::Symbol=:none,c_interval=:none,figsize=(800,600),dark::Bool=false)
-
-    names = Dict(   
-        :tss => "Age of CAIs (Ma)", 
-        :rAlo=>"Initial ²⁶Al/²⁷Al",
-        :Tm=> "Midplane temperature (K, 2.5 AU)",
-        :R => "Radius (km)",
-        :ta=> "Accretion time (Ma after CAIs)", 
-        :cAl=> "Al abundance (wt%)",
-        :ρ=> "Bulk density (kg/m³)",
-        :Cp=> "Specific heat Capacity (J/kg•K)",
-        :k => "Thermal conductivity (W/m•K)",
-        :Tc=> "Ar closure temperature (K)",
-        :tχα=> "Primordial bombardment onset (Ma after CAIs)",
-        :τχα=> "Primordial bombardment ℯ-folding time (Ma)",
-        :Fχα=> "Primordial initial impactor flux (Ma⁻¹)",
-        :tχβ=> "Post-accretion bombardment onset (Ma after CAIs)",
-        :τχβ=> "Post-accretion bombardment ℯ-folding time (Ma)",
-        :Fχβ=> "Post-accretion initial impactor flux (Ma⁻¹)",
-        :tχγ=> "2ⁿᵈ Post-accretion bombardment onset (Ma after CAIs)",
-        :τχγ=> "2ⁿᵈ Post-accretion bombardment ℯ-folding time (Ma)",
-        :Fχγ=> "2ⁿᵈ Post-accretion initial impactor flux (Ma⁻¹)",            )
-
-    nᵥ=length(v)
-
-    d=deepcopy(data_in)
-# Convert
-    d[:R] .+= log(1e-3) # m -> km
-    d[:cAl] .+= log(100) # Multiply by 100 -> wt%, but in natural-log-space
-# INCORPORATE ADJUSTMENTS INTO BOUNDS BELOW
-
-#Convert to strings if necessary
-    isequal(eltype(keys(d)),String) ? (v= String.(v); acpt = "accept") : ( acpt = :accept)
-# Calculate number of rows needed to accomodate all variables in `cols` columns.
-    rows = ceil(Int,nᵥ/cols)
-
-    pltclr,bkgrnd = ifelse(dark,(:white,:transparent),(:black,:white))
-
-
-    panels = Vector{Any}(nothing,nᵥ)
-    for i ∈ 1:nᵥ
-        k = v[i]
-        x = d[k]
-
-        isa(plims[k],lNrm) && map!(exp,x,x)
-
-        x_scooch = (maximum(x)-minimum(x))/ (nbins-4)
-        binedges = LinRange(minimum(x)-2*x_scooch,maximum(x)+2*x_scooch,nbins+1)
-        y=histcounts(x,binedges)
-        panels[i] = Plots.plot(binweave(binedges),interleave(y),yaxis=false,yticks=[],grid=false,label="", xlabel=names[k],
-            linewidth=2,linecolor=pltclr, background=bkgrnd,fillcolor=pltclr,fillrange=0,fillalpha=0.1)
-
-        if bounds
-            B = plims[Symbol(k)]
-            isequal(k,:cAl) && (B= lNrm(B.μ +log(100),B.σ))
-            isequal(k,:R) && (B = lNrm(B.μ +log(1e-3),B.σ))
-
-            if isa(B,Unf)
-                linestylin= :solid
-                bound_lo = fill(B.a,2)
-                bound_hi = fill(ifelse(isinf(B.b),maximum(x),B.b),2)
-            elseif isa(B,Nrm)
-                linestylin= :dash
-                bound_lo = fill(B.μ-B.σ,2)
-                bound_hi = fill(B.μ+B.σ,2)
-            elseif isa(B,lNrm)
-                linestylin= :dash
-                bound_lo = fill(exp(B.μ-B.σ),2)
-                bound_hi = fill(exp(B.μ+B.σ),2)
-            end
-
-            Plots.plot!(bound_lo,[0,maximum(y)],linecolor=pltclr,fillalpha=0.6,linewidth=2,linestyle=linestylin)
-            Plots.plot!(bound_hi,[0,maximum(y)],linecolor=pltclr,fillalpha=0.6,linewidth=2,linestyle=linestylin)
-
-        end
-
-        if cent==:none
-
-        else
-            cent==:mean && (m=mean(x);mname="mean")
-            cent==:median  && (m=median(x);mname="median")
-
-            ymax = Plots.ylims(panels[i])[2] # Keep this value fixed.
-            Plots.plot!(fill(m,2),[0,ymax],linecolor=pltclr,linewidth=3,label="")
-            #Plots.annotate!(m,minimum(y),text(" $mname",:left,:bottom,12))
-
-            if c_interval == :none
-            else
-                if c_interval == :sigma || c_interval ==:σ
-                    cih = cil = std(x)
-                elseif isa(c_interval,Number)
-                    α = 1-c_interval
-                    cil = quantile(x,α/2)
-                    cih = quantile(x,1-α/2)
-                end
-                Plots.plot!(fill(cih,2),[0,ymax],linecolor=pltclr,linewidth=3,linestyle=:dash,label="")
-                Plots.plot!(fill(cil,2),[0,ymax],linecolor=pltclr,linewidth=3,linestyle=:dash,label="")
-            end
-        end
-
-    end
-
-    sbplts=rows*cols
-    Δplts = sbplts-length(panels)
-    if Δplts > 0
-        blnkplt = Plots.plot(legend=false,grid=false,foreground_color_subplot=bkgrnd,axis=:none,ticks=:none)
-        [ push!(panels,blnkplt) for j ∈ 1:Δplts]
-    end
-
-    Plots.plot(panels...,layout=Plots.grid(rows,cols),labels="",size=figsize)
-end
 
 
 ## Plot Evolution of proposals
-
+import Plots; Plots.gr()
 """
 """
 function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),ll::Bool=true,bounds::Bool=true,figsize=(800,600))
