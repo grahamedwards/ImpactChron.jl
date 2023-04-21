@@ -102,57 +102,49 @@ end
 
 
 ## Plot Evolution of proposals
-import Plots; Plots.gr()
-"""
-"""
-function plotproposals(d::Dict,plims::NamedTuple,cols::Integer;vars::Tuple=(),ll::Bool=true,bounds::Bool=true,figsize=(800,600))
-    isempty(vars) ? v=keys(plims) : v=vars
-    ll && (v=tuple(:ll,v...))
-    nᵥ=length(v)
 
-#Convert to strings if necessary
-    isequal(eltype(keys(d)),String) ? (v= String.(v); llₛ = "ll" ; acpt = "accept") : (llₛ = :ll; acpt = :accept)
-# Calculate number of rows needed to accomodate all variables in `cols` columns.
-    rows = Int(ceil(nᵥ/cols,digits=0))
-
-    panels = Vector{Any}(nothing,nᵥ)
-    for i ∈ 1:nᵥ
-        k = v[i]
-        y = d[k]
-        x = 1:length(y)
-        if k == llₛ
-            panels[i] = Plots.plot(x,y,xticks=[],ylabel="ll",linecolor=:black) #use \scrl eventually
-            r =  round(100*sum(d[acpt])/length(d[acpt]),digits=1)
-            Plots.xlabel!("acceptance = $r %",xguidefontsize=6)
-            #Plots.annotate!(last(x), (y[end]+y[1])/2, text("acceptance = $r %", :black,:bottomleft,6))
-        elseif isnan(last(y)) || isone(length(y))
-            panels[i] = Plots.plot([1,last(x)],fill(y[1],2),xticks=[],ylabel="$k",linecolor=:black)
-        else
-            panels[i] = Plots.plot(x,y,xticks=[],linecolor=:black)
-        end
-
-        if bounds && k != llₛ
-            B = plims[Symbol(k)]
-            if isa(B,Unf)
-                Plots.plot!([1,last(x)],fill(B.a,2),ylabel="$k",linecolor=:grey,linestyle=:solid)
-                Plots.plot!([1,last(x)],fill(B.b,2),linecolor=:grey,linestyle=:solid)
-            elseif isa(B,Nrm)
-                Plots.plot!([1,last(x)],fill(B.μ+B.σ,2),ylabel="$k",linecolor=:grey,linestyle=:dash)
-                Plots.plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dash)
-            elseif isa(B,lNrm)
-                Plots.plot!([1,last(x)],fill(B.μ+B.σ,2),ylabel="log[" * "$k" * "]",linecolor=:grey,linestyle=:dashdot)
-                Plots.plot!([1,last(x)],fill(B.μ-B.σ,2),linecolor=:grey,linestyle=:dashdot)
-            end
-        end
-    end
-    sbplts=rows*cols
-    Δplts = sbplts-length(panels)
-    if Δplts > 0
-        blnkplt = Plots.plot(legend=false,grid=false,foreground_color_subplot=:white)
-        [ push!(panels,blnkplt) for j ∈ 1:Δplts]
+function plotproposal(v::Symbol,x::Vector;f=Figure(),B=(),linecolor=:black)
+    lc = linecolor
+    if v==:ll 
+        yl = "ℓ"
+    elseif B isa lNrm
+        yl = "ln[" * "$v" * "]"
+    else
+        yl = "$v"
     end
 
-    Plots.plot(panels...,layout=Plots.grid(rows,cols),labels="",size=figsize,left_margin=10Plots.mm)
+    ax = Axis(f[1,1], ylabel=yl,xgridvisible=false, ygridvisible=false,xticksvisible=false,xticklabelsvisible=false)
+    lines!(ax,x, color=(lc,0.6))
+    #text!(ax,yl,position=(0,maximum(x)), align=(:left,:top),color=lc,fontsize=18)
+    if B isa Unf
+        b = (low=B.a,high=B.b)
+    elseif B isa Nrm || B isa lNrm
+        b = (low=B.μ-B.σ, high=B.μ+B.σ)
+    else
+        b=()
+    end
+    isempty(b) || hlines!(ax,[b.low,b.high], color=lc,linewidth=2,linestyle=:dash)
+    f
+end
+
+function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, cols::Int=3, figsize=(800,600),linecolor=:black)
+    llind=0
+    lv=length(v) + ifelse(ll,1,0)
+    rows = ceil(Int,lv/cols)
+    f=Figure(resolution=(figsize))
+    for j in CartesianIndices((rows,cols))
+        i = j[1] + rows * (j[2]-1) #calculate index in v
+        if i <= length(v)
+            plotproposal(v[i], data_in[v[i]],B=plims[v[i]], f=f[j[1],j[2]],linecolor=linecolor)
+        elseif i==lv
+            llind = j
+        end
+    end
+    ll && plotproposal(:ll, data_in[:ll], f=f[llind[1],llind[2]],linecolor=linecolor)
+    ar= round(100vmean(data_in[:accept]), digits=1)
+    #text!("acceptance rate = $ar %",position=(length(data_in[:ll]), minimum(data_in[:ll])), align=(:right,:top))
+    #Label(f[end+1,:],"acceptance rate = $ar %", halign = :center)
+    f
 end
 
 "~Plotting Functions Loaded Successfully~"
