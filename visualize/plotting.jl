@@ -127,11 +127,14 @@ function plotproposal(v::Symbol,x::Vector;f=Figure(),B=(),linecolor=:black)
     f
 end
 
-function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, cols::Int=3, figsize=(800,600),linecolor=:black)
+function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, cols::Int=3, figsize=(800,600),linecolor=:black, acceptance::Bool=false)
     llind=0
+    
     lv=length(v) + ifelse(ll,1,0)
     rows = ceil(Int,lv/cols)
+    
     f=Figure(resolution=(figsize))
+
     for j in CartesianIndices((rows,cols))
         i = j[1] + rows * (j[2]-1) #calculate index in v
         if i <= length(v)
@@ -140,10 +143,14 @@ function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, c
             llind = j
         end
     end
+
+## Extras 
     ll && plotproposal(:ll, data_in[:ll], f=f[llind[1],llind[2]],linecolor=linecolor)
+    
     ar= round(100vmean(data_in[:accept]), digits=1)
+    println("acceptance rate = $ar %")
     #text!("acceptance rate = $ar %",position=(length(data_in[:ll]), minimum(data_in[:ll])), align=(:right,:top))
-    #Label(f[end+1,:],"acceptance rate = $ar %", halign = :center)
+    acceptance && Label(f[end+1,:],"acceptance rate = $ar %", halign = :center)
     f
 end
 
