@@ -18,6 +18,7 @@ ptp = ( tss=0,rAlo=0,R=0,ta=0,cAl=0,Tm=0,Tc=0,ρ=0,Cp=0,k=0,tχα=0., τχα=20.
 @test !ImpactChron.strict_priors(perturb(ptp,:tχα,15.),:tχα,Nrm(0,1))
 @test !ImpactChron.strict_priors(perturb(ptp,:tχβ,40.),:tχα,Unf(-1,1))
 @test ImpactChron.strict_priors(perturb(perturb(ptp,:Fχγ,0.),:tχγ,0.),:tχα,Unf(-1,1)) # Priors still accepted if tχγ<tχβ when γ-flux turned off (Fχγ=0)
+@test ImpactChron.strict_priors(perturb(perturb(perturb(ptp,:Fχγ,0.),:Fχβ ,0.),:tχα,50.),:Fχγ,Unf(-1,1)) # Priors still accepted if tχγ,tχβ < tχα when β-, γ-flux turned off (Fχγ=Fχβ=0)
 
 # Test long post-accretion bombardment e-folding times
 @test !ImpactChron.strict_priors(perturb(ptp,:τχγ,30.),:tχα,Unf(-1,1)) # Reject

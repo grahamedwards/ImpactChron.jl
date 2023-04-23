@@ -46,7 +46,12 @@ function strict_priors(p::NamedTuple,k::Symbol,p_prior::PriorDistribution)
 # Return false if p[k] falls outside of Uniform bounds
     bool = prior_bounds(p[k],p_prior)
 # Return false if the bombardment onset times fall out of order.
-    bool *= p.tχα <= p.tχβ <= ifelse(iszero(p.Fχγ),Inf,p.tχγ) # ifelse in case γ-flux is off (Fχγ=0)
+    bool *= p.tχα <= ifelse(iszero(p.Fχβ),Inf,p.tχβ) # if β flux is off, always accept
+    Bγ = ifelse(iszero(p.Fχγ),Inf,p.tχγ) # if γ flux is off, always accept
+    bool *= p.tχα <= Bγ
+    bool *= p.tχβ <= Bγ
+    
+    # ifelse in case γ-flux is off (Fχγ=0)
 # The τ of instability/scattering fluxes must be shorter than that of the background impactor flux.
     bool *= ifelse(iszero(p.Fχβ),-Inf,p.τχβ) <= p.τχα
     bool *= ifelse(iszero(p.Fχγ),-Inf,p.τχγ) <= p.τχα
