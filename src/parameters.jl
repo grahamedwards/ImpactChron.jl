@@ -161,8 +161,7 @@ function PetroTypes(temps::NamedTuple,samples::Vector{String})
     t5 = ImpactChron.TempProp(float(temps.T5),n5/n)
     t6 = ImpactChron.TempProp(float(temps.T6),n6/n)
 
-    @assert isone(t3.p+t4.p+t5.p+t6.p)
-
+    @assert t3.p+t4.p+t5.p+t6.p ≈ 1
     return PetroTypes(t3,t4,t5,t6,true)
 end
 
