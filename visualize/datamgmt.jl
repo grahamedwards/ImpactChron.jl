@@ -5,6 +5,32 @@ using LoopVectorization, Polyester # We need speed.
 using ImpactChron # This is probably already loaded, but just in case.
 using NaNStatistics
 
+
+
+const ParamTitles = Dict(   
+    :tss => "Age of CAIs (Ma)", 
+    :rAlo=>"Initial ²⁶Al/²⁷Al (×10⁻⁵)",
+    :Tm=> "Midplane temperature (K, 2.5 AU)",
+    :R => "Radius (km)",
+    :ta=> "Accretion time (Ma after CAIs)", 
+    :cAl=> "Al abundance (wt%)",
+    :ρ=> "Bulk density (kg/m³)",
+    :Cp=> "Specific heat Capacity (J/kg•K)",
+    :k => "Thermal conductivity (W/m•K)",
+    :Tc=> "Ar closure temperature (K)",
+    :tχα=> "α bombardment onset (Ma after CAIs)",
+    :τχα=> "α bombardment ℯ-folding time (Ma)",
+    :Fχα=> "α initial impactor flux (Ma⁻¹)",
+    :tχβ=> "β bombardment onset (Ma after CAIs)",
+    :τχβ=> "β bombardment ℯ-folding time (Ma)",
+    :Fχβ=> "β initial impactor flux (Ma⁻¹)",
+    :tχγ=> "γ bombardment onset (Ma after CAIs)",
+    :τχγ=> "γ bombardment ℯ-folding time (Ma)",
+    :Fχγ=> "γ initial impactor flux (Ma⁻¹)",            )
+
+const ParamVars = Dict( :tss => "tₛₛ", :rAlo=>"²⁶Alₒ", :Tm=> "Tₘ", :R => "R", :ta=> "tₐ", :cAl=> "[Al]", :ρ=> "ρ", :Cp=> "Cₚ", :k => "K", :Tc=> "Tc",:tχα=> "tₒα", :τχα=> "τα", :Fχα=> "Fₒα", :tχβ=> "tₒβ", :τχβ=> "τβ", :Fχβ=> "Fₒβ", :tχγ=> "tₒγ", :τχγ=> "τγ", :Fχγ=> "Fₒγ")
+
+
 """
 ```julia
 interleave(a)
@@ -409,6 +435,9 @@ end
 println("""
 Data Management Functions Loaded Successfully:
 
+Parameter titles/variables locked in `ParamTitles`/`ParamVars`
+
 Summary statistics: `distmeans`, `distmedians`
+
 Visualization prep: `interleave(!)`, `binweave(!)`, `cleanhist`, `summedpdfhist(!)`, `normdens`, `sumpdfs(!)`, `pdfsample(!)`, `histhist`
 """)

@@ -42,27 +42,7 @@ end
 
 function proposalhist_priordist(v::Symbol, data_in::Vector,B::ImpactChron.PriorDistribution; f=Figure(), nbins::Int=32,darkmode::Bool=false)
 
-    names = Dict(   
-        :tss => "Age of CAIs (Ma)", 
-        :rAlo=>"Initial ²⁶Al/²⁷Al (×10⁻⁵)",
-        :Tm=> "Midplane temperature (K, 2.5 AU)",
-        :R => "Radius (km)",
-        :ta=> "Accretion time (Ma after CAIs)", 
-        :cAl=> "Al abundance (wt%)",
-        :ρ=> "Bulk density (kg/m³)",
-        :Cp=> "Specific heat Capacity (J/kg•K)",
-        :k => "Thermal conductivity (W/m•K)",
-        :Tc=> "Ar closure temperature (K)",
-        :tχα=> "Primordial bombardment onset (Ma after CAIs)",
-        :τχα=> "Primordial bombardment ℯ-folding time (Ma)",
-        :Fχα=> "Primordial initial impactor flux (Ma⁻¹)",
-        :tχβ=> "Post-accretion bombardment onset (Ma after CAIs)",
-        :τχβ=> "Post-accretion bombardment ℯ-folding time (Ma)",
-        :Fχβ=> "Post-accretion initial impactor flux (Ma⁻¹)",
-        :tχγ=> "2ⁿᵈ Post-accretion bombardment onset (Ma after CAIs)",
-        :τχγ=> "2ⁿᵈ Post-accretion bombardment ℯ-folding time (Ma)",
-        :Fχγ=> "2ⁿᵈ Post-accretion initial impactor flux (Ma⁻¹)",            )
-
+    names = ParamTitles
     x=deepcopy(data_in)
 # Convert
 
@@ -108,9 +88,9 @@ function plotproposal(v::Symbol,x::Vector;f=Figure(),B=(),linecolor=:black)
     if v==:ll 
         yl = "ℓ"
     elseif B isa lNrm
-        yl = "ln[" * "$v" * "]"
+        yl = "ln(" * ParamVars[v] * ")"
     else
-        yl = "$v"
+        yl = ParamVars[v]
     end
 
     ax = Axis(f[1,1], ylabel=yl,xgridvisible=false, ygridvisible=false,xticksvisible=false,xticklabelsvisible=false)
