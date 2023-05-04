@@ -302,7 +302,7 @@ end
 """
 
 ```julia
-weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::NamedTuple)
+weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::PetroTypes)
 ```
 
 Reweight volumetric fractions relative to the abundance of each petrologic type in the meteorite record.
@@ -310,8 +310,7 @@ Takes `Vector`s of volumetric fraction (`v`), peak temperature (`T`), and coolin
 Accounts for melted layers (`r` where `v[i]==0` due to melting in `planetesimal_cooling_timestep!`.
 Requires all petrologic types to occupy at least one radial node, otherwise returns `zero` in all `v`.
 
-`petrotypes` is a `NamedTuple` of `NamedTuple`s, such that `petrotypes = (type#=(T<:Number,p<:Number), ...)` where `T` and `p` respectively represent maximum temperature and relative abundance in the meteorite record.
-
+see also: `PetroTypes`
 
 """
 function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::PetroTypes)
