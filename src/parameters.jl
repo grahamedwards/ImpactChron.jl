@@ -109,7 +109,7 @@ function ImpactSite(::Type{T}, impactor_diameter::Number) where {T}
     heated_diameter = 5 * impactor_diameter
     heated_depth = (2/3) * heated_diameter
 
-    ImpactSite(T(heated_depth,heated_diameter/2),zero(impactor_diameter))
+    ImpactSite(T(heated_depth,heated_diameter/2),zero(float(impactor_diameter)))
 end
 
 function ImpactSite(::Type{T}; r::N=0., C::N=0.01 ) where {T, N<: Number}
