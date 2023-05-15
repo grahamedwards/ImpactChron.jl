@@ -8,25 +8,25 @@ using NaNStatistics
 
 
 const ParamTitles = Dict(   
-    :tss => "Age of CAIs (Ma)", 
+    :tss => "Solar age (CAIs, Ma)", 
     :rAlo=>"Initial ²⁶Al/²⁷Al (×10⁻⁵)",
-    :Tm=> "Midplane temperature (K, 2.5 AU)",
+    :Tm=> "Disk temperature (K, 2.5 AU)",
     :R => "Radius (km)",
-    :ta=> "Accretion time (Ma after CAIs)", 
+    :ta=> "Accretion time (Myₛₛ)", 
     :cAl=> "Al abundance (wt%)",
     :ρ=> "Bulk density (kg/m³)",
     :Cp=> "Specific heat Capacity (J/kg•K)",
     :k => "Thermal conductivity (W/m•K)",
     :Tc=> "Ar closure temperature (K)",
-    :tχα=> "α bombardment onset (Ma after CAIs)",
-    :τχα=> "α bombardment ℯ-folding time (Ma)",
-    :Fχα=> "α initial impactor flux (Ma⁻¹)",
-    :tχβ=> "β bombardment onset (Ma after CAIs)",
-    :τχβ=> "β bombardment ℯ-folding time (Ma)",
-    :Fχβ=> "β initial impactor flux (Ma⁻¹)",
-    :tχγ=> "γ bombardment onset (Ma after CAIs)",
-    :τχγ=> "γ bombardment ℯ-folding time (Ma)",
-    :Fχγ=> "γ initial impactor flux (Ma⁻¹)",            )
+    :tχα=> "α bombardment onset (Myₛₛ)",
+    :τχα=> "α bombardment ℯ-folding time (My)",
+    :Fχα=> "α initial impactor flux (My⁻¹)",
+    :tχβ=> "β bombardment onset (Myₛₛ)",
+    :τχβ=> "β bombardment ℯ-folding time (My)",
+    :Fχβ=> "β initial impactor flux (My⁻¹)",
+    :tχγ=> "γ bombardment onset (My after CAIs)",
+    :τχγ=> "γ bombardment ℯ-folding time (My)",
+    :Fχγ=> "γ initial impactor flux (My⁻¹)",            )
 
 const ParamVars = Dict( :tss => "tₛₛ", :rAlo=>"²⁶Alₒ", :Tm=> "Tₘ", :R => "R", :ta=> "tₐ", :cAl=> "[Al]", :ρ=> "ρ", :Cp=> "Cₚ", :k => "K", :Tc=> "Tc",:tχα=> "tₒα", :τχα=> "τα", :Fχα=> "Fₒα", :tχβ=> "tₒβ", :τχβ=> "τβ", :Fχβ=> "Fₒβ", :tχγ=> "tₒγ", :τχγ=> "τγ", :Fχγ=> "Fₒγ")
 
