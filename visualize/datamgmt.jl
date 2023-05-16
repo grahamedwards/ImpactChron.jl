@@ -10,7 +10,7 @@ using NaNStatistics
 const ParamTitles = Dict(   
     :tss => "Solar age (CAIs, Ma)", 
     :rAlo=>"Initial ²⁶Al/²⁷Al (×10⁻⁵)",
-    :Tm=> "Disk temperature (K, 2.5 AU)",
+    :Tm=> "Midplane temperature (K)",
     :R => "Radius (km)",
     :ta=> "Accretion time (Myₛₛ)", 
     :cAl=> "Al abundance (wt%)",
