@@ -1,3 +1,7 @@
+Within the database csv file, literature sources of K-Ar and Ar-Ar dates are given as abbreviated reference codes, typically beginning with the first four letters of the first-author's name and the year of publication. The following table relates these codes to permanent identifiers such as a Digital Object Identifier (DOI) or Astrophysical Data System (ADS) Bibcode. If neither is available for a source, we provide a full citation.
+
+---
+
 | Reference code | DOI / ADS Bibcode / Citation | 
 | :--- | :--- |
 | Bene2008 | [10.1016/j.gca.2008.02.010](https://doi.org/10.1016/j.gca.2008.02.010) | 
