@@ -1,3 +1,53 @@
+# Compiled data
+The directory `/data/` contains the various compiled data used as priors in our Markov chain Monte Carlo inversions, including a database of [chondrite K-Ar and Ar-Ar ages](#database-of-chondrite-k-ar-and-ar-ar-ages) and a compilation of [constraints on parent body properties](#thermochronologic-model-parameters) used in the thermochronologic model. 
+
+## Thermochronologic model parameters
+`parameterpriors.jl` contains extensively annotated calculations of the distributions of the following thermochronologic model parameters:
+
+- Environmental parameters of early solar system
+  - solar system age (oldest Ca-Al-rich inclusions, CAIs)
+  - initial solar system ²⁶Al/²⁷Al
+  - solar system midplane temperature
+- Material parameters of chondritic parent bodies
+  - specific heat capacity
+  - thermal conductivity
+  - bulk density
+  - Ar closure temperature
+- Asteroidal parameters of parent bodies
+  - aluminum abundance
+  - body radius
+  - accretion age (relative to the oldest CAIs)
+
+The corresponding literature sources are identified by doi, Astrophysical Data System ([ADS](https://ads.harvard.edu/)) Bibcode, or another permanent identifier as necessary.
+
+## Database of chondrite K-Ar and Ar-Ar ages
+
+`KArArages_comipilation.csv` contains our database of chondritic K-Ar and Ar-Ar ages from the literature. The following table summarizes the columns in the database.
+
+| Column | Description |
+| :----- | :---------- |
+| `name`   | meteorite name 
+| `group` | genetic group/family (H, L, LL, EH, EL, or R)
+| `type` | petrologic type ("im" indicates "impact melt")
+| `ageMa` | K-Ar or Ar-Ar age in Ma
+| `sigma` | 1σ standard deviation of age
+| `lambda` | decay constants used to calculate age*
+| `source` | literature source (see [References](#references))
+| `srclocation` | location in literature source where age is reported.
+| `notes` | any notes or additional information (e.g. denoting K-Ar ages)
+||
+
+*Abbreviations for decay constant references: `T69`= Turner 1969 (doi:[10.1007/978-94-010-3411-1](https://doi.org/10.1007/978-94-010-3411-1)), `H74` = Husain 1974 (doi: [10.1029/JB079i017p02588](https://doi.org/10.1029/JB079i017p02588)), `SJ77` = Steiger+Jäeger 1977 (doi: [10.1016/0012-821X(77)90060-7](https://doi.org/10.1016/0012-821X(77)90060-7))
+
+
+### Calculating and recalibrating K-Ar/Ar-Ar ages
+
+In cases where multiple viable ages were reported or only ages of individual heating steps were reported, we calculated a mean age using a Monte Carlo Method (`ImpactChron.mcmean`). These calculations are shown in `recalculateages.jl` and the results are reported in `KArArages_comipilation.csv`.
+
+Since the ages in `KArArages_comipilation.csv` were originally calculated with different decay constants, we use a variety of techniques to recalibrate all ages to the near-ubiquitously used decay constants of Steiger+Jäeger 1977 (doi: [10.1016/0012-821X(77)90060-7](https://doi.org/10.1016/0012-821X(77)90060-7)). These calculations are summarized in `recalibrateages.jl`. In this script, we also divide the recalibrated ages into separate files containing only Ar-Ar ages (`ArArages.csv), only K-Ar ages (`KArages.csv`), or the entire recalibrated database (`KArArages.csv`).
+
+
+### References:
 Within the database csv file, literature sources of K-Ar and Ar-Ar dates are given as abbreviated reference codes, typically beginning with the first four letters of the first-author's name and the year of publication. The following table relates these codes to permanent identifiers such as a Digital Object Identifier (DOI) or Astrophysical Data System (ADS) Bibcode. If neither is available for a source, we provide a full citation.
 
 ---
@@ -73,3 +123,6 @@ Within the database csv file, literature sources of K-Ar and Ar-Ar dates are giv
 | Welt2003 | [10.1111/j.1945-5100.2003.tb01052.x](https://doi.org/10.1111/j.1945-5100.2003.tb01052.x) | 
 | Whit2000 | [10.1126/science.288.5472.1819](https://doi.org/10.1126/science.288.5472.1819) | 
 | Witt2011 | [10.1016/j.gca.2011.07.037](https://doi.org/10.1016/j.gca.2011.07.037) | 
+---
+
+

@@ -60,3 +60,4 @@ jobs:
             using ImpactChron
             DocMeta.setdocmeta!(ImpactChron, :DocTestSetup, :(using ImpactChron); recursive=true)
             doctest(ImpactChron)'
+      - run: julia --project=docs docs/make.jl
