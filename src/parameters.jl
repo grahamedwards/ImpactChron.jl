@@ -180,16 +180,19 @@ AsteroidHistory(typeseed<:Number; nnodes, Δt, tmax, downscale_factor)
 
 Constructor function takes a parameter from the `proposal` to seed type and requires the number of radial nodes `nnodes` (`::Int`), the timestep used `Δt`, the full time duration `tmax`, and the `downscale_factor` (`::Int`).
 
-Fields: 
-    `Vfrxn`: volume fractions of each radial shell,
-    `peakT`: peak temperature of each radial shell, 
-    `cooltime`: indices in `t` of the primary cooling date, 
-    `impacts`: number of impacts at each timestep, 
-    `txr`: time x radius array of proportional cooling ages, 
-    `agedist`: distribution of ages corresponding to `t`, 
-    `agedist_downscaled`: distribution of ages corresponding to `t_downscaled`, 
-    `t`: timesteps of full-scale model, 
-    `t_downscaled`: timesteps of downscaled model output, 
+Fields in AsteroidHistory:
+
+| Field | Description |
+| :---- | :---------- |
+|`Vfrxn` | volume fractions of each radial shell |
+|`peakT` | peak temperature of each radial shell | 
+|`cooltime` | indices in `t` of the primary cooling date |
+|`impacts` | number of impacts at each timestep |
+|`txr` | time x radius array of proportional cooling ages |
+|`agedist` | distribution of ages corresponding to `t` |
+|`agedist_downscaled` | distribution of ages corresponding to `t_downscaled` |
+|`t` |  timesteps of full-scale model |
+|`t_downscaled` | timesteps of downscaled model output |
 
 """
 struct AsteroidHistory{T<:Number}
