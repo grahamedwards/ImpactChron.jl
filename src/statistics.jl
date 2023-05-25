@@ -60,22 +60,18 @@ end
 histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 ```
 
-Constructs histogram over (linear) midpoints of `domain` from model outputs in x with corresponding
-abundances in y. Does not require a constant step in `x`.
+Constructs histogram over bins defined by `domain` from model outputs in `x` with corresponding
+abundances in `y`. 
+Does not require a constant step in `x`, so this calculates histograms of outputs from `planetesimal_cooling_dates`.
 
-Normalizes the output, such that for output `dist` ∑ dist[dᵢ] * Δd = 1
-(for each dᵢ in the bincenters of domain with step-size Δd), so long as all x ∈ domain.
-If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the corresponding xₒᵤₜ of each yₒᵤₜ is ∉ domain.
+`histogramify` normalizes its output, such that for output `dist` ∑ dist * Δd = 1, so long as all x ∈ domain.
+If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the corresponding xₒᵤₜ of yₒᵤₜ are ∉ domain.
 
-***
-***
-Returns only the histogram masses, centers of time bins must be calculated externally.
-e.g.
-```julia
-Δd = step(domain)
-bincenters= LinRange( first(domain)+Δd/2, last(domain)-Δd/2, length(domain)-1)
-```
-or see `rangemidpoints`
+---
+
+Returns only the histogram masses, centers of bins must be calculated separately with
+
+    julia> rangemidpoints(domain)
 
 """
 function histogramify(domain::AbstractRange, x::AbstractVector, y::AbstractVector)
