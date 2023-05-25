@@ -1,5 +1,4 @@
 ## Functions used for statistical purposes & math support:
-    # turbosum & tturbosum
     # rangemidpoints & rangemidbounds
     # downscale!
     # histogramify ~ converts data into binned histogram
@@ -9,39 +8,6 @@
         # ll_dist
         # weight_petro_types!
 
-"""
-
-```julia
-turbosum(x::AbstractArray)
-```
-Fast summing of x with the power of LoopVectorization.jl's @turbo.
-Since `vreduce` does not accept `view`s, we `turbosum`!
-
-Faster than reduce for length(x)>≈200
-"""
-function turbosum(x::AbstractArray)
-    ∑x = zero(eltype(x))
-    @turbo for i in eachindex(x)
-        ∑x += x[i]
-    end
-    return ∑x
-end
-
-
-"""
-
-```julia
-tturbosum(x::AbstractArray)
-```
-Fast summing of x with the power of LoopVectorization.jl's @tturbo (multithreaded turbo).
-"""
-function tturbosum(x::AbstractArray)
-    ∑x = zero(eltype(x))
-    @tturbo for i in eachindex(x)
-        ∑x += x[i]
-    end
-    return ∑x
-end
 
 """
 
