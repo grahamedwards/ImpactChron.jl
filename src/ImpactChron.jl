@@ -15,7 +15,7 @@ using Random
 export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere, ImpactSite, AsteroidHistory, PetroTypes
 include("parameters.jl")
 
-export  rangemidpoints, rangemidbounds,turbosum, tturbosum, histogramify, histogramify!, ll_param, ll_params, ll_dist, ll_dist_params
+export  rangemidpoints, rangemidbounds, histogramify, histogramify!, ll_param, ll_params, ll_dist, ll_dist_params
 include("statistics.jl")
 
 export plntsml_Tz, planetesimal_cooling_dates, planetesimal_cooling_dates!, impact_reset_array!, asteroid_agedist!
