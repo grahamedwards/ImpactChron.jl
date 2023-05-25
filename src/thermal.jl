@@ -360,24 +360,7 @@ function planetesimal_cooling_timestep!(solartime::AbstractRange,
     chond_vol = vsum(Vfrxn)
     Vfrxn ./= chond_vol
 end
-"""
 
-```julia
-nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
-```
-
-Replace all dates in `d` with NaN where corresponding peak temperatures in `T` are less than `Tmin`
-Fast with `@turbo`
-
-"""
-function nan_regolith!(d::AbstractArray,T::AbstractArray,Tmin::Number)
-    @inbounds for i = eachindex(d)
-        d[i] = ifelse( T[i]>Tmin, d[i], NaN)
-    end
-    d
-end
-
-## Impact (Re)Heater v2
 """
 
 ```julia
@@ -446,7 +429,7 @@ function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcool
 
 # Time to reheat this planetesimal:
 
-### Remove excavation for now.
+### Ignore excavation for now/ever.
 # At excavated depths, material is removed
 #    r_baseₑ = searchsortedfirst(radii,R-c.excavate_shape.z) # deepest excavated radius index
 #    @batch for r ∈ r_baseₑ:nᵣ # For each cratered radial node
