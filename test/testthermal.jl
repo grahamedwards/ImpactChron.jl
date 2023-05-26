@@ -1,12 +1,6 @@
-## Test functions in ImCh_thermal.jl
-    # radius_at_depth
-    #
-
-
-using ImpactChron # safetestset
+## Test functions in src/thermal.jl
 
 ## A few of the small helper functions
-@test isequal(ImpactChron.nan_regolith!([0.,0.,0.], [8.,2.,6.], 4), [0.,NaN,0.])
 
 @test ImpactChron.radius_at_depth(18.,20.,Cone(4.,2.)) ≈ 1
 @test ImpactChron.radius_at_depth(18.,20.,Parabola(4.,2.)) ≈ sqrt(2)
