@@ -1,4 +1,4 @@
-## Functions to produce visualizations of of ImpactChron outputs
+## Plotting: Functions to produce visualizations of of ImpactChron outputs
 
 if !isdefined(@__MODULE__,:interleave)
     @warn "Trying to load datamgmt.jl"
@@ -10,22 +10,28 @@ if !isdefined(@__MODULE__,:interleave)
     end
 end
 
-using CairoMakie
-import Distributions
+try 
+    using CairoMakie
+catch
+    @warn "All plotting functions rely on CairoMakie.\n\nTo make plots, please install it by typing into the REPL:  ]add CairoMakie\n\n"
+end
+
 
 """
 
 ```julia
-proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple; cols=3, nbins=32,figsize=(800,600),darkmode=false)
+proposalhists_priordists(   data_in::Dict, plims::NamedTuple, v::Tuple; 
+                            cols=3, nbins=32, figsize=(800,600),darkmode=false)
 ```
 
-Plots a grid of pretty (top-traced with translucent fill) histograms for parameters listed in `v` and Markov chains in `data_in`, overlain by prior distributions in `plims`.
+Plots a grid of pretty (top-traced with translucent fill) histograms for parameters listed in `v` and Markov chains in `data_in` (output of `thermochron_metropolis`), overlain by prior distributions in `plims`.
 
-`cols` specifies the number of columns in the histogram grid,
-`nbins` specifies the number of bins to plot,
-`figsize` specifies full figure size in pixels.
-
-Set to a transparent background color scheme by setting `darkmode=true`
+| kwarg | description |
+| :---- | :---------- |
+|`cols` | number of columns in the histogram grid |
+|`nbins`| number of bins/histogram |
+|`figsize` | specifies figure size (px) |
+|`darkmode=true`| transparent, dark background color scheme |
 
 """
 function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;cols::Int=3, nbins::Int=32,figsize=(800,600),darkmode::Bool=false)
@@ -67,21 +73,21 @@ function proposalhist_priordist(v::Symbol, data_in::Vector,B::ImpactChron.PriorD
     Makie.lines!(ax,h.x,h.y, color=pltclr,linewdith=2,)
 
 # Plot prior distributions
-    if isa(B,Unf)
-        prdst = Distributions.Uniform(B.a,ifelse(isinf(B.b),maximum(x),B.b))
+prdst_x = LinRange(first(h.x),last(h.x),100)
+prdst_y = if isa(B,Unf)
+        fill(1/(ifelse(isinf(B.b),maximum(x),B.b)-B.a), length(prdst_x))
     elseif isa(B,Nrm)
-        prdst = Distributions.Normal(B.μ,B.σ)
+         normdens.(prdst_x,B.μ,B.σ)
     elseif isa(B,lNrm)
-        prdst = Distributions.LogNormal(B.μ,B.σ)
+        lognormdens.(prdst_x,B.μ,B.σ)
     end
-    prdst_x = LinRange(first(h.x),last(h.x),100)
-    lines!(prdst_x,Distributions.pdf.(prdst,prdst_x),linewidth=2,linestyle=:dash,color=(fillcolor,0.6))
+    lines!(prdst_x, prdst_y, linewidth=2,linestyle=:dash,color=(fillcolor,0.6))
     f
 end
 
 
 
-## Plot Evolution of proposals
+## Plot Markov chain of one parameter
 
 function plotproposal(v::Symbol,x::Vector;f=Figure(),B=(),linecolor=:black)
     lc = linecolor
@@ -107,6 +113,7 @@ function plotproposal(v::Symbol,x::Vector;f=Figure(),B=(),linecolor=:black)
     f
 end
 
+# Plot Markov chains of several parameters
 function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, cols::Int=3, figsize=(800,600),linecolor=:black, acceptance::Bool=false)
     llind=0
     
@@ -127,7 +134,7 @@ function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, c
 ## Extras 
     ll && plotproposal(:ll, data_in[:ll], f=f[llind[1],llind[2]],linecolor=linecolor)
     
-    ar= round(100vmean(data_in[:accept]), digits=1)
+    ar= round(100ImpactChron.vmean(data_in[:accept]), digits=1)
     println("acceptance rate = $ar %")
     #text!("acceptance rate = $ar %",position=(length(data_in[:ll]), minimum(data_in[:ll])), align=(:right,:top))
     acceptance && Label(f[end+1,:],"acceptance rate = $ar %", halign = :center)

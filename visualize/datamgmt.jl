@@ -1,9 +1,10 @@
 ## Data Management: functions to aid visualization of ImpactChron outputs.
 
-using VectorizedStatistics # fast summary statistics, e.g. vmean, vmedian, vquantile, vstd
-using LoopVectorization, Polyester # We need speed.
+
 using ImpactChron # This is probably already loaded, but just in case.
-using NaNStatistics
+# Since ImpactChron already loads these within its module, I just call them from within the ImpactChron (i.e. ImpactChron.function):
+    # VectorizedStatistics # for fast summary statistics: vmean, vmedian, vquantile, vstd
+    # LoopVectorization, Polyester # for fast loops: @tturbo, @batch
 
 
 
@@ -37,19 +38,17 @@ interleave(a)
 ```
 Interleave the sequential values of `a` (`<:AbstractVector`) so that each value occurs twice in a `Vector` of `length(a)*2`
 
-Examples
-==========
+Example
+========
 
-```
-julia> interleave([1,2,3])
-6-element Vector{Int64}:
- 1
- 1
- 2
- 2
- 3
- 3
-```
+    julia> interleave([1,2,3])
+    6-element Vector{Int64}:
+    1
+    1
+    2
+    2
+    3
+    3
 
 """
 function interleave(a::AbstractVector)
@@ -76,9 +75,11 @@ end
 
 
 """
+
 ```julia
 binweave(a)
 ```
+
 Interleave the sequential values of `a` (`<:AbstractVector`) using the first and last values only once. To be used with `interleave` to make plotting-ready histograms.
 
 See also: `interleave`
@@ -86,14 +87,15 @@ See also: `interleave`
 Example
 ==========
 
-```
-julia> binweave([1,2,3])
-4-element Vector{Int64}:
- 1
- 2
- 2
- 3
-```
+
+    julia> binweave([1,2,3])
+    4-element Vector{Int64}:
+    1
+    2
+    2
+    3
+
+
 """
 function binweave(a::AbstractVector)
     c = Vector{eltype(a)}(undef, 2*(length(a)-1))
@@ -135,14 +137,14 @@ function distmeans(d::Dict;stdev::Bool=false)
         dₒᵤₜ = Dict{Symbol,Tuple{Number,Number}}()
         for i ∈ keys(d)
             if eltype(d[i]) <: AbstractFloat
-                dₒᵤₜ[i]= (vmean(d[i]), vstd(d[i]))
+                dₒᵤₜ[i]= (ImpactChron.vmean(d[i]), ImpactChron.vstd(d[i]))
             end
         end
     else
         dₒᵤₜ = Dict{Symbol,Number}()
         for i ∈ keys(d)
             if eltype(d[i]) <: AbstractFloat
-                dₒᵤₜ[i]= vmean(d[i])
+                dₒᵤₜ[i]= ImpactChron.vmean(d[i])
             end
         end
     end
@@ -155,9 +157,10 @@ end
 ```julia
 distmedians(d::Dict;ci)
 ```
+
 Calculate medians of each array in a `Dict` of `Array{<:Number}`.
 
-Returns a `NamedTuple` of each key and its median (default) or a `Tuple` of `(median,lower,upper)` where `lower` and `upper` are the lower and upper bounds of the credible interval provied for `ci ∈ [0,1]`.
+Returns a `NamedTuple` of each key and its median (default) or a `Tuple` of `(median,lower,upper)` where `lower` and `upper` are the lower and upper bounds of the credible interval `ci` (∈[0,1]).
 
 """
 function distmedians(d::Dict;ci::Number=0.)
@@ -169,10 +172,10 @@ function distmedians(d::Dict;ci::Number=0.)
             if eltype(d[i]) <: AbstractFloat
                 if length(d[i])>1
                     println(i)
-                    med = vmedian(d[i])
+                    med = ImpactChron.vmedian(d[i])
                     "median was ok"
-                    lower = med - vquantile(d[i],α/2)
-                    upper = vquantile(d[i],1-α/2) - med
+                    lower = med - ImpactChron.vquantile(d[i],α/2)
+                    upper = ImpactChron.vquantile(d[i],1-α/2) - med
                 else
                     med = d[i]
                     lower = upper = zero(med)
@@ -184,7 +187,7 @@ function distmedians(d::Dict;ci::Number=0.)
         dₒᵤₜ = Dict{Symbol,Number}()
         for i ∈ keys(d)
             if eltype(d[i]) <: AbstractFloat
-                length(d[i])>1 ? dₒᵤₜ[i]= vmedian(d[i]) : dₒᵤₜ[i] = d[i]
+                length(d[i])>1 ? dₒᵤₜ[i]= ImpactChron.vmedian(d[i]) : dₒᵤₜ[i] = d[i]
             end
         end
     end
@@ -198,9 +201,10 @@ cleanhist(x; nbins=50, scooch_nbins=4)
 ```
 Calculates a histogram with extra (0 count) bins to buffer the edges and make it look nice and clean. 🧼
 
-Optionally specify the number of histogram `bins` (default: 64 bins) and the number of buffering bins `scooch_nbins`. (Total bins = `nbins + scoochbins`)
+Optionally specify the number of histogram `bins` (default: `2⁶=64` bins) and the number of buffering bins `scooch_nbins`. (Total bins = `nbins + scoochbins`)
 
 Returns a `NamedTuple` with `x` and `y` values of histogram.
+
 """
 function cleanhist(x::AbstractArray; nbins::Int=64, scooch_nbins::Int=2)
 
@@ -273,8 +277,20 @@ normdens(x,m,s)
 Calculate the probability of a normal distribution with mean `m` and standard deviation `s` at a value `x`
 
 """
-function normdens(x::Number,m::Number,s::Number)
-	(s*sqrt(2*π))^-1 * exp(-(x-m)*(x-m) / (2*s*s))
+normdens(x::Number,m::Number,s::Number) = exp(-(x-m)*(x-m) / (2*s*s)) / (s*sqrt(2*π))
+
+
+"""
+```julia
+lognormdens(x,m,s)
+```
+
+Calculate the probability of a log-normal distribution with log-mean `m` and log-standard-deviation `s` at a value `x`
+
+"""
+function lognormdens(x::Number,m::Number,s::Number)
+    lnx=log(x)
+	exp(-(lnx-m)*(lnx-m) / (2*s*s)) / (x*s*sqrt(2*π))
 end
 
 """
@@ -309,7 +325,7 @@ function sumpdfs!(ρ::AbstractVector, z::AbstractVector, x::AbstractVector, δx:
     @assert length(ρ) == length(z)
     ρ .= zero(float(eltype(ρ)))
 
-        @tturbo for j in eachindex(x)
+        ImpactChron.@tturbo for j in eachindex(x)
             xj = x[j]
             δxj = δx[j]
             for i in eachindex(z)
@@ -319,7 +335,7 @@ function sumpdfs!(ρ::AbstractVector, z::AbstractVector, x::AbstractVector, δx:
 # Calculate the stepsize of z for normalization
 	isa(z,AbstractRange) ? Δz = step(z) : Δz = z[2]-z[1]
 # flatten and normalize z
-	ρ ./= (vsum(ρ)*Δz)
+	ρ ./= (ImpactChron.vsum(ρ)*Δz)
 end
 
 
@@ -354,7 +370,7 @@ function pdfsample!(samples::AbstractVector, x::AbstractVector, cp::AbstractVect
     @assert length(samples) > 1
 	cumsum!(cp,cp)
 	cp ./= last(cp) # ensure the cdf max = 1
-	@batch for i = eachindex(samples)
+	ImpactChron.@batch for i = eachindex(samples)
 		r = rand() # draw a random value from the cdf
 		ir = searchsortedfirst(cp,r)
 # Since searchsortedfirst returns the index ≥ the cumulative probability, interpolate between the returned step and the preceding step where the sample likely lies.
