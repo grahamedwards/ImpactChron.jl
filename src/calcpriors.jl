@@ -1,12 +1,18 @@
-## (Re)Calculate mean ages or recalibrate ages with different decay constants
+## (Re)Calculate mean ages, recalibrate ages with different decay constants, and calculate lognormal distributions.
+    # mcmean
+    # agerecal
+    # lognorm
+    # draw
+    # lognormMC
 
 """
 
 ```julia
-mcmean(x,xsig,n=10_000_000,fullpost=false)
+ImpactChron.mcmean(x, xsig, n=10_000_000, fullpost=false)
 ```
 
-Calculate mean of age(s) `x` with 1σ uncertainties `xsig` by Monte Carlo method. A 10M resample (default) returns consistent results at the 10ka level.
+Calculate mean of age(s) `x` with 1σ uncertainties `xsig` by Monte Carlo method. 
+A 10M resample routine (n=10⁷, default) returns consistent results at the 10⁻⁴ level.
 
 Returns a tuple of `(mean,1σ)` by default. 
 
@@ -34,9 +40,12 @@ end
 """
 
 ```julia
-agerecal(x,sig;monitor_age,n, KAr=false)
+ImpactChron.agerecal(x,sig;monitor_age,n, KAr=false)
 ```
-Recalculate the age and uncertainty of an Ar-Ar age `x`±`sig` (1σ) Ma with the decay constants of Steiger & Jager (1977). Quantifies uncertainty by resampling `n` times (default: 1M). Optionally accepts `monitor_age`. If not given, resamples from a range of absolute (not necessarily K-Ar constrained) monitor ages ∈ [0,3] Ga.
+
+Recalculate the age and uncertainty of an Ar-Ar age `x`±`sig` (1σ) Ma with the decay constants of Steiger & Jäger 1977 (EPSL, http://doi.org/10.1016/0012-821X(77)90060-7). 
+Quantifies uncertainty by resampling `n` times (default: 10⁶). 
+Optionally accepts a `monitor_age`. If not given, resamples from a range of absolute monitor ages ∈ [0,3] Ga.
 
 If `KAr=true`, this recalculates the K-Ar age with the new decay constants, without correcting for a monitor.
 
@@ -87,12 +96,11 @@ end
 """
 
 ```julia
-lognorm(x)
+ImpactChron.lognorm(x)
 ```
 
-Calculate the lognormal distribution of `x`, a collection of `Number`s. Returns a `lNrm` type. Conveniently accepts `NamedTuple`s.
-
-See also: `lognorm`
+Calculate the lognormal distribution of `x` from a collection of `Number`s (accepts `NamedTuple`s). 
+Returns a [`lNrm`](@ref) type.
 
 """
 function lognorm(y)
@@ -106,14 +114,14 @@ end
 """
 
 ```julia
-draw(x::Union{Number,ImpactChron.PriorDistribution})
+ImpactChron.draw(x)
 ```
 
-Make a random draw from  `x`, which may be a `Tuple` or any subtype of `PriorDistribution``. If `x` is a `Number`, it simply returns `x`.
+Make a pseudorandom draw from  `x`, which may be a `Tuple` or any subtype of `PriorDistribution`. If `x` is a `Number`, it simply returns `x`.
 
 Used exclusively in support of `lognormMC`.
 
-See also: `Nrm`, `lNrm`, `Unf`, `lognormMC`
+See also: [`Nrm`](@ref), [`lNrm`](@ref), [`Unf`](@ref), [`lognormMC`](@ref)
 
 """
 draw(x::Nrm; rng=Random.Xoshiro()) = x.μ + x.σ*randn(rng)
@@ -125,19 +133,20 @@ draw(x::Tuple; rng=Random.Xoshiro()) = rand(rng,x)
 """
 
 ```julia
-lognormMC(x ; n)
+ImpactChron.lognormMC(x ; n)
 ```
 
-Calculate the lognormal distribution of a collection `x` by resampling the entire collection `n`` times (default=1M).
+Calculate the lognormal distribution of a collection `x` by resampling the entire collection `n` times (default=10⁶).
 
 `x` may contain data in the form of `Tuple`s, `PriorDistribution` subtypes, or `Number`s.
 
 Returns a `lNrm` type.
 
-See also: `lognorm`, `ImpactChron.draw`
+See also: [`ImpactChron.lognorm`](@ref), [`ImpactChron.draw`](@ref)
 
 ---
-Just in case, the function has a (very slow) safety net to prevent it from trying to calculate the `log` of any negative resamples. (This has never happened for the data I used)
+Just in case, the function has a (slow) safety net to prevent it from trying to calculate the `log` of any negative resamples. (This has never happened for the data I used)
+
 """
 function lognormMC(x;n::Int=1_000_000,rng=Random.Xoshiro())
     xdraws = Vector{Float64}(undef,length(x)*n)

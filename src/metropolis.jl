@@ -1,11 +1,15 @@
-## Metropolis Function
+## Metropolis code and support functions
+    # metropolis_status
+    # prior_bounds
+    # strict_priors
+    # thermochron_metropolis
 
 # Status function to keep user updated...
 function metropolis_status(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,stepN::Integer,stage::String,t::Number;accpt::AbstractVector=[])
     println("---------------------------")
     stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
     println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
-    isempty(accpt) || println("acceptance rate =",reduce(+,accpt)/stepI)
+    isempty(accpt) || println("acceptance rate =",vreduce(+,accpt)/stepI)
     println("ll=$ll \n")
     for v ∈ vars
         println(v," → ",p[v])
@@ -14,12 +18,14 @@ function metropolis_status(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,s
 end
 
 """
+
 ```julia
-ImpactChron.prior_bounds(x,p<:PriorDistribution)
+ImpactChron.prior_bounds(x, p<:PriorDistribution)
 ```
 
-Evaluates whether a proposal `x` falls within the permissible bounds of its prior `p <: PriorDistribution`. 
+Evaluates whether a proposal `x` falls within the permissible bounds of its prior `p <:` [`PriorDistribution`](@ref). 
 Always returns `true` if p is of type `Nrm` or `lNrm`, tests if `x ∈ (p.a,p.b)` for `p::Unf`.
+
 """
 prior_bounds(x::Number,p::Unf) = p.a < x < p.b
 prior_bounds(x::Number,p::Nrm) = true
@@ -28,17 +34,17 @@ prior_bounds(x::Number,p::lNrm) = true
 """
 
 ```julia
-strict_priors(p::NamedTuple,k,p_prior<:PriorDistribution)
+ImpactChron.strict_priors(p, k, p_prior<:PriorDistribution)
 ```
 
-Evaluates strict priors related to Uniform distributions and other rules for paramter proposal `p` and perturbed variable `k::Symbol`, where `p_prior` is the prior distribution of `p[k]`.
+Evaluates strict priors related to Uniform distributions and other rules for paramter proposal `p` (`::NamedTuple`) and perturbed variable `k` (`::Symbol`), where `p_prior` is a [`PriorDistribution`](@ref) of `p[k]`.
 
 Returns `true` if all priors are satisfied. Returns `false` if any priors fail.
 
 Currently includes:\n
-    1. Ensure bounds of uniform priors are not exceeded.\n
-    2. Ensure bombardment events α, β, γ are in sequential order.\n
-    3. The ℯ-folding time of the primordial flux must be longer than that of post-accretion bombardments. 
+1. Ensure bounds of uniform priors are not exceeded. See [`ImpactChron.prior_bounds`](@ref).\n
+2. Ensure bombardment events α, β, γ begin in sequential order.\n
+3. The ℯ-folding time of bombardment α must be longer than those of β and γ.
 
 """
 function strict_priors(p::NamedTuple,k::Symbol,p_prior::PriorDistribution)
@@ -50,11 +56,9 @@ function strict_priors(p::NamedTuple,k::Symbol,p_prior::PriorDistribution)
     Bγ = ifelse(iszero(p.Fχγ),Inf,p.tχγ) # if γ flux is off, always accept
     bool *= p.tχα <= Bγ
     bool *= p.tχβ <= Bγ
-    
-    # ifelse in case γ-flux is off (Fχγ=0)
 # The τ of instability/scattering fluxes must be shorter than that of the background impactor flux.
-    bool *= ifelse(iszero(p.Fχβ),-Inf,p.τχβ) <= p.τχα
-    bool *= ifelse(iszero(p.Fχγ),-Inf,p.τχγ) <= p.τχα
+    bool *= ifelse(iszero(p.Fχβ),-Inf,p.τχβ) <= p.τχα # accept if β flux is off
+    bool *= ifelse(iszero(p.Fχγ),-Inf,p.τχγ) <= p.τχα # accept if γ flux is off
 
     bool
 end
@@ -62,21 +66,25 @@ end
 
 """
 ```julia
-function thermochron_metropolis(p, pσ, pvars, mu, sigma, impactsite; plims, nsteps, downscale, petrotypes, kwargs...)
+function thermochron_metropolis(p, pσ, pvars, mu, sigma, impactsite; nsteps, plims, downscale, petrotypes, kwargs...)
 ```
 
-Runs a Markov chain Monte Carlo (MCMC) routine that explores the parameter space of the variables listed in `pvars` (see PARAMETERS table below), constrained by observed thermochronologic ages given in `mu` with corresponding 1σ uncertainties in `sigma`.
-Requires an initial proposal for parameter values `p` and a Gaussian jump size `pσ`, as `NamedTuple`s, each containing all model parameters listed in the table below.
+Runs a Markov chain Monte Carlo (MCMC) routine that explores the parameter space of the variables in `pvars` (as type `Symbol`, see PARAMETERS table below), constrained by observed thermochronologic ages given in `mu` with corresponding 1σ uncertainties in `sigma`.
+Requires an initial proposal `p` (`::NamedTuple`) for parameter values and a Gaussian jump size `pσ` (`::NamedTuple`), each containing all model parameters listed in the table below.
 Note that many parameters are log-normally distributed and require a natural-log-space initial guess (see table).
-`impactsite` (`ImpactSite`) describes the shape of asteroidal volume reheated per impact (See docs for details: `?ImpactSite`).
+`impactsite` (`::ImpactSite`) describes the shape of asteroidal volume reheated per impact. See [`ImpactSite`](@ref) for details.
 
 
-Three `kwargs` are particularly important:
-1. `plims <: NamedTuple` -- The model relies on hierarchical priors, such that all non-bombardment variables (bombardment parameters contain `χ`) are constrained by prior distributions. Field names are as in `p` and `pσ` and values are of type `<:ImpactChron.PriorDistribution` (i.e. `Nrm`, `Unf`, `lNrm`, see docs for details). 
+Four `kwargs` are particularly important:
 
-2. `downscale ::Int` bins the age distribution produced by the thermal models to smooth it. The distribution is "downscaled" by the factor given. It is set to `1` by default (off). I recommend a value of `10`. See `?ImpactChron.downscale!` for details. 
+1. `nsteps ::Int` is the number of post-burn-in Markov chain steps.
 
-3. `petrotypes <: PetroTypes` contains the weights and upperbound temperatures of different petrologic types. This weighting is turned off by default. See `?PetroTypes` for details.
+2. `plims ::NamedTuple` -- The model relies on hierarchical priors, such that all non-bombardment variables (`χ` ∉ parameter name) are constrained by prior distributions. 
+Field names are as in `p` and `pσ` and values are subtypes of [`PriorDistribution`](@ref). 
+
+3. `downscale ::Integer` bins the modeled age distribution to smooth it. The distribution is "downscaled" by the factor `downcale`. It is set to `1` by default (off). I recommend a value of `10`. See [`ImpactChron.downscale!`](@ref) for details. 
+
+4. `petrotypes ::PetroTypes` contains the weights and upperbound temperatures of different petrologic types. This weighting is turned off by default. See [`PetroTypes`](@ref) for details.
 
 ---
 
@@ -90,17 +98,17 @@ PARAMETERS:
 | body radius (m)           | yes   | `R`    | 
 | accretion date (Myₛₛ)      | yes   | `ta`   | 
 | disk temperature (K)      | yes   | `Tm`   |
-| [Al] (g/g)                | yes   | `cAl`  |
-| density (kg/m³)           | yes   | `k`    | 
-| thermal diffusivity       | yes   | `ρ`    | 
-| spec. heat capacity       | yes   | `Cp`   |
-| α bombardment onset (Myₛₛ) | no   | `tχα`  | 
+| Al abundance (g/g)        | yes   | `cAl`  |
+| density (kg/m³)           | yes   | `ρ`    | 
+| thermal diffusivity       | yes   | `k`    | 
+| specific heat capacity    | yes   | `Cp`   |
+| α bombardment onset (Myₛₛ) | no    | `tχα`  | 
 | α initial flux (My⁻¹)     | no    | `Fχα`  | 
 | α ℯ-folding time (My)     | no    | `τχα`  | 
-| β bombardment onset (Myₛₛ) | no   | `tχβ`  | 
+| β bombardment onset (Myₛₛ) | no    | `tχβ`  | 
 | β initial flux (My⁻¹)     | no    | `Fχβ`  | 
 | β ℯ-folding time (My)     | no    | `τχβ`  | 
-| γ bombardment onset (Myₛₛ) | no   | `tχγ`  | 
+| γ bombardment onset (Myₛₛ) | no    | `tχγ`  | 
 | γ initial flux (My⁻¹)     | no    | `Fχγ`  | 
 | γ ℯ-folding time (My)     | no    | `τχγ`  | 
 
@@ -111,15 +119,15 @@ All the other `kwargs`...
 | kwarg | Default | Description |
 | :---- | :-----: | :------ |
 | `burnin` | 0 | MCMC burn-in iterations |
-| `Δt` | 1.0 | model timestep (My) | 
-| `Tmax` | 1500. | maximum temperature (K) | 
-| `Tmin` | 0. | minimum temperature (K) |
-| `nᵣ` | 100 | simulated radial nodes | 
-| `stepfactor` | 2.9 | scales each accepted jump `pσ` (tuned to ~50% acceptance) | 
-| `updateN` | 1000 | print a status update of chains every `_N` steps | 
-| `archinveN` | 0 | save an archive of chains every `_N` steps (`0`-> off) |
-|`archiveages` | false | `true` -> archives the downscaled age distribution for each MCMC step |
-| `rng` | `Random.Xoshiro()` | pseudo-random number generator seed | 
+| `Δt` | 1 | model timestep (My) | 
+| `Tmax` | 1500 | maximum temperature (K) | 
+| `Tmin` | 0 | minimum temperature (K) |
+| `nᵣ` | 100 | number of radial nodes in simulated asteroid | 
+| `stepfactor` | 2.9 | scales each accepted jump (`pσ *= stepfactor`, tuned to ~50% acceptance rate) | 
+| `updateN` | 1000 | print a status update of Markov chain every `...N` steps | 
+| `archiveN` | 0 | save an archive of Markov chain every `...N` steps (`0`-> off, see also `serial2dict`) |
+|`archiveages` | false | `true` -> archives the downscaled age dist. for each step |
+| `rng` | `Random.Xoshiro()` | pseudorandom number generator seed | 
 
 """
 function thermochron_metropolis(  p::NamedTuple,   # Parameter proposal

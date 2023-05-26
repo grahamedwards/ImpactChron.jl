@@ -1,4 +1,4 @@
-## Test functions in ImCh_statistics.jl
+## Test functions in src/statistics.jl
 
     # rangemidpoints / rangemidbounds
     # histogramify(!)
@@ -31,9 +31,9 @@ yhst = (LinRange(10,100,10).^3 .- LinRange(0,90,10).^3) ./ 100^3
 # Calculate the correct answer
 hist_test_ans = [yhst[4]+yhst[5],yhst[6],yhst[7]+yhst[8]] / (sum(yhst[.!isnan.(xhst)])*step(hstdmn))
 # Let histogramify and histogramify! try...
-dist1 = histogramify(hstdmn,xhst,yhst)
+dist1 = ImpactChron.histogramify(hstdmn,xhst,yhst)
 dist2=zero(dist1)
-histogramify!(dist2,hstdmn,xhst,yhst)
+ImpactChron.histogramify!(dist2,hstdmn,xhst,yhst)
 # See how they do!
 @test dist1 == dist2 == hist_test_ans
 

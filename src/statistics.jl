@@ -1,28 +1,35 @@
 ## Functions used for statistical purposes & math support:
-    # rangemidpoints & rangemidbounds
+    # rangemidpoints 
+    # rangemidbounds
     # downscale!
-    # histogramify ~ converts data into binned histogram
+    # ImpactChron.histogramify[!]
     # log-likelihood calculators
         # ll_param
         # ll_params
         # ll_dist
+        # ll_dist_params
         # weight_petro_types!
 
 
 """
 
 ```julia
-rangemidpoints(x::AbstractRange)
+rangemidpoints(x)
 ```
+
 Calculate a `LinRange` of the midpoints of each step in `x`(`<:AbstractRange`).
+
 """
 rangemidpoints(x::AbstractRange) = LinRange(first(x) + 0.5step(x), last(x) - 0.5step(x), length(x)-1)
 
 """
+
 ```julia
-rangebinbounds(x::AbstractRange)
+rangebinbounds(x)
 ```
-Calculate a `LinRange` of the linear bounds for each "midpoint" step in `x`.
+
+Calculate a `LinRange` of the linear bounds for each "midpoint" step in `x` (`<:AbstractRange`).
+
 """
 rangemidbounds(x::AbstractRange) = LinRange(first(x) - 0.5step(x), last(x) + 0.5step(x), length(x)+1)
 
@@ -30,10 +37,10 @@ rangemidbounds(x::AbstractRange) = LinRange(first(x) - 0.5step(x), last(x) + 0.5
 """
 
 ```julia
-downscale!(B::AbstractArray, A::AbstractArray)
+ImpactChron.downscale!(B, A)
 ```
 
-Downscales elements of 1-D array `A` into smaller 1-D array `B` by summing.
+Downscales elements of 1-D Array `A` into smaller 1-D Array `B` by summing.
 Scales the downscaled values in `B` by the ratio of length(A)÷length(B) to preserve any normalizations.
 
 Requires that length(A) % length(B) = 0.
@@ -57,7 +64,7 @@ end
 
 """
 ```julia
-histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
+ImpactChron.histogramify(domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 ```
 
 Constructs histogram over bins defined by `domain` from model outputs in `x` with corresponding
@@ -65,7 +72,7 @@ abundances in `y`.
 Does not require a constant step in `x`, so this calculates histograms of outputs from `planetesimal_cooling_dates`.
 
 `histogramify` normalizes its output, such that for output `dist` ∑ dist * Δd = 1, so long as all x ∈ domain.
-If any x ∉ domain, ∑ dist[dᵢ] * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the corresponding xₒᵤₜ of yₒᵤₜ are ∉ domain.
+If any x ∉ domain, ∑ dist * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where the xₒᵤₜ corresponding to yₒᵤₜ are ∉ domain.
 
 ---
 
@@ -84,12 +91,12 @@ end
 """
 
 ```julia
-histogramify!(dist::AbstractVector, domain::AbstractRange, x::AbstractVector, y::AbstractVector)
-
+ImpactChron.histogramify!(dist::AbstractVector, domain::AbstractRange, x::AbstractVector, y::AbstractVector)
 ```
-In-place `histogramify` that overwites a pre-allocated vector `dist`.
 
-see `histogramify` for details
+In-place `histogramify` that overwites a pre-allocated vector `dist`.
+See  [`histogramify`](@ref) for details.
+
 """
 function histogramify!(dist::AbstractVector,domain::AbstractRange,x::AbstractVector,y::AbstractVector)
 # start with a fresh zero distribution
@@ -137,24 +144,17 @@ end
 """
 
 ```julia
-ll_param(x::Number,D::T) -> T ∈ {Nrm,lNrm,Unf}
+ll_param(x::Number,D<:PriorDistribution)
+```
 
-Calculate the log-likelihood that `x` is drawn from a distribution
-`D`, where D may be...
-Normal (`Nrm`), with mean D.μ and 1σ = D.σ
-
-Lognormal (`lNrm`), with logspace mean D.μ and 1σ = D.σ. Assumes x is already in logspace.
-
-Uniform (`Unf`) with lowerbound D.a and upperbound D.b
-(D::Unf always returns loglikelihhood of zero, bounds test is done earlier to speed up code.)
-
-see `ImCh_parameters.jl` for construction of T-structs
+Calculate the log-likelihood that `x` is drawn from a distribution `D`, which may be a Normal ([`Nrm`](@ref)), Lognormal ([`lNrm`](@ref)), or Uniform ([`Unf`](@ref)) distribution.
+For `D::Unf`, `ll_param` returns `0` and bounds checks are performed by [`ImpactChron.prior_bounds`](@ref) within [`ImpactChron.strict_priors`](@ref).
 
 """
 ll_param(x::Number,D::Nrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
 ll_param(x::Number,D::lNrm) = -(x-D.μ)*(x-D.μ)/(2*D.σ*D.σ)
     #lnx = log(x); return -lnx-(lnx-D.μ)*(lnx-D.μ) / (2*D.σ*D.σ)
-ll_param(x::T,D::Unf) where T<:Number = zero(T)
+ll_param(::T,D::Unf) where T<:Number = zero(T)
 
 
 """
@@ -162,10 +162,10 @@ ll_param(x::T,D::Unf) where T<:Number = zero(T)
 ```julia
 ll_params(p::NamedTuple,d::NamedTuple)
 ```
-Calculate log-likelihood for a number of proposals in `p`
+Calculate log-likelihoods for the proposals in `p`
 with corresponding distributions in `d`
 
-Currently does not evaluate impact (_χ_) parameters.
+Does not evaluate impact (_χ_) parameters, since these were only modeled on Unf distributions.
 """
 function ll_params(p::NamedTuple,d::NamedTuple)
     ll = 0.
@@ -185,13 +185,12 @@ end
 """
 
 ```julia
-ll_dist(x::AbstractVector,dist::AbstractVector,mu::AbstractVector,sigma::AbstractVector)
+ll_dist(x, dist, mu, sigma)
 ```
 
-Calculate loglikelihood that observations in `mu` and `sigma`
-are drawn from modeled distribution described by `x` and `dist`
-where
-`x` contains the bincenters of a normalized histogram `dist` and
+Calculate loglikelihood that observations in Vectors `mu` and `sigma`
+are drawn from modeled distribution described by Vectors `x` and `dist`,
+where `x` contains the bincenters of a normalized histogram `dist` and
 `mu` and `sigma` respectively contain the mean and 1σ of the observations.
 
 """
@@ -238,16 +237,16 @@ end
 """
 
 ```julia
-function ll_dist_params(a::AsteroidHistory, p, plims, mu,sig)
+ll_dist_params(a, p, plims, mu,sig)
 ```
 
 Calculate the combined log-likelihood that 
 
-1. Observations with mean `mu` and corresponding 1σ uncertainties `sig` (both `::Array`) are drawn from the downscaled age distribution and timesteps contained in `a` (`::AsteroidHistory`)
+1. Observations with mean `mu` and corresponding 1σ uncertainties `sig` (both ::`Array`) are drawn from the downscaled age distribution and timesteps contained in `a` (::`AsteroidHistory`)
 
 2. The proposal parameters `p` used to calculate this history are drawn from the prior distributions `plims` (both `::NamedTuple`)
 
-If the age distribution is all zero, quickly returns a log-liklihood of `-∞`
+If the age distribution is zero, quickly returns a log-liklihood of `-Inf`.
 
 """
 function ll_dist_params(a::AsteroidHistory, p::NamedTuple, plims::NamedTuple, mu::AbstractArray,sig::AbstractArray)
@@ -264,15 +263,15 @@ end
 """
 
 ```julia
-weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::PetroTypes)
+ImpactChron.weight_petro_types!(v, T, petrotypes::PetroTypes)
 ```
 
 Reweight volumetric fractions relative to the abundance of each petrologic type in the meteorite record.
-Takes `Vector`s of volumetric fraction (`v`), peak temperature (`T`), and cooling date (`d`), as output by `planetesimal_cooling_dates`.
-Accounts for melted layers (`r` where `v[i]==0` due to melting in `planetesimal_cooling_timestep!`.
+Takes `Array`s of volumetric fraction (`v`) and peak temperature (`T`) as output by [`planetesimal_cooling_dates`](@ref) or contained within an [`AsteroidHistory`](@ref).
+
 Requires all petrologic types to occupy at least one radial node, otherwise returns `zero` in all `v`.
 
-see also: `PetroTypes`
+see also: [`PetroTypes`](@ref)
 
 """
 function weight_petro_types!(v::AbstractArray,T::AbstractArray,petrotypes::PetroTypes)

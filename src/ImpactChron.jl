@@ -12,7 +12,7 @@ using Serialization
 # For reproducibility
 using Random
 
-export  Nrm, lNrm, Unf, perturb, Cone, Parabola, Hemisphere, ImpactSite, AsteroidHistory, PetroTypes
+export  perturb, PriorDistribution, Nrm, lNrm, Unf, ImpactSiteShape, Cone, Parabola, Hemisphere, ImpactSite, AsteroidHistory, PetroTypes
 include("parameters.jl")
 
 export  rangemidpoints, rangemidbounds, ll_param, ll_params, ll_dist, ll_dist_params
@@ -27,6 +27,6 @@ include("metropolis.jl")
 export nt2csv, dict2csv, data2csv, csv2nt, csv2dict
 include("datasaveload.jl")
 
-include("calcpriors.jl")
+include("calcpriors.jl") # all functions are loaded explicitly in the scripts in the data/ directory.
 
 end

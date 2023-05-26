@@ -1,6 +1,5 @@
 # ImpactChron.jl
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://grahamedwards.github.io/ImpactChron.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://grahamedwards.github.io/ImpactChron.jl/dev/)
 [![Build Status](https://github.com/grahamedwards/ImpactChron.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/grahamedwards/ImpactChron.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Coverage](https://codecov.io/gh/grahamedwards/ImpactChron.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/grahamedwards/ImpactChron.jl)
@@ -14,7 +13,7 @@ Developed from the statistical framework of [Chron.jl](https://github.com/brenhi
 ---
 ---
 ## Installation
-`ImpactChron.jl` is written in the Julia programming language. To install, open an instance of Julia, enter the package manager (type `]` in the REPL), and type:
+ImpactChron.jl is written in the Julia programming language. To install, open an instance of Julia, enter the package manager (type `]` in the REPL), and type:
 ```julia
 pkg> add https://github.com/grahamedwards/ImpactChron.jl
 ```
@@ -28,6 +27,8 @@ The package documentation outlines how to implement this and other functions. To
 ```julia
 help?> thermochron_metropolis
 ```
+
+The full Documentation for ImpactChron.jl is available at https://grahamedwards.github.io/ImpactChron.jl/dev. 
 
 ## Example
 An example notebook to show how to use the major features of the package will be available soon! 

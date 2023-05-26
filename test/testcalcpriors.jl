@@ -1,7 +1,7 @@
 @test ImpactChron.mcmean([5,3,2],[1,2,1])[1] ≈ 3.333 atol=0.01
 @test ImpactChron.mcmean([5,3,2],[1,2,1])[2] ≈ 0.817 atol=0.01
 
-#agerecal could have a test but doesn't for now.
+# agerecal could have a test but doesn't for now.
 
 @test ImpactChron.draw((1,2,3)) ∈ (1,2,3)
 @test ImpactChron.draw(0.2) === 0.2

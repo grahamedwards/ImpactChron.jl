@@ -5,27 +5,30 @@
 # cooling and impact reheating.                 #
 #                                               #   
 #   planetesimal_temperature                    #   
-#   planetesimal_cooling_dates                  #    
-#   planetesimal_cooling_timestep               #   
-#   impact_reset_array                          #
+#   planetesimal_cooling_dates[!]               #    
+#   planetesimal_cooling_timestep!              #   
+#   impact_reset_array!                         #
 #   radius_at_depth                             #
+#   asteroid_agedist                            #
 # # # # # # # # # # # # # # # # # # # # # # # # #
 
 
 """
 
 ```julia
-function planetesimal_temperature(time::AbstractArray, radii::AbstractArray; To::Float64, Ao::Float64, λ::Float64, K::Float64, κ::Float64 )
+ImpactChron.planetesimal_temperature(time::AbstractArray, radii::AbstractArray; To, Ao, λ, K, κ)
 ```
 
-Calculates the evolution of temperature at a range of depths defined
+Calculates the evolution of temperature over `time` steps at a range of `radii` defined
 for a conductively cooling sphere with thermal conductivity `K` and thermal diffusivity `κ`,
-given ambient temperature `To`, initial heat production `Ao`, and heat-producing-element decay constant 'λ'.
+given ambient temperature `To`, initial heat production `Ao`, and heat-production decay constant `λ`.
+
+`last(radii)` defines the radius of the sphere.
 
 Adapted from:
-Carlslaw & Jäger (1959)
+Carlslaw & Jäger (1959, ISBN-13: 978-0198533689)
 and
-[Hevey & Sanders (2006)](http://doi.wiley.com/10.1111/j.1945-5100.2006.tb00195.x)
+[Hevey & Sanders (2006)](http://doi.org/10.1111/j.1945-5100.2006.tb00195.x)
 
 """
 function planetesimal_temperature(time::AbstractArray,radii::AbstractArray;
@@ -72,11 +75,13 @@ end
 planetesimal_cooling_dates(p::NamedTuple; nᵣ, Δt, tmax, Tmax, Tmin)
 ```
 
-Returns an `NTuple{4,Vector}` containing (in this order) the thermochronologic cooling dates (Ma after CAIs) and corresponding volume fractions, radial depths (km from center), and peak temperatures (K) of `nᵣ` evenly spaced nodes in a spherical body. 
+Returns an NTuple containing (in this order) thermochronologic cooling dates (My after CAIs) and corresponding volume fractions, radial depths (km from center), and peak temperatures (K) of `nᵣ` evenly spaced nodes in a spherical body. 
 
-Physical and environmental parameters are described in `p`. Alternatively, these parameters may be individually listed in lieu of ϕ. These parameters are outlined in the table below. **Note** that several of these parameters need to be entered as the natural logarithm of the value for easy compatibility with the inversion function.
+Physical and environmental parameters are described in `p`. Alternatively, these parameters may be individually listed in lieu of `p`. These parameters are outlined in the table below. 
 
-`Δt` gives the timestep (in Ma), `tmax`` describes the duration of the model (Ma after CAIs), and `Tmax` and `Tmin` define the maximum and minimum temperatures (K) allowed for chondritic material in the body. Default values are only given for `tmax` (2000 Ma), `Tmax` (1500 K), and `Tmin` (0 K).
+**Note:** several of these parameters need to be entered as the natural logarithm of the value for easy compatibility with the inversion function.
+
+`Δt` gives the timestep (in My), `tmax`` describes the duration of the model (My after CAIs = Myₛₛ), and `Tmax` and `Tmin` define the maximum and minimum temperatures (K) allowed for chondritic material in the body. Default values are only given for `tmax` (2000 Myₛₛ), `Tmax` (1500 K), and `Tmin` (0 K).
 
 
     | Parameter                 | log?  | `NmTpl`| `func`  |
@@ -85,15 +90,15 @@ Physical and environmental parameters are described in `p`. Alternatively, these
     | initial ²⁶Al/²⁷Al         | no    | `rAlo` | `rAlo`   |
     | closure temperature (K)   | yes   | `Tc`   | `Tc`     |
     | body radius (m)           | yes   | `R`    | `R`      |
-    | accretion date (Ma)       | yes   | `ta`   | `tₐ`     |
+    | accretion date (Myₛₛ)       | yes   | `ta`   | `tₐ`     |
     | disk temperature (K)      | yes   | `Tm`   | `To`     |
     | [Al] (g/g)                | yes   | `cAl`  | `Al_conc`|
-    | density (kg/m³)           | yes   | `k`    | `K`      |
-    | thermal diffusivity       | yes   | `ρ`    | `ρ`      |
-    | spec. heat capacity       | yes   | `Cp`   | `Cₚ`     |
+    | density (kg/m³)           | yes   | `ρ`    | `ρ`      |
+    | thermal diffusivity       | yes   | `k`    | `K`      |
+    | specific heat capacity    | yes   | `Cp`   | `Cₚ`     |
     | ------------------------- | ----  | ------ | -------- |
 
-see also: `planetesimal_cooling_dates!`
+see also: [`planetesimal_cooling_dates!`](@ref)
 """
 function planetesimal_cooling_dates(;
             nᵣ::Integer,          # Number of simulated radial distances
@@ -141,13 +146,12 @@ end
 """
 
 ```julia
-function planetesimal_cooling_dates!(ages::AbstractArray, Vfrxn::AbstractArray,peakT::AbstractArray, p::NamedTuple;
-    nᵣ::Integer, Δt::Number, tmax::Number, Tmax::Number, Tmin::Number)
+planetesimal_cooling_dates!(ages, Vfrxn, peakT, p::NamedTuple; nᵣ, Δt, tmax, Tmax, Tmin)
 ```
 
-In-place `planetesimal_cooling_dates` that updates `ages`, `Vfrxn`, and `peakT`.
+In-place `planetesimal_cooling_dates` that updates Arrays `ages`, `Vfrxn`, and `peakT`.
 
-see also `planetesimal_cooling_dates`
+see also: [`planetesimal_cooling_dates`](@ref)
 """
 function planetesimal_cooling_dates!(ages::AbstractArray, #pre-allocated vector for cooling dates
     Vfrxn::AbstractArray, # pre-allocated vector for volume fraction of each date
@@ -250,12 +254,15 @@ end
 """
 
 ```julia
-function planetesimal_cooling_timestep!(solartime::AbstractRange, time_i::Vector, Vfrxn::Vector, peakT::Vector, p::NamedTuple; nᵣ, Tmax, Tmin)
+ImpactChron.planetesimal_cooling_timestep!(solartime::AbstractRange, time_i::Vector, Vfrxn::Vector, peakT::Vector, p::NamedTuple; nᵣ, Tmax, Tmin)
 ```
 
-Returns thermochronologic cooling dates in `time_i` as indices of `solartime`, along with corresponding volumetric fractions (`Vfrxn`) and peak temperatures in K (`peakT`) for `nᵣ` nodes in a body with planetesimal and environmental parameters given in `p`. `Tmax` and `Tmin` respectively describe the maximum and minimum temperatures allowed in the chondritic planetesimal. Failing to exceed `Tmin` gives the date of accretion, and exceeding `Tmax` sets the volumetric fraction to zero (achondritic).
+Returns (overwrites) thermochronologic cooling dates in `time_i` as indices of `solartime`, along with corresponding volumetric fractions (`Vfrxn`) and peak temperatures in K (`peakT`) for `nᵣ` nodes in a body with model parameters given in `p`. 
+`Tmax` and `Tmin` respectively describe the maximum and minimum peak temperatures allowed. 
+Failing to exceed `Tmin` returns the date of accretion, and exceeding `Tmax` sets the volumetric fraction to zero (achondritic).
 
-see also: `planetesimal_cooling_dates`, `planetesimal_cooling_dates!`
+see also: [`planetesimal_cooling_dates`](@ref), [`planetesimal_cooling_dates!`](@ref)
+
 """
 function planetesimal_cooling_timestep!(solartime::AbstractRange,
     time_i::AbstractVector,
@@ -479,13 +486,13 @@ end
 
 """
 ```julia
-radius_at_depth(rᵢ::Number, R::Number, x::T) where T<:{Cone,Parabola,Hemisphere}
+ImpactChron.radius_at_depth(rᵢ, R, x<:ImpactSiteShape)
 ```
 
-Calculates the radius of a circular area at a radial distance of rᵢ from the center of a body with radius `R`,
-where the volume of the region is approximated by a cone (x::Cone), paraboloid of rotation (x::Parabola),
-or hemisphere (x::Hemisphere). `x` includes a maximum depth (x.z) and surface radius (x.r).
-When x::Hemisphere, only `r` is used.
+Calculates the radius of the circle traced by a `x`-shaped region at a distance of `rᵢ` from the center of a body of radius `R`.
+Note that for  `x::Hemisphere`, only its `x.r` is used.
+
+see also: [`ImpactSiteShape`](@ref)
 
 """
 radius_at_depth(rᵢ::Number, R::Number, x::Cone) = (rᵢ + x.z - R) * x.r / x.z # Conical approximation
@@ -493,7 +500,23 @@ radius_at_depth(rᵢ::Number, R::Number, x::Parabola) = x.r * sqrt( (rᵢ+ x.z -
 radius_at_depth(rᵢ::Number, R::Number, x::Hemisphere) = sqrt( x.r*x.r - (rᵢ-R)*(rᵢ-R) ) # Hemispheric approximation, assumes z=r
 
 
+"""
 
+```julia
+asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroTypes, impactsite::ImpactSite; 
+    nᵣ,Tmax,Tmin, melt_reject)
+```
+
+Calculates and updates an asteroid thermochronologic history, contained in `a`, from parameters defined in `p` for an impact-heating morphology of `impactsite`. 
+Weights the abundance of ages in each radial shell by `petrotypes`.
+
+If any petrologic types are missing (see [`ImpactChron.weight_petro_types!`](@ref)) or the radial fraction of the body exceeding Tmax `≥ melt_reject` (`0.1` by default), the age distribution is zeroed, which [`ll_dist_params`](@ref) rejects.
+
+In short, this is a convenient wrapper for a series of functions used in the weighted thermochronologic model.
+
+see also: [`planetesimal_cooling_timestep!`](@ref), [`planetesimal_cooling_dates`](@ref),[`ImpactChron.weight_petro_types!`](@ref),[`impact_reset_array!`](@ref), [`ImpactChron.downscale!`](@ref) 
+
+"""
 function asteroid_agedist!(a::AsteroidHistory, p::NamedTuple, petrotypes::PetroTypes, impactsite::ImpactSite{T,N}; nᵣ::Integer, Tmax::Number, Tmin::Number, melt_reject::Number=0.1) where {T,N}
 # Calculate cooling history 
     planetesimal_cooling_timestep!(a.t, a.cooltime,a.Vfrxn, a.peakT, p, nᵣ=nᵣ, Tmax=Tmax, Tmin=Tmin)

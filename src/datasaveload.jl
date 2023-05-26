@@ -1,16 +1,24 @@
 # Efficiently save and load data with DelimitedFiles functions.
 
-## save data to a csv:
+    # nt2csv
+    # dict2csv
+    # data2csv
+    # csv2nt
+    # csv2dict
+    # serial2dict
 
 """
+
 ```julia
 nt2csv(filename::String,N::NamedTuple)
 ```
 
 Save a `NamedTuple` to a .csv. Accounts for fields of any type.
+
 For single-element entries, the rest of the array/table is filled with `NaN`s.
 
-see also: `dict2csv`, `data2csv`
+see also: [`dict2csv`](@ref), [`data2csv`](@ref)
+
 """
 
 function nt2csv(filename::String,N::NamedTuple)
@@ -34,30 +42,32 @@ function nt2csv(filename::String,N::NamedTuple)
 end
 
 """
+
 ```julia
 dict2csv(filename::String,D::Dict)
 ```
-Save a `Dict` to a .csv. Accounts for fields of any type.
+Save a `Dict` to a .csv. Accounts for fields of any type, keys must be `Symbol`s.
+
 For single-element entries, the rest of the array/table is filled with `NaN`s.
 
-see also: `nt2csv`, `data2csv`
+see also: [`nt2csv`](@ref), [`data2csv`](@ref)
 """
-function dict2csv(filename::String,D::Dict)
-    nt2csv(filename,(; D...))
-end
+dict2csv(filename::String,D::Dict) = nt2csv(filename,(; D...))
 
 
 """
+
 ```julia
 data2csv(filename::String,data)
 ```
 
 Save `data` to a .csv file.
-`data` may be a composite type of `Dict` or `NamedTuple` or an `Array`.
-Accepts fields of any type element.
+`data` may be one of the following: `Dict`, `NamedTuple`, or an `Array`,
+Accepts single-element or Vector fields.
 For single-element entries, the rest of the array/table is filled with `NaN`s.
 
 see also: `nt2csv`, `dict2csv`
+
 """
 function data2csv(filename::String,data)
     if isa(data,Dict)
@@ -74,17 +84,19 @@ end
 ## Load data from a csv to a NamedTuple or Dict
 
 """
+
 ```julia
-csv2nt(filename::String;symbol::Bool=true)
+csv2nt(filename::String;symbol=true)
 ```
 
 Read a .csv file into a `NamedTuple`.
-Assumes columns reflect individual elements, with the first row specifying that element's key.
-For NaN-buffered columns (see `nt2csv`), the `NaN`s are removed, returning a single-element entry.
+Assumes columns reflect discrete entries, with the first row specifying that element's key.
+For NaN-buffered columns, the `NaN`s are removed, returning a single-element entry.
 
 A `true` value for `symbol` will convert data saved as arrays of `String`s into arrays of `Symbol`s.
 
-see also: `nt2csv`, `csv2dict`
+see also: [`nt2csv`](@ref), [`csv2dict`](@ref)
+
 """
 function csv2nt(filename::String;symbol::Bool=true)
     A = readdlm(filename,',') #Input Array
@@ -109,17 +121,19 @@ function csv2nt(filename::String;symbol::Bool=true)
 end
 
 """
+
 ```julia
 csv2dict(filename::String;symbol::Bool=true)
 ```
 
 Read a .csv file into a `NamedTuple`.
-Assumes columns reflect individual entries, with the first row specifying that entry's key.
-For NaN-buffered columns (see `nt2csv`), the `NaN`s are removed, returning a single-element entry.
+Assumes columns reflect discrete entries, with the first row specifying that entry's key.
+For NaN-buffered columns, the `NaN`s are removed, returning a single-element entry.
 
 A `true` value for `symbol` will convert data saved as arrays of `String`s into arrays of `Symbol`s.
 
-see also: `nt2csv`, `csv2dict`
+see also: [`nt2csv`](@ref), [`csv2dict`](@ref)
+
 """
 function csv2dict(filename::String;symbol::Bool=true)
     dnt = csv2nt(filename,symbol=symbol)
@@ -127,16 +141,16 @@ function csv2dict(filename::String;symbol::Bool=true)
 end
 
 """
+
 ```julia
-
-js_arx2dict(file::String, vars::Tuple; n, ll=true, accept=true, perturbation=false)
-
+serial2dict(file::String, vars::Tuple; n, ll=true, accept=true, perturbation=false)
 ```
 
-Load a serialized archive file from `thermochron_metropolis` into a `Dict`` for "post-run" analysis, only incorporating the variables in `vars` and covering `n` steps (all steps by default). Provide a `Bool` to incorporate `ll`, `accept`, or `perturbation`
+Load a serialized archive file from [`thermochron_metropolis`](@ref) into a `Dict` for post-run analysis, only incorporating the variables in `vars` and covering `n` steps (all steps by default). 
+Provide a `Bool` to incorporate log-likelihoods `ll`, acceptances `accept`, or the perturbed variables `perturbation` at each step.
 
 """
-function js_arx2dict(file::String,vars::Tuple;n::Integer=0,ll::Bool=true,accept::Bool=true,perturbation::Bool=false)
+function serial2dict(file::String,vars::Tuple;n::Integer=0,ll::Bool=true,accept::Bool=true,perturbation::Bool=false)
 
     data = deserialize(file)
     iszero(n) && (n=length(data.llDist))
@@ -149,4 +163,3 @@ function js_arx2dict(file::String,vars::Tuple;n::Integer=0,ll::Bool=true,accept:
     perturbation && (out[:prt] = data.prt[1:n])
     return out
 end
-## Add NetCDF capability some day...

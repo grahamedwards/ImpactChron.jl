@@ -1,6 +1,29 @@
 ## Parameters & parameter functions for planetesimal thermal model & metropolis code.
+    # PriorDistribution
+        # Nrm
+        # lNrm
+        # Unf
+    # ImpactSiteShape
+        # Cone
+        # Parabola
+        # Hemisphere
+    # ImpactSite
+    # PetroTypes
+        #TempProp
+    # AsteroidHistory
+        # timemanagement
+    # perturb
 
 ## Distribution structs
+"""
+
+```julia
+PriorDistribution
+```
+
+Supertype of [`Nrm`](@ref), [`lNrm`](@ref), [`Unf`](@ref)
+
+"""
 abstract type PriorDistribution end
 
 """
@@ -9,8 +32,7 @@ abstract type PriorDistribution end
 Nrm(μ::Float64,σ::Float64)
 ```
 
-Immutable `struct` to describe normally distributed data,
-    reported as mean (`μ`) and 1σ (`σ`)
+Immutable `struct` to describe normally distributed data, reported as mean (`μ`) and 1σ (`σ`)
 
 """
 struct Nrm <: PriorDistribution
@@ -24,8 +46,7 @@ end
 lNrm(μ::Float64,σ::Float64)
 ```
 
-Immutable `struct` to describe lognormally distributed data,
-    reported as log-space mean (`μ`) and 1σ (`σ`)
+Immutable `struct` to describe lognormally distributed data, reported as natural-log-space mean (`μ`) and 1σ (`σ`)
 
 """
 struct lNrm <: PriorDistribution
@@ -39,8 +60,7 @@ end
 Unf(a::Float64,b::Float64)
 ```
 
-Immutable `struct` to describe uniformly distributed data,
-    reported as minimum (`a`) and maximum (`b`).
+Immutable `struct` to describe uniformly distributed data, reported as minimum (`a`) and maximum (`b`).
 
 """
 struct Unf <: PriorDistribution
@@ -50,7 +70,18 @@ end
 
 
 ## Structure support for radius_at_depth
+"""
 
+```julia
+ImpactSiteShape
+```
+
+Supertype of `Cone`, `Parabola`, and `Hemisphere`.
+Each contains a field `z` (depth) and `r` (radius), both in meters.
+
+see also: [`ImpactSite`](@ref)
+
+"""
 abstract type ImpactSiteShape end
 
 struct Cone{T<:Number} <: ImpactSiteShape
@@ -80,27 +111,31 @@ end
 """
 
 ```julia
-ImpactSite(heat<:ImpactSiteShape,C<:Number)
+ImpactSite(heat<:ImpactSiteShape, C<:Number)
 ```
 
-`struct` describing the shape of the simulated impact site and zone of reheating.
+`struct` describing the scale and shape of the simulated volume of impact heating.
+
+---
 
 CONSTRUCTOR FUNCTION
 ====================
-```julia
-ImpactSite(shape,impactor_diameter)
-```
-Providing an `impactor_diameter` (<:`Number`) calculates impact parameters based on approximate heat distribution modeled in Davison+ 2012 (GCA, http://dx.doi.org/10.1016/j.gca.2012.08.001).
 
 ```julia
-ImpactSite(shape ; r, C)
+ImpactSite(shape, impactor_diameter)
 ```
 
-If values of `r` and `C` are provided,  prepares an `ImpactSite` that extends to the center of an asteroid with radius `r` (km) and has a surface diameter `C` times the asteroid circumference (`C=0.01` by default). Note that `C ∈ [0,1]`.
+Providing an `impactor_diameter` (`<:Number`) calculates impact parameters based on approximate heat distribution modeled in Davison+ 2012 (GCA, http://doi.org/10.1016/j.gca.2012.08.001).
+
+```julia
+ImpactSite(shape; r, C)
+```
+
+If values of `r` and `C` are provided,  prepares an `ImpactSite` that extends to the center of an asteroid with radius `r` (km) and has a surface diameter `C` times the asteroid circumference (`C ∈ [0,1]`, `C = 0.01` by default).
 If no `r` is provided this seeds an `ImpactSite` with zeroed `ImpactSiteShape` and a `C` value. 
 
 """
-function ImpactSite(::Type{T}, impactor_diameter::Number) where {T}
+function ImpactSite(::Type{T}, impactor_diameter::Number) where {T<:ImpactSiteShape}
 
 # Proportions of ejection site.
     #ejection_diameter=10 * impactor_diameter 
@@ -112,7 +147,7 @@ function ImpactSite(::Type{T}, impactor_diameter::Number) where {T}
     ImpactSite(T(heated_depth,heated_diameter/2),zero(float(impactor_diameter)))
 end
 
-function ImpactSite(::Type{T}; r::N=0., C::N=0.01 ) where {T, N<: Number}
+function ImpactSite(::Type{T}; r::N=0., C::N=0.01 ) where {T<:ImpactSiteShape, N<: Number}
     @assert 0 ≤ C ≤ 1
     ImpactSite(T(r, 2π * r * C),C)
 end
@@ -130,12 +165,16 @@ end
 """
 
 ```julia
-PetroTypes(temps::NamedTuple,samples::Vector{String})
+PetroTypes(temps, samples)
 ```
 
-`struct` containing fields of `type3`-`type6`, reflecting petrologic types, each with subfilds `T` (maximum temperature in K) and `p` (proportion among the chondrite record). Note that `p`s sum to unity.
+`struct` containing fields of `type3`–`type6`, reflecting petrologic types. Each field contains a `ImpactChron.TempProp` with subfields `T` (maximum temperature in K) and `p` (proportion among the chondrite record). Note that `p`s sum to unity.
+
+*Only build `PetroTypes` with its constructor function*
 
 Constructor takes a `NamedTuple` containing maximum temperatures as fields `T3`-`T6` and a `Vector{String}` containing the petrologic types corresponding to chondrites used as a prior.
+
+e.g. `PetroTypes( (T3 = 873, T4 = 973, T5 = 1073, T6 = 1223), ["4", "6", "3", "5,6", "im"])`
 
 If no argument given --  `PetroTypes()` -- returns zeroed `type_` fields and `weight=false`, which short-circuits weighting by petrologic type. 
 
@@ -178,7 +217,7 @@ AsteroidHistory(typeseed<:Number; nnodes, Δt, tmax, downscale_factor)
 
 `struct` containing `Array`s that record the evolution of a (bombarded) asteroid.
 
-Constructor function takes a parameter from the `proposal` to seed type and requires the number of radial nodes `nnodes` (`::Int`), the timestep used `Δt`, the full time duration `tmax`, and the `downscale_factor` (`::Int`).
+Constructor function takes a parameter from the proposals to seed type and requires the number of radial nodes `nnodes` (`::Int`), the timestep used `Δt`, the full time duration `tmax`, and the `downscale_factor` (`::Int`).
 
 Fields in AsteroidHistory:
 
@@ -234,10 +273,11 @@ end
 """
 
 ```julia
-timemanagement(Δt, tmax, downscale_factor::Int)
+ImpactChron.timemanagement(Δt, tmax, downscale_factor::Int)
 ```
 
-Calculate (and adjust if necessary) the model timescales for a given `tmax` (Ma after CAIs), `Δt` timestep (in Ma), and a `downscale_factor`. May overwrite tmax to ensure  
+Calculate (and adjust if necessary) the model timescales for a given `tmax` (My after CAIs), `Δt` timestep (in My), and a `downscale_factor`. 
+May overwrite `tmax` to ensure downscaling works properly.
 
 Returns a `Tuple` containing the timescale and the downscaled timescale.
 """
@@ -245,7 +285,7 @@ function timemanagement(Δt::Number, tmax::Number, downscale_factor::Int)
     downscale_adj = length(0:Δt:tmax)%downscale_factor
     tmax = tmax - downscale_adj * Δt
     iszero(downscale_adj) || @warn "time range adjusted for downscale to 0:Δt(=$Δt):$tmax"
-    timerange = 0:Δt:tmax
+    timerange = 0.0:Δt:tmax
     time_downscaled = sum(timerange[1:downscale_factor])/downscale_factor : Δt*downscale_factor : tmax
     timerange, time_downscaled
 end
