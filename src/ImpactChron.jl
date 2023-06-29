@@ -1,9 +1,9 @@
 module ImpactChron
 
 # For speed:
-using LoopVectorization
-using Polyester
-using VectorizedStatistics
+using LoopVectorization: @turbo, @tturbo, vreduce
+using Polyester: @batch
+using VectorizedStatistics: vsum, vmean, vstd, vmedian, vquantile
 
 # For data handling.
 using DelimitedFiles
