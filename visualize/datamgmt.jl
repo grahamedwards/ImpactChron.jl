@@ -2,6 +2,7 @@
 
 
 using ImpactChron # This is probably already loaded, but just in case.
+using NaNStatistics: histcounts
 # Since ImpactChron already loads these within its module, I just call them from within the ImpactChron (i.e. ImpactChron.function):
     # VectorizedStatistics # for fast summary statistics: vmean, vmedian, vquantile, vstd
     # LoopVectorization, Polyester # for fast loops: @tturbo, @batch
@@ -289,6 +290,7 @@ Calculate the probability of a log-normal distribution with log-mean `m` and log
 
 """
 function lognormdens(x::Number,m::Number,s::Number)
+    x=ifelse(x>0,x,NaN)
     lnx=log(x)
 	exp(-(lnx-m)*(lnx-m) / (2*s*s)) / (x*s*sqrt(2*π))
 end

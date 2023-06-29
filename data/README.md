@@ -1,5 +1,5 @@
 # Compiled data
-The directory `/data/` contains the various compiled data used as priors in our Markov chain Monte Carlo inversions, including a database of [chondrite K-Ar and Ar-Ar ages](#database-of-chondrite-k-ar-and-ar-ar-ages) and a compilation of [constraints on parent body properties](#thermochronologic-model-parameters) used in the thermochronologic model. 
+This `data/` directory contains the various compiled data used as priors in our Markov chain Monte Carlo inversions, including a database of [chondrite K-Ar and Ar-Ar ages](#database-of-chondrite-k-ar-and-ar-ar-ages) and a compilation of [constraints on parent body properties](#thermochronologic-model-parameters) used in the thermochronologic model. 
 
 ## Thermochronologic model parameters
 `parameterpriors.jl` contains extensively annotated calculations of the distributions of the following thermochronologic model parameters:
