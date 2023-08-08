@@ -79,7 +79,7 @@ Four `kwargs` are particularly important:
 
 1. `nsteps ::Int` is the number of post-burn-in Markov chain steps.
 
-2. `plims ::NamedTuple` -- The model relies on hierarchical priors, such that all non-bombardment variables (`χ` ∉ parameter name) are constrained by prior distributions. 
+2. `plims ::NamedTuple` -- The model relies on several priors --- all non-bombardment variables (`χ` ∉ parameter name) are constrained by prior distributions. 
 Field names are as in `p` and `pσ` and values are subtypes of [`PriorDistribution`](@ref). 
 
 3. `downscale ::Integer` bins the modeled age distribution to smooth it. The distribution is "downscaled" by the factor `downcale`. It is set to `1` by default (off). I recommend a value of `10`. See [`ImpactChron.downscale!`](@ref) for details. 
@@ -125,8 +125,8 @@ All the other `kwargs`...
 | `nᵣ` | 100 | number of radial nodes in simulated asteroid | 
 | `stepfactor` | 2.9 | scales each accepted jump (`pσ *= stepfactor`, tuned to ~50% acceptance rate) | 
 | `updateN` | 1000 | print a status update of Markov chain every `...N` steps | 
-| `archiveN` | 0 | save an archive of Markov chain every `...N` steps (`0`-> off, see also `serial2dict`) |
-|`archiveages` | false | `true` -> archives the downscaled age dist. for each step |
+| `archiveN` | 0 | save an archive of Markov chain every `...N` steps (`0`-> off, see also [`serial2dict`](@ref)) |
+|`archiveages` | false | `true` -> archives the downscaled age distribution for each step |
 | `rng` | `Random.Xoshiro()` | pseudorandom number generator seed | 
 
 """

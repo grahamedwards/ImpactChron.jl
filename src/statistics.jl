@@ -40,7 +40,7 @@ rangemidbounds(x::AbstractRange) = LinRange(first(x) - 0.5step(x), last(x) + 0.5
 ImpactChron.downscale!(B, A)
 ```
 
-Downscales elements of 1-D Array `A` into smaller 1-D Array `B` by summing.
+Downscales elements of Array `A` into smaller Array `B` by summing.
 Scales the downscaled values in `B` by the ratio of length(A)÷length(B) to preserve any normalizations.
 
 Requires that length(A) % length(B) = 0.
@@ -76,9 +76,7 @@ If any x ∉ domain, ∑ dist * Δd = 1- (∑yₒᵤₜ / ∑yₐₗₗ ) where 
 
 ---
 
-Returns only the histogram masses, centers of bins must be calculated separately with
-
-    julia> rangemidpoints(domain)
+Returns only the histogram masses, centers of bins must be calculated separately with `rangemidpoints(domain)`
 
 """
 function histogramify(domain::AbstractRange, x::AbstractVector, y::AbstractVector)

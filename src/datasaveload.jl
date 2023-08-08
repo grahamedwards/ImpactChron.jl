@@ -126,13 +126,13 @@ end
 csv2dict(filename::String;symbol::Bool=true)
 ```
 
-Read a .csv file into a `NamedTuple`.
+Read a .csv file into a `Dict`.
 Assumes columns reflect discrete entries, with the first row specifying that entry's key.
 For NaN-buffered columns, the `NaN`s are removed, returning a single-element entry.
 
 A `true` value for `symbol` will convert data saved as arrays of `String`s into arrays of `Symbol`s.
 
-see also: [`nt2csv`](@ref), [`csv2dict`](@ref)
+see also: [`nt2csv`](@ref), [`csv2nt`](@ref)
 
 """
 function csv2dict(filename::String;symbol::Bool=true)

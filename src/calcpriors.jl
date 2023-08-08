@@ -12,11 +12,9 @@ ImpactChron.mcmean(x, xsig, n=10_000_000, fullpost=false)
 ```
 
 Calculate mean of age(s) `x` with 1σ uncertainties `xsig` by Monte Carlo method. 
-A 10M resample routine (n=10⁷, default) returns consistent results at the 10⁻⁴ level.
+A 10⁷ (default) resample routine returns consistent results at the 10⁻⁴ level.
 
-Returns a tuple of `(mean,1σ)` by default. 
-
-If `fullpost=true`, returns posterior samples rather than summary statistics.
+Returns a tuple of `(mean,1σ)` by default. If `fullpost=true`, returns posterior samples rather than summary statistics.
 
 """
 function mcmean(x::AbstractArray,xsig::AbstractArray;n::Int=10_000_000,fullpost::Bool=false)
@@ -47,7 +45,7 @@ Recalculate the age and uncertainty of an Ar-Ar age `x`±`sig` (1σ) Ma with the
 Quantifies uncertainty by resampling `n` times (default: 10⁶). 
 Optionally accepts a `monitor_age`. If not given, resamples from a range of absolute monitor ages ∈ [0,3] Ga.
 
-If `KAr=true`, this recalculates the K-Ar age with the new decay constants, without correcting for a monitor.
+If `KAr=true`, this recalculates the sample's K-Ar age with the new decay constants (no monitor correction necessary).
 
 """
 function agerecal(x::Number,sig::Number;monitor_age::Number=0,n::Int64=1_000_000, KAr::Bool=false)
@@ -117,9 +115,9 @@ end
 ImpactChron.draw(x)
 ```
 
-Make a pseudorandom draw from  `x`, which may be a `Tuple` or any subtype of `PriorDistribution`. If `x` is a `Number`, it simply returns `x`.
+Make a pseudorandom draw from  `x`, which may be a `Tuple` or any subtype of `PriorDistribution`. If `x` is a `Number`, it simply returns `x`. 
 
-Used exclusively in support of `lognormMC`.
+Used in support of `lognormMC`.
 
 See also: [`Nrm`](@ref), [`lNrm`](@ref), [`Unf`](@ref), [`lognormMC`](@ref)
 

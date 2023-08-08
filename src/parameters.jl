@@ -298,9 +298,8 @@ perturb(p::NamedTuple,k::Symbol,n::Number)
 Return a NamedTuple identical to `p`,
 with one field (key `k`) changed to the value of `n`.
 Note that `==` identity is preserved only if the
-order of fields in `p` is as below
+order of fields in `p` is: `tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ,tχγ,τχγ,Fχγ`
 
-Fields: `tss,rAlo,R,ta,cAl,Tm,Tc,ρ,Cp,k,tχα,τχα,Fχα,tχβ,τχβ,Fχβ,tχγ,τχγ,Fχγ`
 """
 function perturb(p::NamedTuple,k::Symbol,n::Number)
     tχγ  = ifelse(k==:tχγ,n,p.tχγ)

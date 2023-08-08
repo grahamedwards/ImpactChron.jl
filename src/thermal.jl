@@ -81,16 +81,16 @@ Physical and environmental parameters are described in `p`. Alternatively, these
 
 **Note:** several of these parameters need to be entered as the natural logarithm of the value for easy compatibility with the inversion function.
 
-`Δt` gives the timestep (in My), `tmax`` describes the duration of the model (My after CAIs = Myₛₛ), and `Tmax` and `Tmin` define the maximum and minimum temperatures (K) allowed for chondritic material in the body. Default values are only given for `tmax` (2000 Myₛₛ), `Tmax` (1500 K), and `Tmin` (0 K).
+`Δt` gives the timestep (in My), `tmax` describes the duration of the model (My after CAIs = Myₛₛ), and `Tmax` and `Tmin` define the maximum and minimum temperatures (K) allowed for chondritic material in the body. Default values are only given for `tmax` (2000 Myₛₛ), `Tmax` (1500 K), and `Tmin` (0 K).
 
 
     | Parameter                 | log?  | `NmTpl`| `func`  |
-    | ------------------------- | ----  | ------ | -------- |
+    | :------------------------ | :--:  | :----: | :-----: |
     | solar system age (Ma)     | no    | `tss`  | `tₛₛ`    |
     | initial ²⁶Al/²⁷Al         | no    | `rAlo` | `rAlo`   |
     | closure temperature (K)   | yes   | `Tc`   | `Tc`     |
     | body radius (m)           | yes   | `R`    | `R`      |
-    | accretion date (Myₛₛ)       | yes   | `ta`   | `tₐ`     |
+    | accretion date (Myₛₛ)     | yes   | `ta`   | `tₐ`     |
     | disk temperature (K)      | yes   | `Tm`   | `To`     |
     | [Al] (g/g)                | yes   | `cAl`  | `Al_conc`|
     | density (kg/m³)           | yes   | `ρ`    | `ρ`      |
@@ -371,29 +371,29 @@ end
 """
 
 ```julia
-function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcoolₒ::AbstractArray,Vfrxn::AbstractArray,
-                                impacts::AbstractArray,
-                                p::NamedTuple,c::NamedTuple;
-                                nᵣ::Integer,Δt::Number)
+function impact_reset_array!(
+    tₓr::AbstractArray, solartime::AbstractArray, 
+    tcoolₒ::AbstractArray, Vfrxn::AbstractArray,                             
+    impacts::AbstractArray, p::NamedTuple, c::NamedTuple;
+    nᵣ::Integer, Δt::Number )
 ```
-Simulates an impact history from -χ parameters in `p` (below), and resets
-primary planetesimal cooling dates (indices of dates in `solartime` in `tcoolₒ`) and fractional volumes (`Vfraxn`)
+Simulates an impact history from -χ parameters in `p` (see below), and resets
+primary cooling dates (indices of dates in `solartime` in `tcoolₒ`) and fractional volumes (`Vfraxn`)
 based on impact/crater properties described in `c`.
 
-Depth-cooling age (relative) abundances are tracked in array `tₓr` (time x radial depth),
-with dimensions `(time,radius) = (length(solartime),nᵣ)`,
-where `nᵣ` describes the number of radial nodes, as in the `planetesimal_cooling_dates` function.
+Relative abundances of depth-age pairs are tracked in array `tₓr` (time x radial depth),
+with dimensions `(length(solartime),nᵣ)`, where `nᵣ` describes the number of radial nodes, as in `planetesimal_cooling_dates`.
 
 `impacts` and `tcoolₒ` are pre-allocated vectors that respectively record
 the number of impacts at each time step and the index of the primary cooling date in `solartime`.
 
-Impact site geometries are codified by types (`Cone`,`Parabola`,`Hemisphere`)
-defined in `c` and calculated in the `radius_at_depth`.
-
 Impact flux follows an exponential decay described by parameters in `p`:
-\np.tχ ~ instability start time
-\np.τχ ~ e-folding timescale of impact flux
-\np.Fχ ~ initial impact flux
+
+| `p.` | Description |
+| :--  | :---------- |
+|`tχ_` | instability start time |
+| τχ_ | e-folding timescale of impact flux |
+| Fχ_ | initial impact flux |
 
 """
 function impact_reset_array!(tₓr::AbstractArray,solartime::AbstractArray,tcoolₒ::AbstractArray,Vfrxn::AbstractArray,
