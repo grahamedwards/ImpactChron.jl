@@ -31,4 +31,5 @@ help?> thermochron_metropolis
 The full Documentation for ImpactChron.jl is available at https://grahamedwards.github.io/ImpactChron.jl/dev. 
 
 ## Example
-I am preparing an example notebook in `example.ipynb` to show how to use the main features of the package. I will be annotating it soon!
+
+The file `example.ipynb` in this repository is a Jupyter notebook that illustrates how to use the main features of the package. You can download the `example.ipynb` file to run on your own machine or try it out through this Binder link: [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/grahamedwards/ImpactChron.jl/main?labpath=example.ipynb)

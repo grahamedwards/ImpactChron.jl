@@ -371,7 +371,7 @@ end
 """
 
 ```julia
-function impact_reset_array!(
+impact_reset_array!(
     tₓr::AbstractArray, solartime::AbstractArray, 
     tcoolₒ::AbstractArray, Vfrxn::AbstractArray,                             
     impacts::AbstractArray, p::NamedTuple, c::NamedTuple;
