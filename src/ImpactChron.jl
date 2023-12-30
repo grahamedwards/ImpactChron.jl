@@ -24,7 +24,7 @@ include("thermal.jl")
 export thermochron_metropolis
 include("metropolis.jl")
 
-export nt2csv, dict2csv, data2csv, csv2nt, csv2dict
+export nt2csv, dict2csv, data2csv, csv2nt, csv2dict, loadArAr, loadKArAr, loadKAr
 include("datasaveload.jl")
 
 include("calcpriors.jl") # all functions are loaded explicitly in the scripts in the data/ directory.

@@ -163,3 +163,100 @@ function serial2dict(file::String,vars::Tuple;n::Integer=0,ll::Bool=true,accept:
     perturbation && (out[:prt] = data.prt[1:n])
     return out
 end
+
+
+"""
+
+```julia
+loadArAr(maxage)
+```
+Loads and returns all Ar-Ar ages in the ImpactChron database older than `maxage` (in Ma) as a tuple of `ages`, `ages_σ`, `types`, `groups`, `names`.
+
+    see also: [`loadKAr`](@ref), [`loadKArAr`](@ref)
+"""
+loadArAr(maxage::Number) = trim_ages(maxage, readdlm(string(@__DIR__,"/../data/ArArages.csv"),','))
+
+
+"""
+
+```julia
+loadKAr(maxage)
+```
+Loads and returns all K-Ar ages in the ImpactChron database older than `maxage` (in Ma) as a tuple of `ages`, `ages_σ`, `types`, `groups`, `names`.
+
+    see also: [`loadArAr`](@ref), [`loadKArAr`](@ref)
+"""
+loadKAr(maxage::Number) = trim_ages(maxage, readdlm(string(@__DIR__,"/../data/KArages.csv"),','))
+
+
+"""
+
+```julia
+loadKArAr(maxage)
+```
+Loads and returns all K-Ar and Ar-Ar ages in the ImpactChron database older than `maxage` (in Ma) as a tuple of `ages`, `ages_σ`, `types`, `groups`, `names`.
+
+    see also: [`loadArAr`](@ref), [`loadKAr`](@ref)
+"""
+loadKArAr(maxage::Number) = trim_ages(maxage, readdlm(string(@__DIR__,"/../data/KArArages.csv"),','))
+
+
+"""
+
+```julia
+loadECs(maxage)
+```
+Loads and returns all Ar-Ar ages for enstatite chondrites (ECs) in the ImpactChron database older than `maxage` (in Ma) as a tuple of `ages`, `ages_σ`, `types`, `groups`, `names`.
+
+    see also: [`loadArAr`](@ref), [`loadTrie2003`](@ref)
+"""
+function loadECs(x::Number)
+    alldata = readdlm(string(@__DIR__,"/../data/ArArages.csv"),',')
+    i = contains.(alldata[:,2],"E")
+    trim_ages(x,alldata[i,:])
+end 
+
+
+"""
+
+```julia
+loadTrie2003(maxage)
+```
+Loads and returns Ar-Ar ages for the H chondrites chosen to reflect an unperturbed onion shell by Trieloff+ (2003, [doi:10.1038/nature01499](https://doi.org/10.1038/nature01499)) in the ImpactChron database older than `maxage` (in Ma) as a tuple of `ages`, `ages_σ`, `types`, `groups`, `names`.
+
+    see also: [`loadArAr`](@ref), [`loadTrie2003`](@ref)
+"""
+function loadTrie2003(x::Number)
+    alldata = readdlm(string(@__DIR__,"/../data/ArArages.csv"),',')
+    
+    trieloff= ["Estacado", "Guarena", "Kernouve", "Mount Browne", "Richardton", "Allegan", "Nadiabondi", "Forest Vale", "Ste Marguerite"]
+    t_ = similar(trieloff,Int)
+    ti = 1
+    @inbounds for i in trieloff
+        t_[ti]=findfirst(x -> i==x,alldata[:,1])
+        ti+=1
+    end
+    trim_ages(x,alldata[t_,:])
+end
+
+
+"""
+
+```julia
+trim_ages(maxage, data)
+```
+Helper function to remove all dates younger than `maxage` (in Ma) in K/Ar-Ar `data`` loaded internally from ImpactChron.
+Used under the hood in [`loadArAr`](@ref), [`loadKAr`](@ref), [`loadKArAr`](@ref), [`loadECs`](@ref), [`loadTrie2003`](@ref)
+
+"""
+function trim_ages(x::Number,priordata::Matrix)
+    ages_ = float.(priordata[:,4])
+    iages = ages_ .> x
+    ages = ages_[iages]
+    ages_sig = float.(priordata[:,5])[iages]
+    names = string.(priordata[:,1][iages])
+    groups = string.(priordata[:,2][iages])
+    types = string.(priordata[:,3][iages])
+
+    return ages, ages_sig, types, groups, names
+end
