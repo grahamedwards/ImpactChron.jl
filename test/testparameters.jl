@@ -12,4 +12,4 @@ testimpactor = 6.
 @test ImpactSite(Cone) == ImpactSite(Cone(0.,0.),0.01)
 
 # Test `timemanagement` in AsteroidHistory constructor
-@test ImpactChron.timemanagement(1.,20.,2) == (0.0:1.0:19.0, 0.5:2.0:18.5)
+@test @suppress ImpactChron.timemanagement(1.,20.,2) == (0.0:1.0:19.0, 0.5:2.0:18.5)

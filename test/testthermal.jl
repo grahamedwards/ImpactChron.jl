@@ -73,10 +73,10 @@ impact_reset_array!(A, t☼_, tcool, vₜₛ, impact_log, ϕ₂, crater, nᵣ=no
 
 
 # Combining everything into `asteroid_agedist!`
-AH = AsteroidHistory(ϕ₂.R, nnodes=nodes, Δt=timestep,tmax=600, downscale_factor=50)
+ AH = @suppress_err AsteroidHistory(ϕ₂.R, nnodes=nodes, Δt=timestep,tmax=600, downscale_factor=50)
 
 # Melted Condition
-asteroid_agedist!(AH,ϕ₂,PetroTypes(),crater; nᵣ=nodes, Tmax=temp_max, Tmin=temp_min, melt_reject=0.1)
+@suppress asteroid_agedist!(AH,ϕ₂,PetroTypes(),crater; nᵣ=nodes, Tmax=temp_max, Tmin=temp_min, melt_reject=0.1)
 
 @test AH.agedist_downscaled == zero(AH.agedist_downscaled)
 

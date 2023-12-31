@@ -1,6 +1,7 @@
 using ImpactChron
 using Test
 using StableRNGs
+using Suppressor
 
 @testset "perturb & Constructors" begin include("testparameters.jl") end
 @testset "data management" begin include("testdata.jl") end
