@@ -9,7 +9,7 @@ function metropolis_status(p::NamedTuple,vars::Tuple,ll::Number,stepI::Integer,s
     println("---------------------------")
     stepI != 0 && println("Step $stepI of $stepN in $stage. \n")
     println("run time: ",round((time()-t)/60.,digits=2)," minutes \n")
-    isempty(accpt) || println("acceptance rate =",vreduce(+,accpt)/stepI)
+    isempty(accpt) || println("acceptance rate =",vsum(accpt)/stepI)
     println("ll=$ll \n")
     for v ∈ vars
         println(v," → ",p[v])
