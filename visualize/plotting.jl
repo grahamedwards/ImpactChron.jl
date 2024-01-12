@@ -36,7 +36,7 @@ Plots a grid of pretty (top-traced with translucent fill) histograms for paramet
 """
 function proposalhists_priordists(data_in::Dict,plims::NamedTuple,v::Tuple;cols::Int=3, nbins::Int=32,figsize=(800,600),darkmode::Bool=false)
     rows = ceil(Int,length(v)/cols)
-    f=Figure(resolution=(figsize), backgroundcolor=ifelse(darkmode,:transparent,:white))
+    f=Figure(size=(figsize), backgroundcolor=ifelse(darkmode,:transparent,:white))
     for j in CartesianIndices((rows,cols))
         i = j[1] + rows * (j[2]-1) #calculate index in v
         if i <= length(v)
@@ -120,7 +120,7 @@ function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, c
     lv=length(v) + ifelse(ll,1,0)
     rows = ceil(Int,lv/cols)
     
-    f=Figure(resolution=(figsize))
+    f=Figure(size=(figsize))
 
     for j in CartesianIndices((rows,cols))
         i = j[1] + rows * (j[2]-1) #calculate index in v
