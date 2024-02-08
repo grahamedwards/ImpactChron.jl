@@ -8,7 +8,7 @@ A Bayesian framework to deconvolve the dual contributions of (1.) cooling in pri
 
 Developed from the statistical framework of [Chron.jl](https://github.com/brenhinkeller/Chron.jl) ([doi:10.17605/osf.io/TQX3F](https://doi.org/10.17605/osf.io/TQX3F)).
 
-📄 Associated pre-print coming soon! 📄
+📄 [Associated pre-print on the arXiv](https://arxiv.org/abs/2309.10906) 📄
 
 ---
 ---
