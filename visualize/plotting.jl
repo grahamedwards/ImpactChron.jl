@@ -1,13 +1,13 @@
 ## Plotting: Functions to produce visualizations of of ImpactChron outputs
 
-if !isdefined(@__MODULE__,:interleave)
-    @warn "Trying to load datamgmt.jl"
-    try
-        ImpactChron.
-    catch
-        @warn "Load data management tools for plotting functionality"
-    end
-end
+# if !isdefined(@__MODULE__,:interleave)
+#     @warn "Trying to load datamgmt.jl"
+#     try
+#         ImpactChron.load_datamgmt()
+#     catch
+#         @warn "Load data management tools for plotting functionality"
+#     end
+# end
 
 # try 
 #     using CairoMakie
@@ -15,6 +15,7 @@ end
 #     @warn "All plotting functions rely on CairoMakie.\n\nTo make plots, please install it by typing into the REPL:  ]add CairoMakie\n\n"
 # end
 
+ImpactChron.load_datamgmt()
 
 """
 
