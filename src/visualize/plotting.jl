@@ -15,7 +15,7 @@
 #     @warn "All plotting functions rely on CairoMakie.\n\nTo make plots, please install it by typing into the REPL:  ]add CairoMakie\n\n"
 # end
 
-include(string(@__DIR__,"datamgmt.jl"))
+include(string(@__DIR__,"/datamgmt.jl"))
 
 """
 
