@@ -41,10 +41,9 @@ Load data management tools for summary statistics and plotting of ImpactChron da
 load_datamgmt() = include(string(@__DIR__,"../visualize/datamgmt.jl"))
 
 function __init__()
-    vizpath = string(@__DIR__,"../visualize/plotting.jl")
-    Requires.@require CairoMakie="13f3f980-e62b-5c42-98c6-ff1f3baf88f0" include(vizpath)
-    Requires.@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" include(vizpath) 
-    Requires.@require WGLMakie="276b4fcb-3e11-5398-bf8b-a0c2d153d008" include(vizpath) 
+    Requires.@require CairoMakie="13f3f980-e62b-5c42-98c6-ff1f3baf88f0" include("../visualize/plotting.jl")
+    Requires.@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" include("../visualize/plotting.jl")
+    Requires.@require WGLMakie="276b4fcb-3e11-5398-bf8b-a0c2d153d008" include("../visualize/plotting.jl")
 end
 
 
