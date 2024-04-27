@@ -1,19 +1,8 @@
 ## Plotting: Functions to produce visualizations of of ImpactChron outputs
 
-# if !isdefined(@__MODULE__,:interleave)
-#     @warn "Trying to load datamgmt.jl"
-#     try
-#         ImpactChron.load_datamgmt()
-#     catch
-#         @warn "Load data management tools for plotting functionality"
-#     end
-# end
-
-# try 
-#     using CairoMakie
-# catch
-#     @warn "All plotting functions rely on CairoMakie.\n\nTo make plots, please install it by typing into the REPL:  ]add CairoMakie\n\n"
-# end
+Requires.@require CairoMakie="13f3f980-e62b-5c42-98c6-ff1f3baf88f0" @eval using .CairoMakie
+Requires.@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a"  @eval using .WGLMakie
+Requires.@require WGLMakie="276b4fcb-3e11-5398-bf8b-a0c2d153d008" @eval using .WGLMakie
 
 include(string(@__DIR__,"/datamgmt.jl"))
 
@@ -141,4 +130,6 @@ function plotproposals(data_in::Dict,plims::NamedTuple,v::Tuple;ll::Bool=true, c
     f
 end
 
-"~Plotting Functions Loaded Successfully~"
+export proposalhists_priordists, proposalhist_priordist, plotproposal, plotproposals
+
+"Plotting Functions Loaded Successfully: proposalhist_priordist,proposalhists_priordists, plotproposal, plotproposals"

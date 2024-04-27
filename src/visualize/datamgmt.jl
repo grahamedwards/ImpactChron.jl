@@ -7,7 +7,7 @@ using NaNStatistics: histcounts
     # VectorizedStatistics # for fast summary statistics: vmean, vmedian, vquantile, vstd
     # LoopVectorization, Polyester # for fast loops: @tturbo, @batch
 
-
+export ParamTitles, ParamVars, interleave, interleave!, binweave, binweave!, distmeans, distmedians, cleanhist, summedpdfhist, summedpdfhist!, normdens, lognormdens, sumpdfs, sumpdfs!, pdfsample, pdfsample!, histhist
 
 const ParamTitles = Dict(   
     :tss => "Solar age (CAIs, Ma)", 
