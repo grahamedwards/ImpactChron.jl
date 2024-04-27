@@ -38,12 +38,12 @@ export load_datamgmt
 Load data management tools for summary statistics and plotting of ImpactChron data. 
 
 """
-load_datamgmt() = include(string(@__DIR__,"../visualize/datamgmt.jl"))
+load_datamgmt() = include("visualize/datamgmt.jl")
 
 function __init__()
-    Requires.@require CairoMakie="13f3f980-e62b-5c42-98c6-ff1f3baf88f0" include("../visualize/plotting.jl")
-    Requires.@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" include("../visualize/plotting.jl")
-    Requires.@require WGLMakie="276b4fcb-3e11-5398-bf8b-a0c2d153d008" include("../visualize/plotting.jl")
+    Requires.@require CairoMakie="13f3f980-e62b-5c42-98c6-ff1f3baf88f0" include("visualize/plotting.jl")
+    Requires.@require GLMakie="e9467ef8-e4e7-5192-8a1a-b1aee30e663a" include("visualize/plotting.jl")
+    Requires.@require WGLMakie="276b4fcb-3e11-5398-bf8b-a0c2d153d008" include("visualize/plotting.jl")
 end
 
 
