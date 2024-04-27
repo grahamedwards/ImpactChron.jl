@@ -3,18 +3,17 @@
 if !isdefined(@__MODULE__,:interleave)
     @warn "Trying to load datamgmt.jl"
     try
-        localdir= @__DIR__
-        include("$localdir/datamgmt.jl")
+        ImpactChron.
     catch
-        @warn "Load `datamgmt.jl` for functionality"
+        @warn "Load data management tools for plotting functionality"
     end
 end
 
-try 
-    using CairoMakie
-catch
-    @warn "All plotting functions rely on CairoMakie.\n\nTo make plots, please install it by typing into the REPL:  ]add CairoMakie\n\n"
-end
+# try 
+#     using CairoMakie
+# catch
+#     @warn "All plotting functions rely on CairoMakie.\n\nTo make plots, please install it by typing into the REPL:  ]add CairoMakie\n\n"
+# end
 
 
 """
