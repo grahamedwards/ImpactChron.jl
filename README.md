@@ -8,6 +8,12 @@ A Bayesian framework to deconvolve the dual contributions of (1.) cooling in pri
 
 Developed from the statistical framework of [Chron.jl](https://github.com/brenhinkeller/Chron.jl) ([doi:10.17605/osf.io/TQX3F](https://doi.org/10.17605/osf.io/TQX3F)).
 
+
+## Current Release: v1.0.0
+[![DOI](https://zenodo.org/badge/498024380.svg)](https://zenodo.org/doi/10.5281/zenodo.11163985)
+
+For publication of first use case studying the timescales of giant planet migration in the solar system.
+
 📝 [Associated arXiv pre-print](https://arxiv.org/abs/2309.10906) 📝
 
 ---
