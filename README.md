@@ -12,9 +12,15 @@ Developed from the statistical framework of [Chron.jl](https://github.com/brenhi
 ## Current Release: v1.0.0
 [![DOI](https://zenodo.org/badge/498024380.svg)](https://zenodo.org/doi/10.5281/zenodo.11163985)
 
-For publication of first use case studying the timescales of giant planet migration in the solar system.
+For publication of first use case studying the timescales of giant planet migration in the solar system:
 
-📝 [Associated arXiv pre-print](https://arxiv.org/abs/2309.10906) 📝
+📝 [`doi:10.1038/s41550-024-02340-6`](https://doi.org/10.1038/s41550-024-02340-6)
+
+📝 [`arXiv`](https://arxiv.org/abs/2309.10906)
+
+### Citation
+
+G.H. Edwards, C.B. Keller, E.R. Newton, C.W. Stewart. 2024. An early giant planet instability recorded in asteroidal meteorites. *Nature Astronomy*. https://doi.org/10.1038/s41550-024-02340-6
 
 ---
 ---
