@@ -59,7 +59,7 @@ function proposalhist_priordist(v::Symbol, data_in::Vector,B::ImpactChron.PriorD
     ax = Axis(f[1,1], xlabel=names[v],bottomspinecolor=pltclr,xtickcolor=pltclr,xticklabelcolor=pltclr, xlabelcolor=pltclr,backgroundcolor=ifelse(darkmode,:transparent,:white),
     xgridvisible=false,ygridvisible=false,yticklabelsvisible=false,yticksvisible=false,rightspinevisible=false,leftspinevisible=false,topspinevisible=false,)
     Makie.band!(ax,h.x,h.y,zero(h.y), color=(fillcolor,0.1))
-    Makie.lines!(ax,h.x,h.y, color=pltclr,linewdith=2,)
+    Makie.lines!(ax,h.x,h.y, color=pltclr,linewidth=2,)
 
 # Plot prior distributions
 prdst_x = LinRange(first(h.x),last(h.x),100)
